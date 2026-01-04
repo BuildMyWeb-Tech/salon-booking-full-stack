@@ -31,7 +31,7 @@ const Appointment = () => {
         // getting current date
         let today = new Date()
 
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 7; i++) {
 
             // getting date with index 
             let currentDate = new Date(today)

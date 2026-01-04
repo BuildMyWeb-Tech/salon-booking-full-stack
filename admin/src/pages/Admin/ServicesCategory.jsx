@@ -6,7 +6,7 @@ import { AdminContext } from '../../context/AdminContext'
 import { AppContext } from '../../context/AppContext'
 import { Pencil } from 'lucide-react'
 
-const AddStylist = () => {
+const ServiceCategory = () => {
     const [stylistImg, setStylistImg] = useState(false)
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -241,4 +241,4 @@ const AddStylist = () => {
     )
 }
 
-export default AddStylist;
+export default ServiceCategory;
