@@ -37,6 +37,14 @@ import Gynecologist from './Gynecologist.svg'
 import Neurologist from './Neurologist.svg'
 import Pediatricians from './Pediatricians.svg'
 
+import Hair_Styling from './hair-styling.jpeg';
+// import Beard_Grooming from './beard_grooming.png';
+// import Hair_Coloring from './hair_coloring.png';
+// import Hair_Treatment from './hair_treatment.png';
+// import Bridal_Hairstylist from './bridal_hairstylist.png';
+// import Unisex_Hairstylist from './unisex_hairstylist.png';
+
+
 
 export const assets = {
     appointment_img,
@@ -58,10 +66,9 @@ export const assets = {
     razorpay_logo
 }
 
-export const specialityData = [
-    {
-        speciality: 'General physician',
-        image: General_physician
+export const specialityData = [{
+        speciality: 'Hair Styling Specialist',
+        image: Hair_Styling
     },
     {
         speciality: 'Gynecologist',
@@ -85,8 +92,7 @@ export const specialityData = [
     },
 ]
 
-export const doctors = [
-    {
+export const doctors = [{
         _id: 'doc1',
         name: 'Dr. Richard James',
         image: doc1,
