@@ -1,243 +1,257 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import { assets } from '../../assets/assets'
 import { toast } from 'react-toastify'
 import axios from 'axios'
 import { AdminContext } from '../../context/AdminContext'
 import { AppContext } from '../../context/AppContext'
-import { Pencil } from 'lucide-react'
+import { Pencil, Plus, Edit, Trash2, X } from 'lucide-react'
 
 const ServiceCategory = () => {
-    const [stylistImg, setStylistImg] = useState(false)
-    const [name, setName] = useState('')
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [experience, setExperience] = useState('1 Year')
-    const [price, setPrice] = useState('')
-    const [about, setAbout] = useState('')
-    const [specialty, setSpecialty] = useState('Haircut & Styling')
-    const [certification, setCertification] = useState('')
-    const [instagram, setInstagram] = useState('')
-    const [workingHours, setWorkingHours] = useState('')
+    const [serviceCategories, setServiceCategories] = useState([])
+    const [serviceImg, setServiceImg] = useState(false)
+    const [serviceName, setServiceName] = useState('')
+    const [isEditingService, setIsEditingService] = useState(false)
+    const [editServiceId, setEditServiceId] = useState(null)
+    const [showServiceForm, setShowServiceForm] = useState(false)
 
     const { backendUrl } = useContext(AppContext)
     const { aToken } = useContext(AdminContext)
 
-    const onSubmitHandler = async (event) => {
-        event.preventDefault()
+    useEffect(() => {
+        fetchServices()
+    }, [])
 
+    const fetchServices = async () => {
         try {
-            if (!stylistImg) {
-                return toast.error('Profile Image Required')
+            const { data } = await axios.get(backendUrl + '/api/admin/services', {
+                headers: { aToken }
+            })
+            if (data.success) {
+                setServiceCategories(data.services)
+            }
+        } catch (error) {
+            console.log(error)
+            toast.error('Failed to fetch service categories')
+        }
+    }
+
+    const handleServiceSubmit = async (e) => {
+        e.preventDefault()
+        
+        try {
+            if (!serviceImg && !isEditingService) {
+                return toast.error('Service Image Required')
             }
 
-            const formData = new FormData();
+            const formData = new FormData()
+            if (serviceImg) {
+                formData.append('image', serviceImg)
+            }
+            formData.append('name', serviceName)
 
-            formData.append('image', stylistImg)
-            formData.append('name', name)
-            formData.append('email', email)
-            formData.append('password', password)
-            formData.append('experience', experience)
-            formData.append('price', Number(price))
-            formData.append('about', about)
-            formData.append('specialty', specialty)
-            formData.append('certification', certification)
-            formData.append('instagram', instagram)
-            formData.append('workingHours', workingHours)
+            let response
+            if (isEditingService) {
+                response = await axios.put(
+                    `${backendUrl}/api/admin/services/${editServiceId}`,
+                    formData,
+                    { headers: { aToken } }
+                )
+            } else {
+                response = await axios.post(
+                    `${backendUrl}/api/admin/services`,
+                    formData,
+                    { headers: { aToken } }
+                )
+            }
 
-            // console log formdata            
-            formData.forEach((value, key) => {
-                console.log(`${key}: ${value}`);
-            });
-
-            const { data } = await axios.post(backendUrl + '/api/admin/add-stylist', formData, { headers: { aToken } })
+            const { data } = response
             if (data.success) {
                 toast.success(data.message)
-                setStylistImg(false)
-                setName('')
-                setPassword('')
-                setEmail('')
-                setCertification('')
-                setAbout('')
-                setPrice('')
-                setInstagram('')
-                setWorkingHours('')
+                resetServiceForm()
+                fetchServices()
+                setShowServiceForm(false)
             } else {
                 toast.error(data.message)
             }
-
         } catch (error) {
-            toast.error(error.message)
+            toast.error(error.message || 'Something went wrong')
             console.log(error)
         }
     }
 
+    const handleEditService = (service) => {
+        setServiceName(service.name)
+        setEditServiceId(service._id)
+        setIsEditingService(true)
+        setShowServiceForm(true)
+    }
+
+    const handleDeleteService = async (id) => {
+        if (window.confirm('Are you sure you want to delete this service?')) {
+            try {
+                const { data } = await axios.delete(`${backendUrl}/api/admin/services/${id}`, {
+                    headers: { aToken }
+                })
+                if (data.success) {
+                    toast.success(data.message)
+                    fetchServices()
+                } else {
+                    toast.error(data.message)
+                }
+            } catch (error) {
+                toast.error('Failed to delete service')
+                console.log(error)
+            }
+        }
+    }
+
+    const resetServiceForm = () => {
+        setServiceImg(false)
+        setServiceName('')
+        setIsEditingService(false)
+        setEditServiceId(null)
+    }
+
     return (
-        <form onSubmit={onSubmitHandler} className='m-5 w-full'>
-            <p className='mb-5 text-2xl font-medium text-gray-800'>Add New Stylist</p>
-
-            <div className='bg-white px-8 py-8 border rounded-lg shadow-sm w-full max-w-4xl max-h-[80vh] overflow-y-auto'>
-                <div className='flex flex-col items-center justify-center mb-8'>
-                    <div className='relative mb-3'>
-                        <div className='w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200'>
-                            <img 
-                                className='w-full h-full object-cover' 
-                                src={stylistImg ? URL.createObjectURL(stylistImg) : assets.upload_area} 
-                                alt="Stylist profile" 
-                            />
-                        </div>
-                        <label htmlFor="stylist-img" className='absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer'>
-                            <Pencil size={16} />
-                        </label>
-                        <input onChange={(e) => setStylistImg(e.target.files[0])} type="file" name="" id="stylist-img" hidden />
+        <div className='m-5 w-full'>
+            {!showServiceForm && (
+                <div className="bg-white rounded-lg shadow-sm border p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className='text-2xl font-medium text-gray-800'>Service Categories</h2>
+                        <button 
+                            onClick={() => {
+                                resetServiceForm()
+                                setShowServiceForm(true)
+                            }}
+                            className="bg-primary text-white p-2 rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2"
+                        >
+                            <Plus size={18} />
+                            <span>Add Service</span>
+                        </button>
                     </div>
-                    <p className='text-gray-500 text-sm'>Upload stylist profile picture</p>
+
+                    <div className="overflow-x-auto">
+                        {serviceCategories.length > 0 ? (
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Name</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {serviceCategories.map((service) => (
+                                        <tr key={service._id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100">
+                                                    <img 
+                                                        className="w-full h-full object-cover" 
+                                                        src={service.imageUrl} 
+                                                        alt={service.name} 
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                {service.name}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <div className="flex gap-3">
+                                                    <button 
+                                                        onClick={() => handleEditService(service)}
+                                                        className="text-blue-600 hover:text-blue-900"
+                                                    >
+                                                        <Edit size={18} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteService(service._id)}
+                                                        className="text-red-600 hover:text-red-900"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div className="text-center py-4 text-gray-500">
+                                No service categories found. Add one to get started.
+                            </div>
+                        )}
+                    </div>
                 </div>
+            )}
 
-                <div className='flex flex-col lg:flex-row items-start gap-8 text-gray-600'>
-                    <div className='w-full lg:flex-1 flex flex-col gap-4'>
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Full Name</label>
+            {showServiceForm && (
+                <div className="bg-white rounded-lg shadow-sm border p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className='text-2xl font-medium text-gray-800'>
+                            {isEditingService ? 'Edit Service Category' : 'Add Service Category'}
+                        </h2>
+                        <button 
+                            onClick={() => setShowServiceForm(false)}
+                            className="text-gray-500 hover:text-gray-700"
+                        >
+                            <X size={24} />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleServiceSubmit} className="max-w-2xl">
+                        <div className="flex flex-col items-center mb-6">
+                            <div className="relative mb-3">
+                                <div className="w-24 h-24 rounded-md overflow-hidden bg-gray-100 border-2 border-gray-200">
+                                    <img 
+                                        className="w-full h-full object-cover" 
+                                        src={serviceImg ? URL.createObjectURL(serviceImg) : (isEditingService ? `${backendUrl}/uploads/services/${editServiceId}.jpg` : assets.upload_area)} 
+                                        alt="Service image" 
+                                    />
+                                </div>
+                                <label htmlFor="service-img" className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer">
+                                    <Pencil size={16} />
+                                </label>
+                                <input 
+                                    onChange={(e) => setServiceImg(e.target.files[0])} 
+                                    type="file" 
+                                    id="service-img" 
+                                    hidden 
+                                />
+                            </div>
+                            <p className="text-gray-500 text-sm">Upload service category image</p>
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Service Name</label>
                             <input 
-                                onChange={e => setName(e.target.value)} 
-                                value={name} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="text" 
-                                placeholder='Enter stylist name' 
-                                required 
+                                type="text"
+                                value={serviceName}
+                                onChange={(e) => setServiceName(e.target.value)}
+                                className="w-full border rounded-md px-3 py-2 focus:outline-none focus:border-primary"
+                                placeholder="e.g. Haircut, Coloring, Styling"
+                                required
                             />
                         </div>
 
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Email Address</label>
-                            <input 
-                                onChange={e => setEmail(e.target.value)} 
-                                value={email} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="email" 
-                                placeholder='Enter email address' 
-                                required 
-                            />
-                        </div>
-
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Password</label>
-                            <input 
-                                onChange={e => setPassword(e.target.value)} 
-                                value={password} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="password" 
-                                placeholder='Create password' 
-                                required 
-                            />
-                        </div>
-
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Experience</label>
-                            <select 
-                                onChange={e => setExperience(e.target.value)} 
-                                value={experience} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
+                        <div className="flex gap-3 justify-end">
+                            <button 
+                                type="button"
+                                onClick={() => setShowServiceForm(false)}
+                                className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-50"
                             >
-                                <option value="1 Year">1 Year</option>
-                                <option value="2 Years">2 Years</option>
-                                <option value="3 Years">3 Years</option>
-                                <option value="4 Years">4 Years</option>
-                                <option value="5 Years">5 Years</option>
-                                <option value="6-10 Years">6-10 Years</option>
-                                <option value="10+ Years">10+ Years</option>
-                            </select>
-                        </div>
-
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Base Price</label>
-                            <input 
-                                onChange={e => setPrice(e.target.value)} 
-                                value={price} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="number" 
-                                placeholder='Starting price for services' 
-                                required 
-                            />
-                        </div>
-                    </div>
-
-                    <div className='w-full lg:flex-1 flex flex-col gap-4'>
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Specialty</label>
-                            <select 
-                                onChange={e => setSpecialty(e.target.value)} 
-                                value={specialty} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary'
+                                Cancel
+                            </button>
+                            <button 
+                                type="submit"
+                                className="bg-primary px-4 py-2 text-white rounded-md hover:bg-primary/90 transition-colors"
                             >
-                                <option value="Haircut & Styling">Haircut & Styling</option>
-                                <option value="Color Specialist">Color Specialist</option>
-                                <option value="Hair Extensions">Hair Extensions</option>
-                                <option value="Bridal Styling">Bridal Styling</option>
-                                <option value="Texture Specialist">Texture Specialist</option>
-                                <option value="Men's Grooming">Men's Grooming</option>
-                                <option value="Creative Director">Creative Director</option>
-                            </select>
+                                {isEditingService ? 'Update Service' : 'Add Service'}
+                            </button>
                         </div>
-
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Certification</label>
-                            <input 
-                                onChange={e => setCertification(e.target.value)} 
-                                value={certification} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="text" 
-                                placeholder='Professional certifications' 
-                                required 
-                            />
-                        </div>
-
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Instagram Handle</label>
-                            <input 
-                                onChange={e => setInstagram(e.target.value)} 
-                                value={instagram} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="text" 
-                                placeholder='@username (optional)' 
-                            />
-                        </div>
-
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Working Hours</label>
-                            <input 
-                                onChange={e => setWorkingHours(e.target.value)} 
-                                value={workingHours} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="text" 
-                                placeholder='e.g. Tue-Sat: 10AM-7PM' 
-                                required 
-                            />
-                        </div>
-                    </div>
+                    </form>
                 </div>
-
-                <div>
-                    <label className='text-sm font-medium text-gray-700 block mt-6 mb-2'>About The Stylist</label>
-                    <textarea 
-                        onChange={e => setAbout(e.target.value)} 
-                        value={about} 
-                        className='w-full px-4 pt-3 border rounded-md focus:outline-none focus:border-primary' 
-                        rows={4} 
-                        placeholder="Describe the stylist's expertise, style philosophy, and approach to client service"
-                        required
-                    ></textarea>
-                </div>
-
-                <div className='flex justify-end mt-6'>
-                    <button 
-                        type='submit' 
-                        className='bg-primary px-8 py-3 text-white rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2'
-                    >
-                        Add Stylist
-                    </button>
-                </div>
-            </div>
-        </form>
+            )}
+        </div>
     )
 }
 

@@ -1,41 +1,106 @@
 import React from 'react'
 import { assets } from '../assets/assets'
+import { Phone, Mail, MapPin, Instagram, Facebook, Twitter, Linkedin, Scissors } from 'lucide-react'
 
 const Footer = () => {
   return (
     <div className='md:mx-10'>
-      <div className='flex flex-col sm:grid grid-cols-[3fr_1fr_1fr] gap-14 my-10  mt-40 text-sm'>
-
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 my-10 mt-40 text-sm'>
+        {/* About Us */}
         <div>
-          <img className='mb-5 w-40' src={assets.logo} alt="" />
-          <p className='w-full md:w-2/3 text-gray-600 leading-6'>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.</p>
+          <img className='mb-5 w-40' src={assets.logo} alt="StyleStudio Logo" />
+          <p className='w-full text-gray-600 leading-6 mb-6'>
+            StyleStudio brings expert hair styling and cutting services to help you look your absolute best. Our team of professional stylists are dedicated to creating the perfect look that matches your personality and lifestyle.
+          </p>
+          <div className='flex space-x-4 mt-4'>
+            <a href="https://whatsapp.com" target="_blank" rel="noopener noreferrer" className='w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white hover:bg-green-600 transition duration-300'>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            </a>
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className='w-10 h-10 rounded-full bg-pink-600 flex items-center justify-center text-white hover:bg-pink-700 transition duration-300'>
+              <Instagram size={20} />
+            </a>
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className='w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white hover:bg-blue-700 transition duration-300'>
+              <Facebook size={20} />
+            </a>
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className='w-10 h-10 rounded-full bg-blue-400 flex items-center justify-center text-white hover:bg-blue-500 transition duration-300'>
+              <Twitter size={20} />
+            </a>
+          </div>
         </div>
 
+        {/* Company */}
         <div>
           <p className='text-xl font-medium mb-5'>COMPANY</p>
-          <ul className='flex flex-col gap-2 text-gray-600'>
-            <li>Home</li>
-            <li>About us</li>
-            <li>Delivery</li>
-            <li>Privacy policy</li>
+          <ul className='flex flex-col gap-3 text-gray-600'>
+            <li><a href="/" className='hover:text-primary transition-colors flex items-center'><span className='mr-2'>›</span>Home</a></li>
+            <li><a href="/about" className='hover:text-primary transition-colors flex items-center'><span className='mr-2'>›</span>About us</a></li>
+            <li><a href="/stylists" className='hover:text-primary transition-colors flex items-center'><span className='mr-2'>›</span>Our Stylists</a></li>
+            <li><a href="/contact" className='hover:text-primary transition-colors flex items-center'><span className='mr-2'>›</span>Contact us</a></li>
+            <li><a href="/privacy" className='hover:text-primary transition-colors flex items-center'><span className='mr-2'>›</span>Privacy policy</a></li>
           </ul>
         </div>
 
+        {/* Services */}
+        <div>
+          <p className='text-xl font-medium mb-5'>OUR SERVICES</p>
+          <ul className='flex flex-col gap-3 text-gray-600'>
+            <li className='flex items-center'>
+              <Scissors size={16} className='mr-2' />
+              <span>Haircut & Styling</span>
+            </li>
+            <li className='flex items-center'>
+              <Scissors size={16} className='mr-2' />
+              <span>Color Services</span>
+            </li>
+            <li className='flex items-center'>
+              <Scissors size={16} className='mr-2' />
+              <span>Hair Treatments</span>
+            </li>
+            <li className='flex items-center'>
+              <Scissors size={16} className='mr-2' />
+              <span>Men's Grooming</span>
+            </li>
+            <li className='flex items-center'>
+              <Scissors size={16} className='mr-2' />
+              <span>Bridal Services</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Get In Touch */}
         <div>
           <p className='text-xl font-medium mb-5'>GET IN TOUCH</p>
-          <ul className='flex flex-col gap-2 text-gray-600'>
-            <li>+1-212-456-7890</li>
-            <li>greatstackdev@gmail.com</li>
+          <ul className='flex flex-col gap-4 text-gray-600'>
+            <li>
+              <a href="tel:+919344095727" className='flex items-start hover:text-primary transition-colors'>
+                <Phone className='mr-3 mt-1 flex-shrink-0' size={18} />
+                <span>+91 9344095727</span>
+              </a>
+            </li>
+            <li>
+              <a href="tel:+918610961158" className='flex items-start hover:text-primary transition-colors'>
+                <Phone className='mr-3 mt-1 flex-shrink-0' size={18} />
+                <span>+91 8610961158</span>
+              </a>
+            </li>
+            <li>
+              <a href="mailto:info@stylestudio.com" className='flex items-start hover:text-primary transition-colors'>
+                <Mail className='mr-3 mt-1 flex-shrink-0' size={18} />
+                <span>info@stylestudio.com</span>
+              </a>
+            </li>
+            <li className='flex items-start'>
+              <MapPin className='mr-3 mt-1 flex-shrink-0' size={18} />
+              <span>69, Mettu Street, Srirangam, Pincode-620006, Trichy</span>
+            </li>
           </ul>
         </div>
-
       </div>
 
       <div>
         <hr />
-        <p className='py-5 text-sm text-center'>Copyright 2024 @ Prescripto.com - All Right Reserved.</p>
+        <p className='py-5 text-sm text-center'>Copyright 2024 @ StyleStudio.com - All Rights Reserved.</p>
       </div>
-
     </div>
   )
 }
