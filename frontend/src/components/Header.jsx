@@ -8,7 +8,7 @@ const Header = () => {
                 {/* --------- Header Left --------- */}
                 <div className='w-full md:w-1/2 flex flex-col items-center md:items-start justify-center gap-5 md:gap-6 mb-10 md:mb-0'>
                     <h1 className='text-3xl sm:text-4xl lg:text-5xl xl:text-6xl text-white font-bold leading-tight text-center md:text-left'>
-                        Book Your Style <br className='hidden md:block' /> With Expert Stylists
+                         Book Your Stylist <br className='hidden md:block' /> With Flexible Time
                     </h1>
                     
                     <div className='flex flex-col sm:flex-row items-center gap-4 text-white'>

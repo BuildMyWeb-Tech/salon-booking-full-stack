@@ -4,7 +4,7 @@ import { DoctorContext } from '../context/DoctorContext';
 import { AdminContext } from '../context/AdminContext';
 import { toast } from 'react-toastify';
 import { Eye, EyeOff } from 'lucide-react';
-import RegisterImage from '../assets/image.png';
+import RegisterImage from '../assets/image.jpeg';
 
 const AdminLogin = () => {
   const [state, setState] = useState('Admin');

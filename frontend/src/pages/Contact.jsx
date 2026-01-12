@@ -72,7 +72,7 @@ const Contact = () => {
                 <div className="mt-8 pt-6 border-t border-gray-200">
                   <h4 className="font-medium text-gray-800 mb-3">BOOK AN APPOINTMENT</h4>
                   <p className="text-gray-600 mb-4">Schedule your styling session with our expert team.</p>
-                  <a href="/appointment" className="inline-flex items-center bg-primary text-white px-6 py-3 rounded-md hover:bg-primary-dark transition duration-300">
+                  <a href="/doctor" className="inline-flex items-center bg-primary text-white px-6 py-3 rounded-md hover:bg-primary-dark transition duration-300">
                     <CalendarRange className="w-5 h-5 mr-2" />
                     Book Now
                   </a>
@@ -122,7 +122,7 @@ const Contact = () => {
         </div>
         
         {/* Contact Form */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        {/* <div className="bg-white rounded-lg shadow-lg p-8">
           <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Send Us a Message</h3>
           <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-1">
@@ -187,7 +187,7 @@ const Contact = () => {
               </button>
             </div>
           </form>
-        </div>
+        </div> */}
       </div>
     </div>
   )

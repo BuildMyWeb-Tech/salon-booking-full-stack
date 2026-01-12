@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from 'react'
 import { assets } from '../assets/assets'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { AppContext } from '../context/AppContext'
-import { Home, Grid, Calendar, User, Scissors, Info, Phone, X, Menu } from 'lucide-react'
+import { Home, Grid, Calendar,CalendarCheck , User, Scissors, Info, Phone, X, Menu } from 'lucide-react'
 
 const Navbar = () => {
   const navigate = useNavigate()
@@ -64,12 +64,12 @@ const Navbar = () => {
                 <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive('/doctors') ? 'w-full' : 'group-hover:w-full'}`}></span>
               </li>
             </NavLink>
-            {/* <NavLink to='/services' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
+            <NavLink to='/services' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
               <li className='py-1 relative group'>
                 SERVICES
                 <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive('/services') ? 'w-full' : 'group-hover:w-full'}`}></span>
               </li>
-            </NavLink> */}
+            </NavLink>
             <NavLink to='/about' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
               <li className='py-1 relative group'>
                 ABOUT
@@ -180,14 +180,14 @@ const Navbar = () => {
                 <span>Home</span>
               </NavLink>
               
-              {/* <NavLink 
+              <NavLink 
                 to='/services' 
                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => setShowMenu(false)}
               >
                 <Grid size={20} />
                 <span>Services</span>
-              </NavLink> */}
+              </NavLink>
               
               <NavLink 
                 to='/doctors' 
@@ -270,22 +270,28 @@ const Navbar = () => {
       {/* Bottom Mobile Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-30 px-2 py-2">
         <div className="flex justify-around">
+          
           <NavLink to="/" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
             <Home size={20} />
             <span className="text-xs mt-1">Home</span>
           </NavLink>
-          
-          {/* <NavLink to="/services" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+
+          <NavLink to="/services" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
             <Grid size={20} />
-            <span className="text-xs mt-1">Services</span>
-          </NavLink> */}
-          
-          <NavLink to="/my-appointments" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
-            <Calendar size={20} />
-            <span className="text-xs mt-1">Bookings</span>
+            <span className="text-xs mt-1">Service</span>
           </NavLink>
-          
-          <NavLink to="/my-profile" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+
+          <NavLink to="/doctors" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+            <Scissors size={20} />
+            <span className="text-xs mt-1">Stylist</span>
+          </NavLink>
+
+          <NavLink to="/my-appointments" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+            <CalendarCheck size={20} />
+            <span className="text-xs mt-1">Appointment</span>
+          </NavLink>
+
+          <NavLink to="/profile" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
             <User size={20} />
             <span className="text-xs mt-1">Profile</span>
           </NavLink>

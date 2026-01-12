@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Chrome } from 'lucide-react';
-import RegisterImage from '../assets/image.png';
+import RegisterImage from '../assets/image.jpeg';
 import GoogleImage from '../assets/google-icon.png';
 
 const Login = () => {

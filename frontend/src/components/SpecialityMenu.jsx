@@ -27,7 +27,7 @@ const SpecialityMenu = () => {
           {specialityData.map((item, index) => (
             <Link
               key={index}
-              to={`/stylists/${item.speciality}`}
+              to={`/doctors`}
               onClick={() => scrollTo(0, 0)}
               className="group"
             >
@@ -49,17 +49,7 @@ const SpecialityMenu = () => {
                     {item.description || 'Book an appointment with our expert stylists specializing in this service.'}
                   </p>
                   
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-500">
-                      {item.serviceCount || '5+'} Services
-                    </span>
-                    <span className="flex items-center text-primary text-sm font-medium">
-                      Explore 
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </span>
-                  </div>
+                  
                 </div>
               </div>
             </Link>

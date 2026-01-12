@@ -49,6 +49,17 @@ const Sidebar = () => {
             <p className="hidden md:block">Bookings</p>
           </NavLink>
 
+          
+
+          
+          <NavLink to="/doctor-list" className={({ isActive }) =>
+            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
+            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
+          }>
+            <Users className={iconClass} />
+            <p className="hidden md:block">Stylists</p>
+          </NavLink>
+
           <NavLink to="/add-doctor" className={({ isActive }) =>
             `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
             ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
@@ -57,21 +68,14 @@ const Sidebar = () => {
             <p className="hidden md:block">Add Stylist</p>
           </NavLink>
 
-          <NavLink to="/services-category" className={({ isActive }) =>
+          {/* <NavLink to="/services-category" className={({ isActive }) =>
             `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
             ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
           }>
             <Scissors className={iconClass} />
             <p className="hidden md:block">Services</p>
-          </NavLink>
+          </NavLink> */}
 
-          <NavLink to="/doctor-list" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <Users className={iconClass} />
-            <p className="hidden md:block">Stylists</p>
-          </NavLink>
 
           {/* <NavLink to="/portfolio" className={({ isActive }) =>
             `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
@@ -100,7 +104,7 @@ const Sidebar = () => {
       )}
 
       {/* STYLIST SIDEBAR (formerly DOCTOR SIDEBAR) */}
-      {dToken && (
+      {/* {dToken && (
         <ul className="text-[#515151] mt-5">
           <NavLink to="/stylist-dashboard" className={({ isActive }) =>
             `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
@@ -158,7 +162,7 @@ const Sidebar = () => {
             <p className="hidden md:block">Settings</p>
           </NavLink>
         </ul>
-      )}
+      )} */}
     </div>
   );
 };

@@ -148,17 +148,7 @@ const AddStylist = () => {
                             </select>
                         </div>
 
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Base Price</label>
-                            <input 
-                                onChange={e => setPrice(e.target.value)} 
-                                value={price} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="number" 
-                                placeholder='Starting price for services' 
-                                required 
-                            />
-                        </div>
+                        
                     </div>
 
                     <div className='w-full lg:flex-1 flex flex-col gap-4'>
@@ -192,6 +182,18 @@ const AddStylist = () => {
                         </div>
 
                         <div className='flex-1 flex flex-col gap-1'>
+                            <label className='text-sm font-medium text-gray-700'>Base Price</label>
+                            <input 
+                                onChange={e => setPrice(e.target.value)} 
+                                value={price} 
+                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
+                                type="number" 
+                                placeholder='Starting price for services' 
+                                required 
+                            />
+                        </div>
+
+                        {/* <div className='flex-1 flex flex-col gap-1'>
                             <label className='text-sm font-medium text-gray-700'>Instagram Handle</label>
                             <input 
                                 onChange={e => setInstagram(e.target.value)} 
@@ -200,7 +202,7 @@ const AddStylist = () => {
                                 type="text" 
                                 placeholder='@username (optional)' 
                             />
-                        </div>
+                        </div> 
 
                         <div className='flex-1 flex flex-col gap-1'>
                             <label className='text-sm font-medium text-gray-700'>Working Hours</label>
@@ -212,7 +214,7 @@ const AddStylist = () => {
                                 placeholder='e.g. Tue-Sat: 10AM-7PM' 
                                 required 
                             />
-                        </div>
+                        </div>*/}
                     </div>
                 </div>
 
