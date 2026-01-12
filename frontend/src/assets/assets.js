@@ -38,11 +38,11 @@ import Neurologist from './Neurologist.svg'
 import Pediatricians from './Pediatricians.svg'
 
 import Hair_Styling from './hair-styling.jpeg';
-// import Beard_Grooming from './beard_grooming.png';
-// import Hair_Coloring from './hair_coloring.png';
-// import Hair_Treatment from './hair_treatment.png';
-// import Bridal_Hairstylist from './bridal_hairstylist.png';
-// import Unisex_Hairstylist from './unisex_hairstylist.png';
+import Beard_Grooming from './beard-grooming.jpeg';
+import Hair_Coloring from './hair-coloring_specialist.jpeg';
+import Hair_Treatment from './hair_treatment_specialist.jpeg';
+import Bridal_Hairstylist from './bridal_hairstylist.jpeg';
+import Unisex_Hairstylist from './unisex_hairstylist.jpeg';
 
 
 
@@ -71,24 +71,24 @@ export const specialityData = [{
         image: Hair_Styling
     },
     {
-        speciality: 'Gynecologist',
-        image: Gynecologist
+        speciality: 'Beard Grooming',
+        image: Beard_Grooming
     },
     {
-        speciality: 'Dermatologist',
-        image: Dermatologist
+        speciality: 'Hair Coloring Specialist',
+        image: Hair_Coloring
     },
     {
-        speciality: 'Pediatricians',
-        image: Pediatricians
+        speciality: 'Hair Treatment Specialist',
+        image: Hair_Treatment
     },
     {
-        speciality: 'Neurologist',
-        image: Neurologist
+        speciality: 'Bridal Hairstylist',
+        image: Bridal_Hairstylist
     },
     {
-        speciality: 'Gastroenterologist',
-        image: Gastroenterologist
+        speciality: 'Unisex Hairstylist',
+        image: Unisex_Hairstylist
     },
 ]
 
