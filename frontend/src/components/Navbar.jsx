@@ -43,12 +43,21 @@ const Navbar = () => {
       <nav className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${scrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 py-4'}`}>
         <div className='container mx-auto px-4 flex items-center justify-between'>
           {/* Logo */}
-          <img 
+          {/* <img 
             onClick={() => navigate('/')} 
             className='w-44 cursor-pointer' 
             src={assets.logo} 
             alt="StyleStudio Logo" 
-          />
+          /> */}
+
+          {/* Text Logo */}
+    <h1
+      onClick={() => navigate('/')}
+      className='text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent'
+    >
+
+      BuildMyWeb
+    </h1>
           
           {/* Desktop Navigation */}
           <ul className='hidden md:flex items-center gap-8 font-medium'>
@@ -58,7 +67,7 @@ const Navbar = () => {
                 <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive('/') ? 'w-full' : 'group-hover:w-full'}`}></span>
               </li>
             </NavLink>
-            <NavLink to='/doctors' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
+            <NavLink to='/stylists' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
               <li className='py-1 relative group'>
                 STYLISTS
                 <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive('/doctors') ? 'w-full' : 'group-hover:w-full'}`}></span>

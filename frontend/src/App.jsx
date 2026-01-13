@@ -1,5 +1,6 @@
 import React from 'react'
 import Navbar from './components/Navbar'
+import ScrollToTop from "./components/ScrollToTop";
 import { Routes, Route } from 'react-router-dom'
 import Home from './pages/Home'
 import Doctors from './pages/Doctors'
@@ -13,15 +14,20 @@ import Footer from './components/Footer'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Verify from './pages/Verify'
+import Services from './pages/Services'
 
 const App = () => {
   return (
     <div >
       <ToastContainer />
       <Navbar />
+        <ScrollToTop />
+
       <Routes>
         <Route path='/' element={<Home />} />
-        <Route path='/doctors' element={<Doctors />} />
+        <Route path='/stylists' element={<Doctors />} />
+        <Route path='/services' element={<Services />} />
+
         <Route path='/doctors/:speciality' element={<Doctors />} />
         <Route path='/login' element={<Login />} />
         <Route path='/about' element={<About />} />

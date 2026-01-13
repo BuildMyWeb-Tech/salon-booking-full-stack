@@ -226,7 +226,7 @@ const Appointment = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                                 <div className="bg-white p-4 rounded-lg border border-gray-100">
                                     <div className="text-sm text-gray-500">Appointment Fee</div>
-                                    <div className="text-xl font-bold text-gray-800 mt-1">{currencySymbol}{docInfo.fees}</div>
+                                     <div className="text-xl font-bold text-gray-800 mt-1"> {currencySymbol}{docInfo.price || docInfo.fees || 0} </div>
                                 </div>
                                 
                                 <div className="bg-white p-4 rounded-lg border border-gray-100">
@@ -346,7 +346,7 @@ const Appointment = () => {
                                 
                                 <div className="flex justify-between pt-2 border-t border-gray-200 mt-1">
                                     <span className="text-gray-600">Fee</span>
-                                    <span className="font-bold">{currencySymbol}{docInfo.fees}</span>
+    <span className="font-bold">{currencySymbol}{docInfo.price || docInfo.fees || 0}</span>
                                 </div>
                             </div>
                         </div>
