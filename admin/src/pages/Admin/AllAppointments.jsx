@@ -54,10 +54,10 @@ const AllAppointments = () => {
     
     // Search filter
     const searchString = (
-      appointment.userData.name.toLowerCase() + ' ' +
-      appointment.docData.name.toLowerCase() + ' ' +
-      appointment.docData.speciality.toLowerCase()
-    )
+  (appointment.userData?.name || '').toLowerCase() + ' ' +
+  (appointment.docData?.name || '').toLowerCase() + ' ' +
+  (appointment.docData?.specialty || '').toLowerCase()
+);
     
     const matchesSearch = searchTerm === '' || searchString.includes(searchTerm.toLowerCase())
     
@@ -171,7 +171,7 @@ const AllAppointments = () => {
                   'S.No': index + 1,
                   'Customer Name': item.userData?.name || '',
                   'Stylist Name': item.docData?.name || '',
-                  'Service': item.docData?.speciality || '',
+                  'Service': item.docData?.specialty || '',
                   'Date': formatDateForExport(item.slotDate) || '',
                   'Time': item.slotTime || '',
                   'Status': item.cancelled ? 'Cancelled' : 
@@ -414,7 +414,7 @@ const AllAppointments = () => {
                     
                     {/* Service */}
                     <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
-                      <div className="text-sm text-gray-900">{appointment.docData.speciality}</div>
+                      <div className="text-sm text-gray-900">{appointment.docData.specialty}</div>
                     </td>
                     
                     {/* Date & Time */}

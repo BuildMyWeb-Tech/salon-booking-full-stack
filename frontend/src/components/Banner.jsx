@@ -167,7 +167,7 @@ const Banner = () => {
                             <div className='h-80 sm:h-96 lg:h-full relative overflow-hidden'>
                                 <img 
                                     className='w-full h-full object-cover object-center' 
-                                    src={assets.hair_styling || assets.appointment_img}
+                                    src={assets.hair_styling || assets.banner_img}
                                     alt="Professional hair styling" 
                                 />
                                 

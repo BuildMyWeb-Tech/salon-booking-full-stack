@@ -57,16 +57,14 @@ const appointmentCancel = async (req, res) => {
 
 }
 
-// API for adding Doctor
+// API for adding Stylist
 const addDoctor = async (req, res) => {
-
     try {
-
-        const { name, email, password, speciality, degree, experience, about, fees, address } = req.body
+        const { name, email, password, specialty, experience, about, price, certification, instagram, workingHours } = req.body
         const imageFile = req.file
 
-        // checking for all data to add doctor
-        if (!name || !email || !password || !speciality || !degree || !experience || !about || !fees || !address) {
+        // checking for all data to add stylist
+        if (!name || !email || !password || !specialty || !experience || !about || !price || !certification) {
             return res.json({ success: false, message: "Missing Details" })
         }
 
@@ -81,30 +79,31 @@ const addDoctor = async (req, res) => {
         }
 
         // hashing user password
-        const salt = await bcrypt.genSalt(10); // the more no. round the more time it will take
+        const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt)
 
         // upload image to cloudinary
         const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" })
         const imageUrl = imageUpload.secure_url
 
-        const doctorData = {
+        const stylistData = {
             name,
             email,
             image: imageUrl,
             password: hashedPassword,
-            speciality,
-            degree,
+            specialty,
+            certification,
             experience,
             about,
-            fees,
-            address: JSON.parse(address),
+            price: Number(price),
+            instagram: instagram || "",
+            workingHours: workingHours || "10AM-7PM",
             date: Date.now()
         }
 
-        const newDoctor = new doctorModel(doctorData)
-        await newDoctor.save()
-        res.json({ success: true, message: 'Doctor Added' })
+        const newStylist = new doctorModel(stylistData)
+        await newStylist.save()
+        res.json({ success: true, message: 'Stylist Added Successfully' })
 
     } catch (error) {
         console.log(error)
