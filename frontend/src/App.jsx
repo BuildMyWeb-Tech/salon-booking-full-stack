@@ -16,7 +16,7 @@ import Verify from './pages/Verify'
 
 const App = () => {
   return (
-    <div className='mx-4 sm:mx-[10%]'>
+    <div >
       <ToastContainer />
       <Navbar />
       <Routes>
@@ -35,5 +35,5 @@ const App = () => {
     </div>
   )
 }
-
+// className='mx-4 sm:mx-[10%]'
 export default App
