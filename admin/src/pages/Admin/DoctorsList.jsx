@@ -178,7 +178,7 @@ const StylistsList = () => {
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="text-lg font-semibold text-gray-800">{stylist.name}</h3>
-                        <p className="text-primary font-medium text-sm">{stylist.speciality}</p>
+                        <p className="text-primary font-medium text-sm">{stylist.specialty}</p>
                       </div>
                       
                       {/* Rating (sample data) */}
@@ -234,14 +234,14 @@ const StylistsList = () => {
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="flex gap-2 mt-4">
+                    {/* <div className="flex gap-2 mt-4">
                       <button className="flex-1 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
                         View Profile
                       </button>
                       <button className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
                         Edit
                       </button>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               ))}
