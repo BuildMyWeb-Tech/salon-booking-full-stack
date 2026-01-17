@@ -28,12 +28,20 @@ const swaggerOptions = {
         email: 'support@example.com'
       },
     },
-    servers: [
-      {
-        url: `http://localhost:${port}`,
-        description: 'Development server',
-      },
-    ],
+   servers: [
+  {
+    url:
+      process.env.NODE_ENV === "production"
+        ? process.env.BACKEND_URL
+        : `http://localhost:${port}`,
+    description:
+      process.env.NODE_ENV === "production"
+        ? "Production server"
+        : "Development server",
+  },
+],
+
+
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -51,8 +59,17 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // middlewares
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://salon-booking.vercel.app",
+    "https://salon-admin.vercel.app"
+  ],
+  credentials: true
+}));
 
+app.set("trust proxy", 1);
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
