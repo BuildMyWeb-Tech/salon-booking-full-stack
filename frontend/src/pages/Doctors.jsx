@@ -1,143 +1,222 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import { useNavigate, useParams } from 'react-router-dom';
+import {
+  Star,
+  ChevronDown,
+  Filter,
+  Clock,
+  Calendar,
+  Award,
+  Search,
+  Sparkles,
+  Scissors
+} from 'lucide-react';
 
 const Stylists = () => {
   const { speciality } = useParams();
   const [filteredStylists, setFilteredStylists] = useState([]);
-  const [showFilter, setShowFilter] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
-  // Rename context variable from doctors to stylists
   const { doctors: stylists } = useContext(AppContext);
 
   const applyFilter = () => {
+    let filtered = [...stylists];
+
     if (speciality) {
-      setFilteredStylists(stylists.filter(stylist => stylist.speciality === speciality));
-    } else {
-      setFilteredStylists(stylists);
+      filtered = filtered.filter(s => s.speciality === speciality);
     }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        s =>
+          s.name.toLowerCase().includes(q) ||
+          s.speciality?.toLowerCase().includes(q)
+      );
+    }
+
+    setFilteredStylists(filtered);
   };
 
   useEffect(() => {
     applyFilter();
-  }, [stylists, speciality]);
+  }, [stylists, speciality, searchQuery]);
 
-  // Hair speciality categories
   const specialities = [
     'Hair Styling Specialist',
     'Beard & Grooming Specialist',
-    'Hair Coloring Specialist', 
+    'Hair Coloring Specialist',
     'Hair Treatment Specialist',
     'Bridal Hairstylist',
     'Unisex Hairstylist'
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Hero section */}
-      <div className="mb-10 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-800">
-          Professional Hair Stylists
-        </h1>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Find and book appointments with our expert stylists specializing in cuts, colors, treatments, and more.
-        </p>
+    <div className="bg-gray-50 min-h-screen pb-12">
+
+      {/* HERO */}
+      <div className="bg-gradient-to-r from-primary to-primary/90 text-white py-14">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <span className="inline-flex items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full text-sm mb-4">
+            <Sparkles size={16} className="text-yellow-300" />
+            Find Your Perfect Look
+          </span>
+
+          <h1 className="text-3xl md:text-5xl font-bold mb-4">
+            Professional Salon Stylists
+          </h1>
+
+          <p className="text-white/90 max-w-2xl mx-auto text-base md:text-lg">
+            Choose from expert hair stylists, grooming professionals, and bridal specialists
+            to transform your style with confidence.
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-start gap-6 mt-5">
-        {/* Filter section */}
-        <div className="w-full sm:w-64 mb-6 sm:mb-0">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-gray-800">Filter by Specialty</h3>
-            <button 
-              onClick={() => setShowFilter(!showFilter)} 
-              className="sm:hidden flex items-center gap-1 text-primary"
-            >
-              {showFilter ? 'Hide' : 'Show'} 
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </div>
-          
-          <div className={`flex flex-col gap-3 text-sm ${showFilter ? 'block' : 'hidden sm:block'}`}>
-            <div 
+      {/* FILTER BAR – ALWAYS VISIBLE */}
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4">
+
+          {/* FILTER BUTTONS */}
+          {/* <div className="flex gap-2 overflow-x-auto hide-scrollbar py-4">
+            <button
               onClick={() => navigate('/stylists')}
-              className={`px-4 py-3 my-3 rounded-lg cursor-pointer transition-all border ${!speciality ? 'bg-primary text-white border-primary' : 'border-gray-200 hover:bg-gray-50'}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap
+                ${!speciality ? 'bg-primary text-white' : 'bg-gray-100'}`}
             >
               All Stylists
-            </div>
-            
-            {specialities.map((spec, index) => (
-              <div 
-                key={index}
-                onClick={() => speciality === spec ? navigate('/stylists') : navigate(`/stylists/${spec}`)}
-                className={`px-4 py-3 my-3 rounded-lg cursor-pointer transition-all border ${speciality === spec ? 'bg-primary text-white border-primary' : 'border-gray-200 hover:bg-gray-50'}`}
+            </button>
+
+            {specialities.map((spec, i) => (
+              <button
+                key={i}
+                onClick={() =>
+                  speciality === spec
+                    ? navigate('/stylists')
+                    : navigate(`/stylists/${spec}`)
+                }
+                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap
+                  ${speciality === spec ? 'bg-primary text-white' : 'bg-gray-100'}`}
               >
                 {spec}
+              </button>
+            ))}
+          </div> */}
+
+          {/* SEARCH + SORT */}
+          <div className="flex flex-col sm:flex-row gap-3 pb-4 py-4">
+
+            {/* SEARCH */}
+            <div className="relative flex-1">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search stylist or service..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            {/* SORT */}
+            <select className="border border-gray-300 rounded-lg px-4 py-2.5 text-gray-700">
+              <option>Most Popular</option>
+              <option>Experience</option>
+              <option>Price: Low to High</option>
+              <option>Price: High to Low</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* CONTENT */}
+      <div className="max-w-7xl mx-auto px-4 pt-8">
+
+        {filteredStylists.length === 0 ? (
+          <div className="bg-white rounded-xl p-10 text-center border">
+            <Scissors size={36} className="mx-auto text-gray-400 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Stylists Found</h3>
+            <p className="text-gray-600 mb-6">
+              Try changing filters or searching another service.
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                navigate('/stylists');
+              }}
+              className="px-6 py-3 bg-primary text-white rounded-lg"
+            >
+              View All Stylists
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
+            {filteredStylists.map(stylist => (
+              <div
+                key={stylist._id}
+                onClick={() => {
+                  navigate(`/appointment/${stylist._id}`);
+                  scrollTo(0, 0);
+                }}
+                className="bg-white rounded-2xl overflow-hidden border hover:shadow-xl transition cursor-pointer"
+              >
+
+                {/* IMAGE */}
+                <div className="aspect-[4/5] relative overflow-hidden">
+                  <img
+                    src={stylist.image}
+                    alt={stylist.name}
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-700"
+                  />
+
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black p-4">
+                    <h3 className="text-white font-bold text-lg">
+                      {stylist.name}
+                    </h3>
+                    <p className="text-white/80 text-sm flex items-center gap-1">
+                      <Scissors size={14} />
+                      {stylist.speciality}
+                    </p>
+                  </div>
+                </div>
+
+                {/* INFO */}
+                <div className="p-4 space-y-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="flex items-center gap-1 text-gray-600">
+                      <Award size={14} className="text-primary" />
+                      {stylist.experience || '5 Years'}
+                    </span>
+                    <span className="font-semibold">
+                      ₹{stylist.price || stylist.fees || 500}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm bg-gray-50 p-2 rounded">
+                    <Clock size={14} className="text-primary" />
+                    Next Slot: Today 2:00 PM
+                  </div>
+
+                  <button className="w-full py-2.5 bg-primary text-white rounded-lg flex items-center justify-center gap-2">
+                    <Calendar size={16} />
+                    Book Appointment
+                  </button>
+                </div>
+
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Stylists grid */}
-        <div className="w-full">
-          {filteredStylists.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-gray-500">No stylists found for this specialty.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredStylists.map((stylist) => (
-                <div 
-                  key={stylist._id}
-                  onClick={() => { 
-                    navigate(`/appointment/${stylist._id}`); 
-                    scrollTo(0, 0); 
-                  }} 
-                  className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md border border-gray-100 cursor-pointer transform hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className="h-56 overflow-hidden">
-                    <img 
-                      className="w-full h-full object-cover" 
-                      src={stylist.image} 
-                      alt={stylist.name} 
-                    />
-                  </div>
-
-                  <div className="p-5">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-primary">
-                        {stylist.speciality}
-                      </span>
-                      <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${stylist.available ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        <span className={`w-2 h-2 rounded-full ${stylist.available ? 'bg-green-500' : 'bg-gray-500'}`}></span>
-                        <span>{stylist.available ? 'Available' : 'Unavailable'}</span>
-                      </div>
-                    </div>
-
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2">{stylist.name}</h3>
-                    
-                    <div className="flex items-center gap-1 mb-3">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <svg key={star} xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${star <= (stylist.rating || 4) ? 'text-yellow-400' : 'text-gray-300'}`} viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                      ))}
-                      <span className="text-sm text-gray-500">({stylist.reviewCount || '24'} reviews)</span>
-                    </div>
-
-                    <button className="w-full py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors">
-                      Book Appointment
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
       </div>
+
+      {/* SCROLLBAR HIDE */}
+      <style jsx>{`
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { scrollbar-width: none; }
+      `}</style>
     </div>
   );
 };

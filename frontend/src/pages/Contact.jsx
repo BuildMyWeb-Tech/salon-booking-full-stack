@@ -72,7 +72,7 @@ const Contact = () => {
                 <div className="mt-8 pt-6 border-t border-gray-200">
                   <h4 className="font-medium text-gray-800 mb-3">BOOK AN APPOINTMENT</h4>
                   <p className="text-gray-600 mb-4">Schedule your styling session with our expert team.</p>
-                  <a href="/doctor" className="inline-flex items-center bg-primary text-white px-6 py-3 rounded-md hover:bg-primary-dark transition duration-300">
+                  <a href="/stylists" className="inline-flex items-center bg-primary text-white px-6 py-3 rounded-md hover:bg-primary-dark transition duration-300">
                     <CalendarRange className="w-5 h-5 mr-2" />
                     Book Now
                   </a>
@@ -103,12 +103,19 @@ const Contact = () => {
                 <h3 className="text-2xl font-bold text-gray-800 mb-4">Our Styling Services</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
-                    "Haircut & Styling",
-                    "Color Services",
-                    "Hair Extensions",
-                    "Bridal Styling",
-                    "Hair Treatments",
-                    "Men's Grooming"
+
+                    "Hair Styling Specialist" , 
+                    "Beard & Grooming Specialist" , 
+                    "Hair Coloring Specialist" , 
+                    "Hair Treatment Specialist" , 
+                    "Bridal Hairstylist", 
+                    "Unisex Hairstylist" , 
+                    // "Haircut & Styling",
+                    // "Color Services",
+                    // "Hair Extensions",
+                    // "Bridal Styling",
+                    // "Hair Treatments",
+                    // "Men's Grooming"
                   ].map((service, index) => (
                     <div key={index} className="flex items-center">
                       <Scissors className="text-primary w-4 h-4 mr-3" />
