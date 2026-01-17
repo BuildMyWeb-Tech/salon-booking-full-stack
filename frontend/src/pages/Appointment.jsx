@@ -5,6 +5,7 @@ import { assets } from '../assets/assets'
 import RelatedDoctors from '../components/RelatedDoctors'
 import axios from 'axios'
 import { toast } from 'react-toastify'
+import { Phone } from "lucide-react";
 
 const Appointment = () => {
     const { docId } = useParams()
@@ -45,10 +46,10 @@ const Appointment = () => {
 
             // setting hours 
             if (today.getDate() === currentDate.getDate()) {
-                currentDate.setHours(currentDate.getHours() > 10 ? currentDate.getHours() + 1 : 10)
+                currentDate.setHours(currentDate.getHours() > 8 ? currentDate.getHours() + 1 : 8)
                 currentDate.setMinutes(currentDate.getMinutes() > 30 ? 30 : 0)
             } else {
-                currentDate.setHours(10)
+                currentDate.setHours(8)
                 currentDate.setMinutes(0)
             }
 
@@ -166,11 +167,21 @@ const Appointment = () => {
                             </div>
                             
                             <div className="mt-4 flex flex-col sm:flex-row md:flex-col gap-2">
-                                <button className="flex-1 flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg text-sm transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                    </svg>
-                                    Contact
+                                <button
+                                    onClick={() => {
+                                        if (docInfo?.phone) {
+                                        window.location.href = `tel:${docInfo.phone}`;
+                                        }
+                                    }}
+                                    disabled={!docInfo?.phone}
+                                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors
+                                        ${docInfo?.phone 
+                                        ? 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 cursor-pointer'
+                                        : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                        }`}
+                                    >
+                                    <Phone className="w-4 h-4" />
+                                    {docInfo?.phone ? `Call ${docInfo.name}` : 'Contact'}
                                 </button>
                                 
                                 
@@ -197,7 +208,7 @@ const Appointment = () => {
                                     </div>
                                 </div>
                                 
-                                <div className="flex items-center gap-1">
+                                {/* <div className="flex items-center gap-1">
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <svg 
                                             key={star} 
@@ -210,7 +221,7 @@ const Appointment = () => {
                                         </svg>
                                     ))}
                                     <span className="text-sm text-gray-500 ml-1">(76 reviews)</span>
-                                </div>
+                                </div> */}
                             </div>
                             
                             {/* About Section */}
@@ -235,8 +246,8 @@ const Appointment = () => {
                                 </div>
                                 
                                 <div className="bg-white p-4 rounded-lg border border-gray-100">
-                                    <div className="text-sm text-gray-500">Services</div>
-                                    <div className="text-xl font-bold text-gray-800 mt-1">25+ Services</div>
+                                    <div className="text-sm text-gray-500">Working Hours</div>
+                                    <div className="text-xl font-bold text-gray-800 mt-1">{docInfo.WorkingHours}</div>
                                 </div>
                             </div>
                         </div>

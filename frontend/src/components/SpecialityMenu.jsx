@@ -11,14 +11,13 @@ const SpecialityMenu = () => {
       <div className="container mx-auto">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">
-            Find Your Perfect Style
+            Our Styling Services
           </h2>
           
           <div className="w-20 h-1 bg-primary mx-auto mb-6"></div>
           
           <p className="text-gray-600">
-            Browse our collection of specialized styling services and find the
-            perfect stylist for your unique hair transformation.
+            Explore professional hair services tailored to your look, lifestyle, and personality — delivered by expert stylists using modern techniques.
           </p>
         </div>
 
@@ -27,7 +26,7 @@ const SpecialityMenu = () => {
           {specialityData.map((item, index) => (
             <Link
               key={index}
-              to={`/doctors`}
+              to={`/stylists`}
               onClick={() => scrollTo(0, 0)}
               className="group"
             >

@@ -4,8 +4,8 @@ import { AppContext } from '../context/AppContext'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { assets } from '../assets/assets'
-import { motion, AnimatePresence } from 'framer-motion' // You'll need to install this package
-import { Calendar, Clock, MapPin, AlertTriangle, X, ChevronLeft, Scissors } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Calendar, Clock, MapPin, AlertTriangle, X, ChevronLeft, Scissors, CreditCard, Phone, DollarSign } from 'lucide-react'
 
 const MyAppointments = () => {
     const { backendUrl, token } = useContext(AppContext)
@@ -21,6 +21,10 @@ const MyAppointments = () => {
     const [selectedDate, setSelectedDate] = useState('')
     const [selectedTime, setSelectedTime] = useState('')
     const [isLoading, setIsLoading] = useState(true)
+    const [dummyPaymentModal, setDummyPaymentModal] = useState(false)
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('')
+    const [currentAppointmentId, setCurrentAppointmentId] = useState(null)
+    const [processingPayment, setProcessingPayment] = useState(false)
 
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -38,7 +42,7 @@ const MyAppointments = () => {
             setAppointments(data.appointments.reverse())
         } catch (error) {
             console.log(error)
-            toast.error(error.message)
+            toast.error(error.message || 'Failed to load appointments')
         } finally {
             setIsLoading(false)
         }
@@ -64,41 +68,77 @@ const MyAppointments = () => {
             }
         } catch (error) {
             console.log(error)
-            toast.error(error.message)
+            toast.error(error.message || 'Failed to cancel appointment')
         }
     }
 
-    const initPay = (order) => {
-        const options = {
-            key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-            amount: order.amount,
-            currency: order.currency,
-            name: 'Haircut Session Payment',
-            description: "Styling Session Payment",
-            order_id: order.id,
-            receipt: order.receipt,
-            handler: async (response) => {
-                try {
-                    const { data } = await axios.post(backendUrl + "/api/user/verifyRazorpay", response, { headers: { token } });
-                    if (data.success) {
-                        toast.success("Payment successful! You can now reschedule if needed.")
-                        navigate('/my-appointments')
-                        getUserAppointments()
-                    }
-                } catch (error) {
-                    console.log(error)
-                    toast.error(error.message)
+    // Function for dummy Razorpay payment
+    const handleDummyRazorpayPayment = () => {
+        setProcessingPayment(true)
+        
+        // Simulate API call delay
+        setTimeout(() => {
+            // Simulate successful payment
+            const updatedAppointments = appointments.map(app => {
+                if (app._id === currentAppointmentId) {
+                    return { ...app, payment: true }
                 }
-            }
-        };
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-    };
+                return app
+            })
+            
+            setAppointments(updatedAppointments)
+            setDummyPaymentModal(false)
+            setProcessingPayment(false)
+            setPayment('')
+            setCurrentAppointmentId(null)
+            
+            toast.success("Payment successful! You can now reschedule if needed.")
+        }, 2000)
+    }
 
-    // Function to make payment using razorpay
+    // Function for dummy Stripe payment
+    const handleDummyStripePayment = () => {
+        setProcessingPayment(true)
+        
+        // Simulate API call delay
+        setTimeout(() => {
+            // Simulate successful payment
+            const updatedAppointments = appointments.map(app => {
+                if (app._id === currentAppointmentId) {
+                    return { ...app, payment: true }
+                }
+                return app
+            })
+            
+            setAppointments(updatedAppointments)
+            setDummyPaymentModal(false)
+            setProcessingPayment(false)
+            setPayment('')
+            setCurrentAppointmentId(null)
+            
+            toast.success("Payment successful! You can now reschedule if needed.")
+        }, 2000)
+    }
+
+    // Open dummy payment modal (for testing)
+    const openDummyPaymentModal = (appointmentId) => {
+        setCurrentAppointmentId(appointmentId)
+        setSelectedPaymentMethod('')
+        setDummyPaymentModal(true)
+    }
+
+    // Real payment functions (but will use the dummy ones for testing)
     const appointmentRazorpay = async (appointmentId) => {
+        // For testing purposes, use dummy payment
+        openDummyPaymentModal(appointmentId)
+        
+        /* Real implementation would be:
         try {
-            const { data } = await axios.post(backendUrl + '/api/user/payment-razorpay', { appointmentId }, { headers: { token } })
+            const { data } = await axios.post(
+                backendUrl + '/api/user/payment-razorpay', 
+                { appointmentId }, 
+                { headers: { token } }
+            )
             if (data.success) {
                 initPay(data.order)
             } else {
@@ -108,12 +148,20 @@ const MyAppointments = () => {
             console.log(error)
             toast.error(error.message)
         }
+        */
     }
 
-    // Function to make payment using stripe
     const appointmentStripe = async (appointmentId) => {
+        // For testing purposes, use dummy payment
+        openDummyPaymentModal(appointmentId)
+        
+        /* Real implementation would be:
         try {
-            const { data } = await axios.post(backendUrl + '/api/user/payment-stripe', { appointmentId }, { headers: { token } })
+            const { data } = await axios.post(
+                backendUrl + '/api/user/payment-stripe', 
+                { appointmentId }, 
+                { headers: { token } }
+            )
             if (data.success) {
                 const { session_url } = data
                 window.location.replace(session_url)
@@ -124,20 +172,60 @@ const MyAppointments = () => {
             console.log(error)
             toast.error(error.message)
         }
+        */
     }
 
     // Function to get available slots for rescheduling
     const getAvailableSlots = async (stylistId) => {
         try {
-            const { data } = await axios.get(backendUrl + `/api/user/available-slots/${stylistId}`, { headers: { token } })
+            // For demo purposes, generate some sample slots
+            const today = new Date()
+            const sampleSlots = []
+            
+            for (let i = 1; i <= 7; i++) {
+                const date = new Date()
+                date.setDate(today.getDate() + i)
+                
+                const day = date.getDate()
+                const month = date.getMonth() + 1
+                const year = date.getFullYear()
+                
+                const formattedDate = `${day}_${month}_${year}`
+                
+                const times = []
+                for (let hour = 10; hour <= 18; hour++) {
+                    if (Math.random() > 0.5) { // randomly include some times
+                        times.push(`${hour}:00 AM`)
+                    }
+                    if (Math.random() > 0.5) {
+                        times.push(`${hour}:30 AM`)
+                    }
+                }
+                
+                if (times.length > 0) {
+                    sampleSlots.push({
+                        date: formattedDate,
+                        times
+                    })
+                }
+            }
+            
+            setAvailableSlots(sampleSlots)
+            
+            /* Real implementation would be:
+            const { data } = await axios.get(
+                backendUrl + `/api/user/available-slots/${stylistId}`,
+                { headers: { token } }
+            )
             if (data.success) {
                 setAvailableSlots(data.availableSlots)
             } else {
                 toast.error(data.message)
             }
+            */
         } catch (error) {
             console.log(error)
-            toast.error(error.message)
+            toast.error(error.message || 'Failed to fetch available slots')
         }
     }
 
@@ -162,6 +250,26 @@ const MyAppointments = () => {
         }
 
         try {
+            // For testing, just update the appointments state
+            const updatedAppointments = appointments.map(app => {
+                if (app._id === appointmentToReschedule._id) {
+                    return {
+                        ...app,
+                        slotDate: selectedDate,
+                        slotTime: selectedTime
+                    }
+                }
+                return app
+            })
+            
+            setAppointments(updatedAppointments)
+            setRescheduleModal(false)
+            setSelectedDate('')
+            setSelectedTime('')
+            
+            toast.success("Appointment rescheduled successfully!")
+            
+            /* Real implementation would be:
             const { data } = await axios.post(
                 backendUrl + '/api/user/reschedule-appointment',
                 { 
@@ -181,15 +289,84 @@ const MyAppointments = () => {
             } else {
                 toast.error(data.message)
             }
+            */
         } catch (error) {
             console.log(error)
-            toast.error(error.message)
+            toast.error(error.message || 'Failed to reschedule appointment')
         }
+    }
+
+    // Generate sample appointment data for testing if needed
+    const generateSampleAppointments = () => {
+        const sampleData = [
+            {
+                _id: '1',
+                docData: {
+                    _id: '101',
+                    name: 'Emily Johnson',
+                    specialty: 'Hair Styling Specialist',
+                    image: 'https://images.unsplash.com/photo-1595959183082-7b570b7e08e2?q=80&w=300',
+                    address: {
+                        line1: 'StyleStudio Main Salon',
+                        line2: '69, Mettu Street, Srirangam'
+                    }
+                },
+                slotDate: '15_6_2023',
+                slotTime: '10:00 AM',
+                payment: false,
+                isCompleted: false,
+                cancelled: false
+            },
+            {
+                _id: '2',
+                docData: {
+                    _id: '102',
+                    name: 'Michael Rodriguez',
+                    specialty: 'Beard & Grooming Specialist',
+                    image: 'https://images.unsplash.com/photo-1618077360395-f3068be8e001?q=80&w=300',
+                    address: {
+                        line1: 'StyleStudio Main Salon',
+                        line2: '69, Mettu Street, Srirangam'
+                    }
+                },
+                slotDate: '18_6_2023',
+                slotTime: '2:30 PM',
+                payment: true,
+                isCompleted: false,
+                cancelled: false
+            },
+            {
+                _id: '3',
+                docData: {
+                    _id: '103',
+                    name: 'Sophia Williams',
+                    specialty: 'Hair Coloring Specialist',
+                    image: 'https://images.unsplash.com/photo-1605980776566-0486c3ac7617?q=80&w=300',
+                    address: {
+                        line1: 'StyleStudio Main Salon',
+                        line2: '69, Mettu Street, Srirangam'
+                    }
+                },
+                slotDate: '20_5_2023',
+                slotTime: '11:00 AM',
+                payment: true,
+                isCompleted: true,
+                cancelled: false
+            }
+        ]
+        
+        return sampleData
     }
 
     useEffect(() => {
         if (token) {
-            getUserAppointments()
+            // For testing purposes, use sample data instead of API call
+            const sampleAppointments = generateSampleAppointments()
+            setAppointments(sampleAppointments)
+            setIsLoading(false)
+            
+            // In real app, you'd use:
+            // getUserAppointments()
         }
     }, [token])
 
@@ -242,6 +419,15 @@ const MyAppointments = () => {
                                                 src={item.docData.image} 
                                                 alt={item.docData.name} 
                                             />
+                                            {item.docData.phone && (
+                                                <a 
+                                                    href={`tel:${item.docData.phone}`}
+                                                    className="mt-3 flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors w-full"
+                                                >
+                                                    <Phone size={14} />
+                                                    <span>Contact Stylist</span>
+                                                </a>
+                                            )}
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex justify-between flex-wrap gap-2 mb-3">
@@ -289,10 +475,23 @@ const MyAppointments = () => {
                                                         <p className="text-sm font-medium text-gray-500">Location</p>
                                                         <p className="text-gray-800">
                                                             {item.docData.address?.line1 || "StyleStudio Main Salon"},
+                                                            <br className="hidden sm:block" />
                                                             {item.docData.address?.line2 || " 69, Mettu Street, Srirangam"}
                                                         </p>
                                                     </div>
                                                 </div>
+                                                
+                                                {!item.payment && !item.cancelled && !item.isCompleted && (
+                                                    <div className="flex items-start">
+                                                        <AlertTriangle size={18} className="mt-0.5 mr-2 text-amber-500 flex-shrink-0" />
+                                                        <div>
+                                                            <p className="text-sm font-medium text-amber-600">Payment Required</p>
+                                                            <p className="text-gray-600 text-sm">
+                                                                Please complete payment to confirm your appointment
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -305,6 +504,7 @@ const MyAppointments = () => {
                                                     onClick={() => setPayment(item._id)} 
                                                     className="px-5 py-2 border border-primary text-primary rounded-md hover:bg-primary hover:text-white transition-colors flex items-center justify-center"
                                                 >
+                                                    <DollarSign size={16} className="mr-1.5" />
                                                     <span>Pay Now</span>
                                                 </button>
                                             )}
@@ -480,7 +680,7 @@ const MyAppointments = () => {
                             transition={{ type: "spring", damping: 20, stiffness: 300 }}
                         >
                             <div className="text-center mb-6">
-                                <div className="mx-auto flex items-center justify-center   w-16 rounded-full bg-red-100 mb-4">
+                                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
                                     <AlertTriangle size={30} className="text-red-600" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Cancel Appointment</h3>
@@ -508,6 +708,108 @@ const MyAppointments = () => {
                                 >
                                     Yes, Cancel
                                 </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+            
+            {/* Dummy Payment Modal for Testing */}
+            <AnimatePresence>
+                {dummyPaymentModal && (
+                    <div className="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+                        <motion.div 
+                            className="bg-white rounded-lg max-w-md w-full p-6"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                        >
+                            <div className="flex justify-between items-center mb-5">
+                                <h3 className="text-xl font-semibold text-gray-900">Complete Payment</h3>
+                                <button 
+                                    onClick={() => {
+                                        setDummyPaymentModal(false)
+                                        setSelectedPaymentMethod('')
+                                    }}
+                                    className="text-gray-400 hover:text-gray-500"
+                                    disabled={processingPayment}
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            
+                            <div className="border-b border-gray-200 pb-5">
+                                <p className="text-gray-500 mb-4">
+                                    Select a payment method to complete your booking:
+                                </p>
+                                
+                                <div className="space-y-3">
+                                    <div 
+                                        className={`border rounded-lg p-3 flex items-center cursor-pointer ${selectedPaymentMethod === 'stripe' ? 'border-primary bg-primary/5' : 'hover:bg-gray-50'}`}
+                                        onClick={() => setSelectedPaymentMethod('stripe')}
+                                    >
+                                        <div className="flex-shrink-0 mr-3">
+                                            <img className="h-8" src={assets.stripe_logo} alt="Stripe" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-800">Stripe</p>
+                                            <p className="text-sm text-gray-500">Pay with credit/debit card</p>
+                                        </div>
+                                        <div className="ml-auto">
+                                            <div className={`w-5 h-5 rounded-full border ${selectedPaymentMethod === 'stripe' ? 'border-primary' : 'border-gray-300'} flex items-center justify-center`}>
+                                                {selectedPaymentMethod === 'stripe' && <div className="w-3 h-3 rounded-full bg-primary"></div>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div 
+                                        className={`border rounded-lg p-3 flex items-center cursor-pointer ${selectedPaymentMethod === 'razorpay' ? 'border-primary bg-primary/5' : 'hover:bg-gray-50'}`}
+                                        onClick={() => setSelectedPaymentMethod('razorpay')}
+                                    >
+                                        <div className="flex-shrink-0 mr-3">
+                                            <img className="h-8" src={assets.razorpay_logo} alt="Razorpay" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-800">Razorpay</p>
+                                            <p className="text-sm text-gray-500">Pay with UPI, cards, or bank transfer</p>
+                                        </div>
+                                        <div className="ml-auto">
+                                            <div className={`w-5 h-5 rounded-full border ${selectedPaymentMethod === 'razorpay' ? 'border-primary' : 'border-gray-300'} flex items-center justify-center`}>
+                                                {selectedPaymentMethod === 'razorpay' && <div className="w-3 h-3 rounded-full bg-primary"></div>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="pt-5">
+                                <div className="flex justify-between items-center mb-4">
+                                    <span className="text-gray-500">Amount:</span>
+                                    <span className="text-lg font-semibold">₹1,200</span>
+                                </div>
+                                
+                                <button
+                                    onClick={selectedPaymentMethod === 'stripe' ? handleDummyStripePayment : handleDummyRazorpayPayment}
+                                    disabled={!selectedPaymentMethod || processingPayment}
+                                    className="w-full py-3 bg-primary text-white rounded-md hover:bg-primary/90 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center"
+                                >
+                                    {processingPayment ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CreditCard size={18} className="mr-2" />
+                                            Pay Now
+                                        </>
+                                    )}
+                                </button>
+                                
+                                <p className="text-xs text-gray-500 text-center mt-3">
+                                    This is a test payment and won't charge your card. For testing the rescheduling functionality only.
+                                </p>
                             </div>
                         </motion.div>
                     </div>
