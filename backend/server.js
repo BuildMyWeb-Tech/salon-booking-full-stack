@@ -63,7 +63,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
   "https://salon-booking-frontend-nu.vercel.app",
-  "https://salon-admin.vercel.app"
+  "https://salon-booking-admin.vercel.app/"
 ];
 
 app.use(cors({
