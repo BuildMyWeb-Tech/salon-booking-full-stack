@@ -21,47 +21,8 @@ const StylistPanel = () => {
           price: 1800,
           status: 'confirmed',
           image: 'https://randomuser.me/api/portraits/women/44.jpg'
-        },
-        {
-          id: '2',
-          clientName: 'John Smith',
-          service: 'Beard Grooming',
-          date: '2023-06-15',
-          time: '11:30 AM',
-          price: 600,
-          status: 'completed',
-          image: 'https://randomuser.me/api/portraits/men/32.jpg'
-        },
-        {
-          id: '3',
-          clientName: 'Sophia Patel',
-          service: 'Hair Treatment',
-          date: '2023-06-15',
-          time: '2:00 PM',
-          price: 1200,
-          status: 'pending',
-          image: 'https://randomuser.me/api/portraits/women/66.jpg'
-        },
-        {
-          id: '4',
-          clientName: 'Alex Johnson',
-          service: 'Haircut & Styling',
-          date: '2023-06-16',
-          time: '9:30 AM',
-          price: 800,
-          status: 'confirmed',
-          image: 'https://randomuser.me/api/portraits/men/22.jpg'
-        },
-        {
-          id: '5',
-          clientName: 'Olivia Davis',
-          service: 'Bridal Hair & Makeup',
-          date: '2023-06-16',
-          time: '3:00 PM',
-          price: 3500,
-          status: 'pending',
-          image: 'https://randomuser.me/api/portraits/women/17.jpg'
         }
+        
       ];
       
       setAppointmentsList(demoAppointments);

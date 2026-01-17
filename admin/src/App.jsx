@@ -15,7 +15,8 @@ import Login from './pages/Login';
 import DoctorAppointments from './pages/Doctor/DoctorAppointments';
 import DoctorDashboard from './pages/Doctor/DoctorDashboard';
 import DoctorProfile from './pages/Doctor/DoctorProfile';
-import StylistPanel from './components/StylistPanel';
+// import StylistPanel from './components/StylistPanel';
+import MyProfile from './pages/Admin/MyProfile';
 
 const App = () => {
 
@@ -38,7 +39,8 @@ const App = () => {
           <Route path='/doctor-dashboard' element={<DoctorDashboard />} />
           <Route path='/doctor-appointments' element={<DoctorAppointments />} />
           <Route path='/doctor-profile' element={<DoctorProfile />} />
-                  <Route path="/stylist-panel" element={<StylistPanel />} />
+          {/* <Route path="/stylist-panel" element={<StylistPanel />} /> */}
+          <Route path="/my-profile" element={<MyProfile />} />
 
         </Routes>
       </div>
