@@ -1,21 +1,37 @@
 import React, { useEffect, useState } from 'react'
-import { assets } from '../../assets/assets'
 import { useContext } from 'react'
 import { AdminContext } from '../../context/AdminContext'
 import { AppContext } from '../../context/AppContext'
-import { Trash2, Calendar, XCircle } from 'lucide-react'
+import { 
+  Trash2, 
+  Calendar, 
+  XCircle, 
+  Download, 
+  Search,
+  CheckCircle,
+  RotateCcw,
+  AlertTriangle,
+  DollarSign,
+  X,
+  Check,
+  AlertCircle,
+  Filter
+} from 'lucide-react'
 import * as XLSX from 'xlsx'
-import { Download } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 
 const AllAppointments = () => {
-  const { aToken, appointments, cancelAppointment, getAllAppointments } = useContext(AdminContext)
+  const { aToken, appointments, cancelAppointment, getAllAppointments, markAppointmentCompleted, markAppointmentIncomplete } = useContext(AdminContext)
   const { slotDateFormat, calculateAge, currency } = useContext(AppContext)
   
   const [filterStatus, setFilterStatus] = useState('all')
+  const [filterPayment, setFilterPayment] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('date-desc')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [appointmentToDelete, setAppointmentToDelete] = useState(null)
   
   useEffect(() => {
     if (aToken) {
@@ -26,6 +42,7 @@ const AllAppointments = () => {
   // Clear all filters
   const clearFilters = () => {
     setFilterStatus('all')
+    setFilterPayment('all')
     setSearchTerm('')
     setStartDate('')
     setEndDate('')
@@ -43,7 +60,35 @@ const AllAppointments = () => {
     return new Date(dateStr);
   }
   
-  // Filter appointments based on status, search term, and date range
+  // Check if appointment time is past
+  const isAppointmentTimePast = (appointment) => {
+    const appointmentDate = parseDateString(appointment.slotDate);
+    
+    // Parse time (e.g., "10:00 AM")
+    const timeParts = appointment.slotTime.match(/(\d+):(\d+)\s*([APap][Mm])/);
+    if (timeParts) {
+      let [, hours, minutes, period] = timeParts;
+      hours = parseInt(hours);
+      minutes = parseInt(minutes);
+      
+      if (period.toUpperCase() === 'PM' && hours < 12) {
+        hours += 12;
+      } else if (period.toUpperCase() === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      appointmentDate.setHours(hours, minutes);
+      
+      // Add 30 minutes buffer time (appointment duration)
+      appointmentDate.setMinutes(appointmentDate.getMinutes() + 30);
+      
+      return new Date() > appointmentDate;
+    }
+    
+    return false;
+  }
+  
+  // Filter appointments based on status, payment status, search term, and date range
   const filteredAppointments = appointments.filter(appointment => {
     // Status filter
     const matchesStatus = 
@@ -52,12 +97,19 @@ const AllAppointments = () => {
       (filterStatus === 'completed' && appointment.isCompleted) ||
       (filterStatus === 'cancelled' && appointment.cancelled)
     
+    // Payment filter
+    const matchesPayment = 
+      filterPayment === 'all' ||
+      (filterPayment === 'paid' && appointment.payment) ||
+      (filterPayment === 'unpaid' && !appointment.payment)
+    
     // Search filter
     const searchString = (
-  (appointment.userData?.name || '').toLowerCase() + ' ' +
-  (appointment.docData?.name || '').toLowerCase() + ' ' +
-  (appointment.docData?.specialty || '').toLowerCase()
-);
+      (appointment.userData?.name || '').toLowerCase() + ' ' +
+      (appointment.userData?.phone || '').toLowerCase() + ' ' +
+      (appointment.docData?.name || '').toLowerCase() + ' ' +
+      (appointment.docData?.specialty || '').toLowerCase()
+    );
     
     const matchesSearch = searchTerm === '' || searchString.includes(searchTerm.toLowerCase())
     
@@ -89,7 +141,7 @@ const AllAppointments = () => {
       }
     }
     
-    return matchesStatus && matchesSearch && matchesDateRange
+    return matchesStatus && matchesPayment && matchesSearch && matchesDateRange
   })
   
   // Sort appointments
@@ -104,18 +156,55 @@ const AllAppointments = () => {
     return 0
   })
   
+  // Handle mark as completed
+  const handleMarkCompleted = (id) => {
+    markAppointmentCompleted(id)
+  }
+  
+  // Handle undo completed
+  const handleUndoCompleted = (id) => {
+    markAppointmentIncomplete(id)
+  }
+  
+  // Handle delete confirmation
+  const handleDeleteConfirmation = (appointment) => {
+    setAppointmentToDelete(appointment)
+    setShowDeleteModal(true)
+  }
+  
+  // Handle delete confirmed
+  const handleDeleteConfirmed = () => {
+    if (appointmentToDelete) {
+      cancelAppointment(appointmentToDelete._id)
+      setShowDeleteModal(false)
+      setAppointmentToDelete(null)
+    }
+  }
+  
   // Status badge component
   const StatusBadge = ({ appointment }) => {
+    // Check if appointment time is past and it's not marked as completed or cancelled
+    const isPastAndUnhandled = !appointment.isCompleted && !appointment.cancelled && isAppointmentTimePast(appointment);
+    
     if (appointment.cancelled) {
       return (
-        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium flex items-center gap-1">
+          <XCircle size={12} />
           Cancelled
         </span>
       )
     } else if (appointment.isCompleted) {
       return (
-        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+          <CheckCircle size={12} />
           Completed
+        </span>
+      )
+    } else if (isPastAndUnhandled) {
+      return (
+        <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium flex items-center gap-1">
+          <AlertCircle size={12} />
+          Overdue
         </span>
       )
     } else {
@@ -127,17 +216,38 @@ const AllAppointments = () => {
       
       if (apptDate.getTime() === today.getTime()) {
         return (
-          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1">
+            <Calendar size={12} />
             Today
           </span>
         )
       } else {
         return (
-          <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+          <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium flex items-center gap-1">
+            <Calendar size={12} />
             Upcoming
           </span>
         )
       }
+    }
+  }
+  
+  // Payment status badge component
+  const PaymentStatusBadge = ({ appointment }) => {
+    if (appointment.payment) {
+      return (
+        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+          <DollarSign size={12} />
+          Paid
+        </span>
+      )
+    } else {
+      return (
+        <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium flex items-center gap-1">
+          <AlertTriangle size={12} />
+          Unpaid
+        </span>
+      )
     }
   }
 
@@ -170,14 +280,16 @@ const AllAppointments = () => {
                 sortedAppointments.map((item, index) => ({
                   'S.No': index + 1,
                   'Customer Name': item.userData?.name || '',
+                  'Phone Number': item.userData?.phone || '',
                   'Stylist Name': item.docData?.name || '',
                   'Service': item.docData?.specialty || '',
                   'Date': formatDateForExport(item.slotDate) || '',
                   'Time': item.slotTime || '',
                   'Status': item.cancelled ? 'Cancelled' : 
-                           item.isCompleted ? 'Completed' : 'Upcoming',
-                  'Amount': item.amount ? `${currency}${item.amount}` : '0',
-                  'Payment Status': item.payment ? 'Paid' : 'Pending'
+                           item.isCompleted ? 'Completed' : 
+                           isAppointmentTimePast(item) ? 'Overdue' : 'Upcoming',
+                  'Payment Status': item.payment ? 'Paid' : 'Unpaid',
+                  'Amount': item.amount ? `${currency}${item.amount}` : '0'
                 }))
               )
 
@@ -201,71 +313,113 @@ const AllAppointments = () => {
           {/* Status and Search */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             {/* Left side - Filter tabs */}
-            <div className="flex items-center space-x-1 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-              <button 
-                onClick={() => setFilterStatus('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                  filterStatus === 'all' 
-                    ? 'bg-primary text-white' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                All Appointments
-              </button>
-              <button 
-                onClick={() => setFilterStatus('upcoming')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                  filterStatus === 'upcoming' 
-                    ? 'bg-primary text-white' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Upcoming
-              </button>
-              <button 
-                onClick={() => setFilterStatus('completed')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                  filterStatus === 'completed' 
-                    ? 'bg-primary text-white' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Completed
-              </button>
-              <button 
-                onClick={() => setFilterStatus('cancelled')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                  filterStatus === 'cancelled' 
-                    ? 'bg-primary text-white' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Cancelled
-              </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-gray-600 mr-1 flex items-center">
+                <Filter size={15} className="mr-1" /> Status:
+              </span>
+              <div className="flex items-center space-x-1 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                <button 
+                  onClick={() => setFilterStatus('all')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                    filterStatus === 'all' 
+                      ? 'bg-primary text-white' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  All
+                </button>
+                <button 
+                  onClick={() => setFilterStatus('upcoming')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                    filterStatus === 'upcoming' 
+                      ? 'bg-primary text-white' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Upcoming
+                </button>
+                <button 
+                  onClick={() => setFilterStatus('completed')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                    filterStatus === 'completed' 
+                      ? 'bg-primary text-white' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Completed
+                </button>
+                <button 
+                  onClick={() => setFilterStatus('cancelled')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                    filterStatus === 'cancelled' 
+                      ? 'bg-primary text-white' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Cancelled
+                </button>
+              </div>
             </div>
             
-            {/* Search */}
-            <div className="relative w-full md:w-auto">
-              <input 
-                type="text" 
-                placeholder="Search appointments..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-9 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
-              />
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              
-              {searchTerm && (
+            {/* Payment Filter */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-gray-600 mr-1 flex items-center">
+                <DollarSign size={15} className="mr-1" /> Payment:
+              </span>
+              <div className="flex items-center space-x-1">
                 <button 
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  onClick={() => setFilterPayment('all')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                    filterPayment === 'all' 
+                      ? 'bg-primary text-white' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
                 >
-                  <XCircle size={18} />
+                  All
                 </button>
-              )}
+                <button 
+                  onClick={() => setFilterPayment('paid')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                    filterPayment === 'paid' 
+                      ? 'bg-primary text-white' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Paid
+                </button>
+                <button 
+                  onClick={() => setFilterPayment('unpaid')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                    filterPayment === 'unpaid' 
+                      ? 'bg-primary text-white' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Unpaid
+                </button>
+              </div>
             </div>
+          </div>
+          
+          {/* Search */}
+          <div className="relative w-full">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Search by customer, stylist, service, or phone number..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-9 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
+            />
+            
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <XCircle size={18} />
+              </button>
+            )}
           </div>
           
           {/* Date range and sorting */}
@@ -292,7 +446,7 @@ const AllAppointments = () => {
                 />
               </div>
               
-              {(startDate || endDate || searchTerm || filterStatus !== 'all') && (
+              {(startDate || endDate || searchTerm || filterStatus !== 'all' || filterPayment !== 'all') && (
                 <button
                   onClick={clearFilters}
                   className="text-primary hover:text-primary/80 text-sm flex items-center gap-1"
@@ -322,9 +476,7 @@ const AllAppointments = () => {
         <div className="overflow-x-auto">
           {sortedAppointments.length === 0 ? (
             <div className="py-16 flex flex-col items-center justify-center text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+              <Calendar size={48} className="text-gray-300 mb-4" />
               <p>No appointments found</p>
               <p className="text-sm mt-2">Try changing your filters or search term</p>
             </div>
@@ -336,22 +488,27 @@ const AllAppointments = () => {
                     Customer
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                    Stylist
+                    Phone
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                    Stylist
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                     Service
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date & Time
                   </th>
-                  
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Price
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -361,7 +518,7 @@ const AllAppointments = () => {
                 {sortedAppointments.map((appointment, index) => (
                   <tr key={index} className="hover:bg-gray-50 transition-colors">
                     
-                    {/* customer */}
+                    {/* Customer */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 relative">
@@ -373,13 +530,14 @@ const AllAppointments = () => {
                             />
                           ) : (
                             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                              {appointment.userData.name.charAt(0)}
+                              {appointment.userData.name?.charAt(0) || '?'}
                             </div>
                           )}
                           
                           <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-white ${
                             appointment.cancelled ? 'bg-red-400' : 
-                            appointment.isCompleted ? 'bg-green-400' : 'bg-blue-400'
+                            appointment.isCompleted ? 'bg-green-400' :
+                            isAppointmentTimePast(appointment) ? 'bg-amber-400' : 'bg-blue-400'
                           }`}></span>
                         </div>
                         
@@ -387,15 +545,19 @@ const AllAppointments = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {appointment.userData.name}
                           </div>
-                          <div className="text-xs text-gray-500 flex items-center gap-1">
-                            <span>{appointment.userData.phone || "No phone"}</span>
-                          </div>
                         </div>
                       </div>
                     </td>
 
-                    {/* Stylist */}
+                    {/* Phone */}
                     <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                      <div className="text-sm text-gray-900">
+                        {appointment.userData.phone || "N/A"}
+                      </div>
+                    </td>
+
+                    {/* Stylist */}
+                    <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-8 w-8">
                           <img 
@@ -413,7 +575,7 @@ const AllAppointments = () => {
                     </td>
                     
                     {/* Service */}
-                    <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                    <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                       <div className="text-sm text-gray-900">{appointment.docData.specialty}</div>
                     </td>
                     
@@ -427,33 +589,56 @@ const AllAppointments = () => {
                       </div>
                     </td>                  
                     
-                    
                     {/* Status */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge appointment={appointment} />
                     </td>
                     
+                    {/* Payment Status */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <PaymentStatusBadge appointment={appointment} />
+                    </td>
+                    
                     {/* Price */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {currency}{appointment.amount}
-                      {appointment.payment && (
-                        <span className="ml-2 px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded-full">
-                          Paid
-                        </span>
-                      )}
+                      {currency}{appointment.amount || 0}
                     </td>
                     
                     {/* Actions */}
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {!appointment.cancelled && !appointment.isCompleted && (
-                        <button 
-                          onClick={() => cancelAppointment(appointment._id)}
-                          className="text-red-600 hover:text-red-800 transition-colors"
-                          title="Cancel appointment"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      )}
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        {/* Complete/Undo Button */}
+                        {!appointment.cancelled && (
+                          appointment.isCompleted ? (
+                            <button 
+                              onClick={() => handleUndoCompleted(appointment._id)}
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                              title="Undo completion"
+                            >
+                              <RotateCcw size={18} />
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => handleMarkCompleted(appointment._id)}
+                              className="text-green-600 hover:text-green-800 transition-colors"
+                              title="Mark as completed"
+                            >
+                              <CheckCircle size={18} />
+                            </button>
+                          )
+                        )}
+                        
+                        {/* Cancel Button - Only show for non-cancelled appointments */}
+                        {!appointment.cancelled && (
+                          <button 
+                            onClick={() => handleDeleteConfirmation(appointment)}
+                            className="text-red-600 hover:text-red-800 transition-colors"
+                            title="Cancel appointment"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -468,10 +653,15 @@ const AllAppointments = () => {
             Showing {sortedAppointments.length} of {appointments.length} total appointments
           </div>
           
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-1">
               <span className="w-3 h-3 bg-purple-100 rounded-full"></span>
-              <span>Upcoming: {appointments.filter(a => !a.isCompleted && !a.cancelled).length}</span>
+              <span>Upcoming: {appointments.filter(a => !a.isCompleted && !a.cancelled && !isAppointmentTimePast(a)).length}</span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-amber-100 rounded-full"></span>
+              <span>Overdue: {appointments.filter(a => !a.isCompleted && !a.cancelled && isAppointmentTimePast(a)).length}</span>
             </div>
             
             <div className="flex items-center gap-1">
@@ -486,6 +676,47 @@ const AllAppointments = () => {
           </div>
         </div>
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-lg max-w-md w-full p-6"
+            >
+              <div className="mb-6 text-center">
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                  <AlertTriangle size={30} className="text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Cancel Appointment</h3>
+                <p className="text-gray-500">
+                  Are you sure you want to cancel the appointment for <span className="font-medium text-gray-700">{appointmentToDelete?.userData?.name}</span> on <span className="font-medium text-gray-700">{slotDateFormat(appointmentToDelete?.slotDate)} at {appointmentToDelete?.slotTime}</span>?
+                </p>
+              </div>
+              
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-5 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors flex-1 flex items-center justify-center gap-2"
+                >
+                  <X size={16} />
+                  <span>No, Keep It</span>
+                </button>
+                <button
+                  onClick={handleDeleteConfirmed}
+                  className="px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex-1 flex items-center justify-center gap-2"
+                >
+                  <Check size={16} />
+                  <span>Yes, Cancel</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
