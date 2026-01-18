@@ -78,33 +78,6 @@ const Stylists = () => {
       {/* FILTER BAR – ALWAYS VISIBLE */}
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4">
-
-          {/* FILTER BUTTONS */}
-          {/* <div className="flex gap-2 overflow-x-auto hide-scrollbar py-4">
-            <button
-              onClick={() => navigate('/stylists')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap
-                ${!speciality ? 'bg-primary text-white' : 'bg-gray-100'}`}
-            >
-              All Stylists
-            </button>
-
-            {specialities.map((spec, i) => (
-              <button
-                key={i}
-                onClick={() =>
-                  speciality === spec
-                    ? navigate('/stylists')
-                    : navigate(`/stylists/${spec}`)
-                }
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap
-                  ${speciality === spec ? 'bg-primary text-white' : 'bg-gray-100'}`}
-              >
-                {spec}
-              </button>
-            ))}
-          </div> */}
-
           {/* SEARCH + SORT */}
           <div className="flex flex-col sm:flex-row gap-3 pb-4 py-4">
 
@@ -205,7 +178,6 @@ const Stylists = () => {
                     Book Appointment
                   </button>
                 </div>
-
               </div>
             ))}
           </div>

@@ -1,19 +1,19 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { DoctorContext } from '../context/DoctorContext';
 import { AdminContext } from '../context/AdminContext';
+
 import {
-  LayoutDashboard,
-  CalendarClock,
-  UserPlus,
-  Scissors,
-  Users,
-  User,
-  Palette,
-  ImagePlus,
-  DollarSign,
-  Settings,
-  ShoppingBag
+  Home,
+  Calendar,
+  UserPlus2,
+  UsersRound,
+  ChevronLeft,
+  ChevronRight,
+  Cog,
+  MenuIcon,
+  X,
+  Scissors
 } from "lucide-react";
 
 const iconClass = "min-w-[23px] w-[23px] h-[23px]";
@@ -22,148 +22,278 @@ const Sidebar = () => {
   const { dToken } = useContext(DoctorContext);
   const { aToken } = useContext(AdminContext);
 
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-white border-r">
-      {/* LOGO AREA */}
-      <div className="py-5 px-6 border-b">
-        <h2 className="text-lg font-bold text-gray-800 hidden md:block">StyleStudio</h2>
-        <h2 className="text-lg font-bold text-gray-800 md:hidden">SS</h2>
+    <>
+      {/* MOBILE MENU BUTTON */}
+      <div className="fixed top-2 left-2 z-50 md:hidden">
+        <button 
+          onClick={() => setMobileOpen(true)}
+          className="bg-white p-2 rounded-full shadow-md text-primary hover:bg-gray-50 transition-all"
+        >
+          {!mobileOpen && <MenuIcon size={24} />}
+        </button>
       </div>
 
-      {/* ADMIN SIDEBAR */}
-      {aToken && (
-        <ul className="text-[#515151] mt-5">
-          <NavLink to="/" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <LayoutDashboard className={iconClass} />
-            <p className="hidden md:block">Dashboard</p>
-          </NavLink>
+      {/* DESKTOP SIDEBAR */}
+      <div 
+        className={`hidden md:flex flex-col bg-white border-r h-screen shadow-sm fixed z-40 
+        transition-all duration-300 ${collapsed ? "w-20" : "w-64"}`}
+      >
+        {/* Desktop Logo */}
+        <div className="py-5 px-6 border-b flex justify-between items-center">
+          {!collapsed ? (
+            <div>
+              <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
+                StyleStudio
+              </h2>
+              <p className="text-xs text-gray-400">Stylist Admin</p>
+            </div>
+          ) : (
+            <div className="w-full flex justify-center">
+              <Scissors className="text-primary" size={24} />
+            </div>
+          )}
 
-          <NavLink to="/all-appointments" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <CalendarClock className={iconClass} />
-            <p className="hidden md:block">Bookings</p>
-          </NavLink>
+          {/* Collapse Toggle Button */}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="text-gray-500 hover:text-primary p-1 rounded-md hover:bg-gray-100 transition-all"
+          >
+            {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </button>
+        </div>
 
-          
+        {/* Desktop Menu */}
+        {aToken && (
+          <ul className="text-[#515151] mt-5 flex flex-col gap-1">
+            
+            {/* Dashboard */}
+            <li>
+              <NavLink to="/" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                 ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <Home className={iconClass} />
+                {!collapsed && <p>Dashboard</p>}
+              </NavLink>
+            </li>
 
-          
-          <NavLink to="/stylist-list" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <Users className={iconClass} />
-            <p className="hidden md:block">Stylists</p>
-          </NavLink>
+            {/* Appointments */}
+            <li>
+              <NavLink to="/all-appointments" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                 ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <Calendar className={iconClass} />
+                {!collapsed && <p>Appointments</p>}
+              </NavLink>
+            </li>
 
-          <NavLink to="/add-stylist" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <UserPlus className={iconClass} />
-            <p className="hidden md:block">Add Stylist</p>
-          </NavLink>
+            {/* Stylists */}
+            <li>
+              <NavLink to="/stylist-list" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <UsersRound className={iconClass} />
+                {!collapsed && <p>Stylists</p>}
+              </NavLink>
+            </li>
 
-          {/* <NavLink to="/services-category" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <Scissors className={iconClass} />
-            <p className="hidden md:block">Services</p>
-          </NavLink> */}
+            {/* Add Stylist */}
+            <li>
+              <NavLink to="/add-stylist" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <UserPlus2 className={iconClass} />
+                {!collapsed && <p>Add Stylist</p>}
+              </NavLink>
+            </li>
 
+            {/* Settings */}
+            <li>
+              <NavLink to="/my-profile" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <Cog className={iconClass} />
+                {!collapsed && <p>Settings</p>}
+              </NavLink>
+            </li>
 
-          {/* <NavLink to="/portfolio" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <ImagePlus className={iconClass} />
-            <p className="hidden md:block">Portfolio</p>
-          </NavLink>
+          </ul>
+        )}
+      </div>
 
-          <NavLink to="/products" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <ShoppingBag className={iconClass} />
-            <p className="hidden md:block">Products</p>
-          </NavLink> 
+      {/* MOBILE SIDEBAR OVERLAY */}
+      <div className={`md:hidden fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 
+        ${mobileOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setMobileOpen(false)}
+      >
+        {/* MOBILE SIDEBAR PANEL */}
+        <div 
+          className={`absolute top-0 left-0 h-screen w-64 bg-white shadow-lg transform transition-transform duration-300 
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Mobile Header */}
+          <div className="py-5 px-6 border-b flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
+                StyleStudio
+              </h2>
+              <p className="text-xs text-gray-400">Stylist Admin</p>
+            </div>
 
-          <NavLink to="/finances" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <DollarSign className={iconClass} />
-            <p className="hidden md:block">Finances</p>
-          </NavLink>*/}
-        </ul>
+            {/* ALWAYS show X when mobileOpen */}
+            {mobileOpen && (
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="text-gray-600 hover:text-primary p-1 rounded-full hover:bg-gray-100 transition"
+              >
+                <X size={24} />
+              </button>
+            )}
+          </div>
+
+          {/* Mobile Menu */}
+          <ul className="text-[#515151] mt-5 flex flex-col gap-1">
+
+            <li>
+              <NavLink 
+                to="/" 
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5
+                   ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                }
+                onClick={() => setMobileOpen(false)}
+              >
+                <Home className={iconClass} />
+                <p>Dashboard</p>
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink 
+                to="/all-appointments" 
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5
+                   ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                }
+                onClick={() => setMobileOpen(false)}
+              >
+                <Calendar className={iconClass} />
+                <p>Appointments</p>
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink 
+                to="/stylist-list" 
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5
+                   ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                }
+                onClick={() => setMobileOpen(false)}
+              >
+                <UsersRound className={iconClass} />
+                <p>Stylists</p>
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink 
+                to="/add-stylist" 
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5
+                   ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                }
+                onClick={() => setMobileOpen(false)}
+              >
+                <UserPlus2 className={iconClass} />
+                <p>Add Stylist</p>
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink 
+                to="/my-profile" 
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5
+                   ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                }
+                onClick={() => setMobileOpen(false)}
+              >
+                <Cog className={iconClass} />
+                <p>Settings</p>
+              </NavLink>
+            </li>
+
+          </ul>
+        </div>
+      </div>
+
+      {/* MOBILE BOTTOM NAV */}
+      {!mobileOpen && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-xl py-2 z-30">
+          <div className="flex justify-around">
+            <NavLink 
+              to="/" 
+              className={({ isActive }) => 
+                `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
+              }
+            >
+              <Home className="w-6 h-6" />
+              <span>Dashboard</span>
+            </NavLink>
+
+            <NavLink 
+              to="/all-appointments" 
+              className={({ isActive }) => 
+                `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
+              }
+            >
+              <Calendar className="w-6 h-6" />
+              <span>Appointments</span>
+            </NavLink>
+
+            <NavLink 
+              to="/stylist-list" 
+              className={({ isActive }) => 
+                `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
+              }
+            >
+              <UsersRound className="w-6 h-6" />
+              <span>Stylists</span>
+            </NavLink>
+
+            <NavLink 
+              to="/add-stylist" 
+              className={({ isActive }) => 
+                `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
+              }
+            >
+              <UserPlus2 className="w-6 h-6" />
+              <span>Add Stylist</span>
+            </NavLink>
+
+            <NavLink 
+              to="/my-profile" 
+              className={({ isActive }) => 
+                `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
+              }
+            >
+              <Cog className="w-6 h-6" />
+              <span>Settings</span>
+            </NavLink>
+          </div>
+        </div>
       )}
-
-      {/* STYLIST SIDEBAR (formerly DOCTOR SIDEBAR) */}
-      {/* {dToken && (
-        <ul className="text-[#515151] mt-5">
-          <NavLink to="/stylist-dashboard" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <LayoutDashboard className={iconClass} />
-            <p className="hidden md:block">Dashboard</p>
-          </NavLink>
-
-          <NavLink to="/stylist-appointments" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <CalendarClock className={iconClass} />
-            <p className="hidden md:block">My Bookings</p>
-          </NavLink>
-
-          <NavLink to="/stylist-services" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <Scissors className={iconClass} />
-            <p className="hidden md:block">My Services</p>
-          </NavLink>
-
-          <NavLink to="/stylist-portfolio" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <Palette className={iconClass} />
-            <p className="hidden md:block">My Portfolio</p>
-          </NavLink>
-
-          <NavLink to="/stylist-clients" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <Users className={iconClass} />
-            <p className="hidden md:block">My Clients</p>
-          </NavLink>
-
-          <NavLink to="/stylist-profile" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <User className={iconClass} />
-            <p className="hidden md:block">Profile</p>
-          </NavLink>
-
-          <NavLink to="/stylist-settings" className={({ isActive }) =>
-            `flex items-center gap-3 py-3.5 px-3 md:px-9 md:min-w-72 cursor-pointer
-            ${isActive ? 'bg-[#F2F3FF] border-r-4 border-primary' : ''}`
-          }>
-            <Settings className={iconClass} />
-            <p className="hidden md:block">Settings</p>
-          </NavLink>
-        </ul>
-      )} */}
-    </div>
+    </>
   );
 };
 
