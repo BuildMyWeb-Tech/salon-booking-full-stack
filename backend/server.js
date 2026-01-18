@@ -28,12 +28,19 @@ const swaggerOptions = {
         email: 'support@example.com'
       },
     },
-    servers: [
-      {
-        url: `http://localhost:${port}`,
-        description: 'Development server',
-      },
-    ],
+  servers: [
+  {
+    url: process.env.NODE_ENV === "production"
+      ? process.env.BACKEND_URL
+      : `http://localhost:${port}`,
+    description: process.env.NODE_ENV === "production"
+      ? "Production server"
+      : "Development server",
+  },
+],
+
+
+
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -51,8 +58,28 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // middlewares
 app.use(express.json())
-app.use(cors())
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://salon-booking-frontend-nu.vercel.app",
+  "https://salon-booking-admin.vercel.app"
+];
+
+app.use(cors({
+  origin: function(origin, callback){
+    // allow requests with no origin (like mobile apps or curl)
+    if(!origin) return callback(null, true);
+    if(allowedOrigins.indexOf(origin) === -1){
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
+
+app.set("trust proxy", 1);
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
