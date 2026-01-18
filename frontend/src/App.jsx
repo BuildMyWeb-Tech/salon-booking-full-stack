@@ -1,5 +1,5 @@
 // App.jsx
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 
 import Navbar from './components/Navbar'
@@ -25,11 +25,12 @@ import { X, Download } from 'lucide-react'
 const App = () => {
   const location = useLocation()
 
-  // ===== PWA INSTALL STATE =====
   const [installPrompt, setInstallPrompt] = useState(null)
   const [showInstallModal, setShowInstallModal] = useState(false)
 
-  // ===== CAPTURE PWA INSTALL EVENT =====
+  const hasShownOnce = useRef(false)
+
+  // ===== CAPTURE INSTALL PROMPT (ANDROID / DESKTOP) =====
   useEffect(() => {
     const handler = (e) => {
       e.preventDefault()
@@ -40,39 +41,49 @@ const App = () => {
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
-  // ===== SHOW INSTALL MODAL EVERY 5 SEC (DESKTOP ONLY) =====
+  // ===== POPUP TIMERS =====
   useEffect(() => {
     if (location.pathname === '/login') return
 
-    const isDesktop = window.innerWidth >= 1024
-    if (!isDesktop || !installPrompt) return
-
-    const interval = setInterval(() => {
+    // FIRST TIME → 5 seconds
+    const firstTimer = setTimeout(() => {
       setShowInstallModal(true)
+      hasShownOnce.current = true
     }, 5000)
 
-    return () => clearInterval(interval)
-  }, [installPrompt, location.pathname])
+    // EVERY 1 MIN AFTER
+    const intervalTimer = setInterval(() => {
+      if (hasShownOnce.current) {
+        setShowInstallModal(true)
+      }
+    }, 60000)
+
+    return () => {
+      clearTimeout(firstTimer)
+      clearInterval(intervalTimer)
+    }
+  }, [location.pathname])
 
   // ===== CLOSE WITH ESC =====
   useEffect(() => {
-    const handleEsc = (e) => {
+    const escHandler = (e) => {
       if (e.key === 'Escape') {
         setShowInstallModal(false)
       }
     }
-
-    document.addEventListener('keydown', handleEsc)
-    return () => document.removeEventListener('keydown', handleEsc)
+    document.addEventListener('keydown', escHandler)
+    return () => document.removeEventListener('keydown', escHandler)
   }, [])
 
   // ===== INSTALL BUTTON =====
   const installApp = async () => {
-    if (!installPrompt) return
+    if (!installPrompt) {
+      alert('Use browser menu → "Add to Home Screen"')
+      return
+    }
 
     installPrompt.prompt()
     await installPrompt.userChoice
-
     setInstallPrompt(null)
     setShowInstallModal(false)
   }
@@ -84,28 +95,28 @@ const App = () => {
       <Navbar />
       <ScrollToTop />
 
-      {/* ===== INSTALL PWA MODAL ===== */}
+      {/* ===== INSTALL POPUP (MOBILE + LAPTOP) ===== */}
       {showInstallModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-[90%] max-w-sm rounded-xl bg-white p-6 text-center shadow-xl animate-fadeIn relative">
-            
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-xl animate-fadeIn relative">
+
             <button
               onClick={() => setShowInstallModal(false)}
-              className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              className="absolute top-3 right-3 rounded-full p-1 text-gray-400 hover:bg-gray-100"
             >
               <X size={18} />
             </button>
 
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Download size={28} />
+              <Download size={26} />
             </div>
 
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900">
               Install StyleStudio App
             </h2>
 
             <p className="mt-2 text-sm text-gray-600">
-              Quick access to appointments, offers, and seamless booking.
+              Faster booking, easy access & smooth experience.
             </p>
 
             <button
@@ -117,7 +128,7 @@ const App = () => {
 
             <button
               onClick={() => setShowInstallModal(false)}
-              className="mt-3 w-full text-sm text-gray-500 hover:text-gray-700"
+              className="mt-3 w-full text-sm text-gray-500"
             >
               Maybe later
             </button>
