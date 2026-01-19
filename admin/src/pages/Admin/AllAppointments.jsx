@@ -22,7 +22,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 
 const AllAppointments = () => {
   const { aToken, appointments, cancelAppointment, getAllAppointments, markAppointmentCompleted, markAppointmentIncomplete } = useContext(AdminContext)
-  const { slotDateFormat, calculateAge, currency } = useContext(AppContext)
+  const { currency } = useContext(AppContext)
   
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterPayment, setFilterPayment] = useState('all')
@@ -32,12 +32,20 @@ const AllAppointments = () => {
   const [endDate, setEndDate] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [appointmentToDelete, setAppointmentToDelete] = useState(null)
+  const [localAppointments, setLocalAppointments] = useState([])
+  
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
   
   useEffect(() => {
     if (aToken) {
       getAllAppointments()
     }
   }, [aToken])
+  
+  // Update local appointments when server data changes
+  useEffect(() => {
+    setLocalAppointments(appointments)
+  }, [appointments])
   
   // Clear all filters
   const clearFilters = () => {
@@ -49,12 +57,29 @@ const AllAppointments = () => {
     setSortBy('date-desc')
   }
   
+  // Function to format the date eg. ( 20_01_2000 => 20 Jan 2000 )
+  const slotDateFormat = (slotDate) => {
+    if (!slotDate || !slotDate.includes('_')) return 'Invalid Date';
+    
+    const dateArray = slotDate.split('_');
+    if (dateArray.length !== 3) return 'Invalid Date';
+    
+    const day = dateArray[0];
+    const month = Number(dateArray[1]) - 1; // JavaScript months are 0-indexed
+    const year = dateArray[2];
+    
+    // Make sure month is in valid range
+    if (month < 0 || month > 11) return 'Invalid Date';
+    
+    return `${day} ${months[month]} ${year}`;
+  };
+  
   // Helper function to parse date strings in DD_MM_YYYY format
   const parseDateString = (dateStr) => {
     // Check if date is in DD_MM_YYYY format
-    if (dateStr.includes('_')) {
+    if (dateStr && dateStr.includes('_')) {
       const [day, month, year] = dateStr.split('_').map(Number);
-      // Month is 0-indexed in JavaScript Date
+      // Month is 0-indexed in JavaScript Date, so we subtract 1 from month
       return new Date(year, month - 1, day);
     }
     return new Date(dateStr);
@@ -62,6 +87,8 @@ const AllAppointments = () => {
   
   // Check if appointment time is past
   const isAppointmentTimePast = (appointment) => {
+    if (!appointment || !appointment.slotDate || !appointment.slotTime) return false;
+    
     const appointmentDate = parseDateString(appointment.slotDate);
     
     // Parse time (e.g., "10:00 AM")
@@ -89,7 +116,7 @@ const AllAppointments = () => {
   }
   
   // Filter appointments based on status, payment status, search term, and date range
-  const filteredAppointments = appointments.filter(appointment => {
+  const filteredAppointments = localAppointments.filter(appointment => {
     // Status filter
     const matchesStatus = 
       filterStatus === 'all' ||
@@ -103,18 +130,18 @@ const AllAppointments = () => {
       (filterPayment === 'paid' && appointment.payment) ||
       (filterPayment === 'unpaid' && !appointment.payment)
     
-    // Search filter
-    const searchString = (
-      (appointment.userData?.name || '').toLowerCase() + ' ' +
-      (appointment.userData?.phone || '').toLowerCase() + ' ' +
-      (appointment.docData?.name || '').toLowerCase() + ' ' +
-      (appointment.docData?.specialty || '').toLowerCase()
-    );
+    // Search filter - handle null or undefined gracefully
+    const searchString = [
+      appointment.userData?.name || '',
+      appointment.userData?.phone || '',
+      appointment.docData?.name || '',
+      appointment.docData?.specialty || appointment.docData?.speciality || ''
+    ].map(s => s.toLowerCase()).join(' ');
     
-    const matchesSearch = searchTerm === '' || searchString.includes(searchTerm.toLowerCase())
+    const matchesSearch = !searchTerm || searchString.includes(searchTerm.toLowerCase());
     
     // Date filter
-    let matchesDateRange = true
+    let matchesDateRange = true;
     if (startDate || endDate) {
       // Parse the appointment date correctly
       const appointmentDate = parseDateString(appointment.slotDate);
@@ -141,43 +168,72 @@ const AllAppointments = () => {
       }
     }
     
-    return matchesStatus && matchesPayment && matchesSearch && matchesDateRange
-  })
+    return matchesStatus && matchesPayment && matchesSearch && matchesDateRange;
+  });
   
   // Sort appointments
   const sortedAppointments = [...filteredAppointments].sort((a, b) => {
     const dateA = parseDateString(a.slotDate);
     const dateB = parseDateString(b.slotDate);
     
-    if (sortBy === 'date-asc') return dateA - dateB
-    if (sortBy === 'date-desc') return dateB - dateA
-    if (sortBy === 'price-asc') return a.amount - b.amount
-    if (sortBy === 'price-desc') return b.amount - a.amount
-    return 0
-  })
+    // Handle invalid dates
+    if (isNaN(dateA) && isNaN(dateB)) return 0;
+    if (isNaN(dateA)) return 1;
+    if (isNaN(dateB)) return -1;
+    
+    if (sortBy === 'date-asc') return dateA - dateB;
+    if (sortBy === 'date-desc') return dateB - dateA;
+    if (sortBy === 'price-asc') return (a.amount || 0) - (b.amount || 0);
+    if (sortBy === 'price-desc') return (b.amount || 0) - (a.amount || 0);
+    return 0;
+  });
   
-  // Handle mark as completed
+  // Handle mark as completed with local state update
   const handleMarkCompleted = (id) => {
-    markAppointmentCompleted(id)
+    // Update local state immediately for better UX
+    setLocalAppointments(prev => 
+      prev.map(app => 
+        app._id === id ? {...app, isCompleted: true} : app
+      )
+    );
+    
+    // Then update server
+    markAppointmentCompleted(id);
   }
   
-  // Handle undo completed
+  // Handle undo completed with local state update
   const handleUndoCompleted = (id) => {
-    markAppointmentIncomplete(id)
+    // Update local state immediately for better UX
+    setLocalAppointments(prev => 
+      prev.map(app => 
+        app._id === id ? {...app, isCompleted: false} : app
+      )
+    );
+    
+    // Then update server
+    markAppointmentIncomplete(id);
   }
   
   // Handle delete confirmation
   const handleDeleteConfirmation = (appointment) => {
-    setAppointmentToDelete(appointment)
-    setShowDeleteModal(true)
+    setAppointmentToDelete(appointment);
+    setShowDeleteModal(true);
   }
   
-  // Handle delete confirmed
+  // Handle delete confirmed with local state update
   const handleDeleteConfirmed = () => {
     if (appointmentToDelete) {
-      cancelAppointment(appointmentToDelete._id)
-      setShowDeleteModal(false)
-      setAppointmentToDelete(null)
+      // Update local state immediately for better UX
+      setLocalAppointments(prev => 
+        prev.map(app => 
+          app._id === appointmentToDelete._id ? {...app, cancelled: true} : app
+        )
+      );
+      
+      // Then update server
+      cancelAppointment(appointmentToDelete._id);
+      setShowDeleteModal(false);
+      setAppointmentToDelete(null);
     }
   }
   
@@ -208,7 +264,7 @@ const AllAppointments = () => {
         </span>
       )
     } else {
-      const today = new Date()
+      const today = new Date();
       today.setHours(0, 0, 0, 0); // Set to start of day for comparison
       
       const apptDate = parseDateString(appointment.slotDate);
@@ -253,9 +309,7 @@ const AllAppointments = () => {
 
   // Format date for Excel export (from DD_MM_YYYY to a more readable format)
   const formatDateForExport = (dateStr) => {
-    if (!dateStr || !dateStr.includes('_')) return dateStr;
-    const [day, month, year] = dateStr.split('_');
-    return `${day}/${month}/${year}`;
+    return slotDateFormat(dateStr) || dateStr;
   }
 
   return (
@@ -282,7 +336,7 @@ const AllAppointments = () => {
                   'Customer Name': item.userData?.name || '',
                   'Phone Number': item.userData?.phone || '',
                   'Stylist Name': item.docData?.name || '',
-                  'Service': item.docData?.specialty || '',
+                  'Service': item.docData?.specialty || item.docData?.speciality || '',
                   'Date': formatDateForExport(item.slotDate) || '',
                   'Time': item.slotTime || '',
                   'Status': item.cancelled ? 'Cancelled' : 
@@ -522,7 +576,7 @@ const AllAppointments = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 relative">
-                          {appointment.userData.image ? (
+                          {appointment.userData?.image ? (
                             <img 
                               className="h-10 w-10 rounded-full object-cover" 
                               src={appointment.userData.image} 
@@ -530,7 +584,7 @@ const AllAppointments = () => {
                             />
                           ) : (
                             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                              {appointment.userData.name?.charAt(0) || '?'}
+                              {appointment.userData?.name?.charAt(0) || '?'}
                             </div>
                           )}
                           
@@ -543,7 +597,7 @@ const AllAppointments = () => {
                         
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {appointment.userData.name}
+                            {appointment.userData?.name || "N/A"}
                           </div>
                         </div>
                       </div>
@@ -552,7 +606,7 @@ const AllAppointments = () => {
                     {/* Phone */}
                     <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell">
                       <div className="text-sm text-gray-900">
-                        {appointment.userData.phone || "N/A"}
+                        {appointment.userData?.phone || "N/A"}
                       </div>
                     </td>
 
@@ -560,15 +614,21 @@ const AllAppointments = () => {
                     <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-8 w-8">
-                          <img 
-                            className="h-8 w-8 rounded-full object-cover border border-gray-200" 
-                            src={appointment.docData.image} 
-                            alt={appointment.docData.name}
-                          />
+                          {appointment.docData?.image ? (
+                            <img 
+                              className="h-8 w-8 rounded-full object-cover border border-gray-200" 
+                              src={appointment.docData.image} 
+                              alt={appointment.docData.name}
+                            />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700">
+                              <Scissors size={12} />
+                            </div>
+                          )}
                         </div>
                         <div className="ml-3">
                           <div className="text-sm font-medium text-gray-900">
-                            {appointment.docData.name}
+                            {appointment.docData?.name || "N/A"}
                           </div>
                         </div>
                       </div>
@@ -576,7 +636,9 @@ const AllAppointments = () => {
                     
                     {/* Service */}
                     <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
-                      <div className="text-sm text-gray-900">{appointment.docData.specialty}</div>
+                      <div className="text-sm text-gray-900">
+                        {appointment.service || appointment.docData?.specialty || appointment.docData?.speciality || "N/A"}
+                      </div>
                     </td>
                     
                     {/* Date & Time */}
@@ -585,7 +647,7 @@ const AllAppointments = () => {
                         {slotDateFormat(appointment.slotDate)}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {appointment.slotTime}
+                        {appointment.slotTime || "N/A"}
                       </div>
                     </td>                  
                     
@@ -601,7 +663,7 @@ const AllAppointments = () => {
                     
                     {/* Price */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {currency}{appointment.amount || 0}
+                      {currency}{appointment.amount || appointment.price || 0}
                     </td>
                     
                     {/* Actions */}
@@ -650,28 +712,28 @@ const AllAppointments = () => {
         {/* Footer with counts */}
         <div className="px-6 py-4 bg-gray-50 border-t flex flex-col sm:flex-row gap-3 justify-between items-center text-sm text-gray-500">
           <div>
-            Showing {sortedAppointments.length} of {appointments.length} total appointments
+            Showing {sortedAppointments.length} of {localAppointments.length} total appointments
           </div>
           
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-1">
               <span className="w-3 h-3 bg-purple-100 rounded-full"></span>
-              <span>Upcoming: {appointments.filter(a => !a.isCompleted && !a.cancelled && !isAppointmentTimePast(a)).length}</span>
+              <span>Upcoming: {localAppointments.filter(a => !a.isCompleted && !a.cancelled && !isAppointmentTimePast(a)).length}</span>
             </div>
             
             <div className="flex items-center gap-1">
               <span className="w-3 h-3 bg-amber-100 rounded-full"></span>
-              <span>Overdue: {appointments.filter(a => !a.isCompleted && !a.cancelled && isAppointmentTimePast(a)).length}</span>
+              <span>Overdue: {localAppointments.filter(a => !a.isCompleted && !a.cancelled && isAppointmentTimePast(a)).length}</span>
             </div>
             
             <div className="flex items-center gap-1">
               <span className="w-3 h-3 bg-green-100 rounded-full"></span>
-              <span>Completed: {appointments.filter(a => a.isCompleted).length}</span>
+              <span>Completed: {localAppointments.filter(a => a.isCompleted).length}</span>
             </div>
             
             <div className="flex items-center gap-1">
               <span className="w-3 h-3 bg-red-100 rounded-full"></span>
-              <span>Cancelled: {appointments.filter(a => a.cancelled).length}</span>
+              <span>Cancelled: {localAppointments.filter(a => a.cancelled).length}</span>
             </div>
           </div>
         </div>
