@@ -1,5 +1,5 @@
 // App.jsx
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 
 import Navbar from './components/Navbar'
@@ -28,9 +28,19 @@ const App = () => {
   const [installPrompt, setInstallPrompt] = useState(null)
   const [showInstallModal, setShowInstallModal] = useState(false)
 
-  const hasShownOnce = useRef(false)
+  let popupTimer = null
+  let popupInterval = null
 
-  // ===== CAPTURE INSTALL PROMPT (ANDROID / DESKTOP) =====
+  /* ================================
+     CHECK IF APP IS ALREADY INSTALLED
+  ================================= */
+  const isPWAInstalled =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+
+  /* ================================
+     CAPTURE INSTALL PROMPT
+  ================================= */
   useEffect(() => {
     const handler = (e) => {
       e.preventDefault()
@@ -38,53 +48,74 @@ const App = () => {
     }
 
     window.addEventListener('beforeinstallprompt', handler)
+
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
-  // ===== POPUP TIMERS =====
+  /* ================================
+     POPUP DISPLAY LOGIC
+  ================================= */
   useEffect(() => {
     if (location.pathname === '/login') return
+    if (isPWAInstalled) return
+    if (localStorage.getItem('app_installed') === 'true') return
 
-    // FIRST TIME → 5 seconds
-    const firstTimer = setTimeout(() => {
-      setShowInstallModal(true)
-      hasShownOnce.current = true
-    }, 5000)
+    const laterClicked = localStorage.getItem('install_later')
 
-    // EVERY 1 MIN AFTER
-    const intervalTimer = setInterval(() => {
-      if (hasShownOnce.current) {
+    // FIRST TIME VISIT → 5 seconds
+    if (!laterClicked) {
+      popupTimer = setTimeout(() => {
         setShowInstallModal(true)
-      }
-    }, 60000)
+      }, 5000)
+    }
+
+    // "Maybe Later" → every 1 minute
+    if (laterClicked === 'true') {
+      popupInterval = setInterval(() => {
+        setShowInstallModal(true)
+      }, 60000)
+    }
 
     return () => {
-      clearTimeout(firstTimer)
-      clearInterval(intervalTimer)
+      clearTimeout(popupTimer)
+      clearInterval(popupInterval)
     }
-  }, [location.pathname])
+  }, [location])
 
-  // ===== CLOSE WITH ESC =====
+  /* ================================
+     ESC KEY CLOSE
+  ================================= */
   useEffect(() => {
     const escHandler = (e) => {
-      if (e.key === 'Escape') {
-        setShowInstallModal(false)
-      }
+      if (e.key === 'Escape') setShowInstallModal(false)
     }
+
     document.addEventListener('keydown', escHandler)
     return () => document.removeEventListener('keydown', escHandler)
   }, [])
 
-  // ===== INSTALL BUTTON =====
+  /* ================================
+     INSTALL APP
+  ================================= */
   const installApp = async () => {
-    if (!installPrompt) {
-      alert('Use browser menu → "Add to Home Screen"')
-      return
+    if (!installPrompt) return
+
+    await installPrompt.prompt()
+    const choice = await installPrompt.userChoice
+
+    if (choice.outcome === 'accepted') {
+      localStorage.setItem('app_installed', 'true')
     }
 
-    installPrompt.prompt()
-    await installPrompt.userChoice
+    setShowInstallModal(false)
     setInstallPrompt(null)
+  }
+
+  /* ================================
+     MAYBE LATER
+  ================================= */
+  const handleMaybeLater = () => {
+    localStorage.setItem('install_later', 'true')
     setShowInstallModal(false)
   }
 
@@ -95,28 +126,25 @@ const App = () => {
       <Navbar />
       <ScrollToTop />
 
-      {/* ===== INSTALL POPUP (MOBILE + LAPTOP) ===== */}
+      {/* ===== INSTALL MODAL ===== */}
       {showInstallModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-xl animate-fadeIn relative">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="relative w-[90%] max-w-sm rounded-xl bg-white p-6 text-center shadow-xl animate-fadeIn">
 
             <button
               onClick={() => setShowInstallModal(false)}
-              className="absolute top-3 right-3 rounded-full p-1 text-gray-400 hover:bg-gray-100"
+              className="absolute top-3 right-3 p-2 rounded-full hover:bg-gray-100"
             >
               <X size={18} />
             </button>
 
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Download size={26} />
             </div>
 
-            <h2 className="text-lg font-semibold text-gray-900">
-              Install StyleStudio App
-            </h2>
-
+            <h2 className="text-xl font-semibold">Install StyleStudio App</h2>
             <p className="mt-2 text-sm text-gray-600">
-              Faster booking, easy access & smooth experience.
+              Book appointments faster with our app experience.
             </p>
 
             <button
@@ -127,8 +155,8 @@ const App = () => {
             </button>
 
             <button
-              onClick={() => setShowInstallModal(false)}
-              className="mt-3 w-full text-sm text-gray-500"
+              onClick={handleMaybeLater}
+              className="mt-3 w-full text-sm text-gray-500 hover:text-gray-700"
             >
               Maybe later
             </button>
@@ -141,7 +169,6 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/stylists" element={<Doctors />} />
-          <Route path="/stylists/:speciality" element={<Doctors />} />
           <Route path="/services" element={<Services />} />
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />

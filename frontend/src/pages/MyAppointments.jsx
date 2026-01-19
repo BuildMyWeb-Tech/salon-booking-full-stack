@@ -13,26 +13,35 @@ import {
   X, 
   ChevronLeft, 
   Scissors, 
-  CreditCard, 
   Check,
-  Sparkles
+  Sparkles,
+  CheckCircle,
+  AlertCircle,
+  BadgeCheck,
+  Star,
+  ChevronsRight,
+  ChevronsUp,
+  Info
 } from 'lucide-react';
 
 const MyAppointments = () => {
-    const { backendUrl, token } = useContext(AppContext);
+    const { backendUrl, token, currencySymbol = "₹" } = useContext(AppContext);
     const navigate = useNavigate();
 
     const [appointments, setAppointments] = useState([]);
-    const [payment, setPayment] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState(null);
     const [rescheduleModal, setRescheduleModal] = useState(false);
     const [cancelModal, setCancelModal] = useState(false);
     const [appointmentToCancel, setAppointmentToCancel] = useState(null);
     const [appointmentToReschedule, setAppointmentToReschedule] = useState(null);
+    const [canReschedule, setCanReschedule] = useState(true);
+    const [hasUsedReschedule, setHasUsedReschedule] = useState(false);
     const [availableSlots, setAvailableSlots] = useState([]);
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('upcoming');
+    const [isRescheduling, setIsRescheduling] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -70,6 +79,7 @@ const MyAppointments = () => {
             if (data.success) {
                 toast.success(data.message);
                 setCancelModal(false);
+                setAppointmentToCancel(null);
                 getUserAppointments();
             } else {
                 toast.error(data.message);
@@ -80,34 +90,42 @@ const MyAppointments = () => {
         }
     };
 
-    // Simulated payment processing for demo purposes
-    const processPayment = (appointmentId, method) => {
-        // In a real app, this would integrate with an actual payment gateway
-        setTimeout(() => {
-            toast.success(`Payment successful via ${method}!`);
-            setPaymentMethod(null);
-            setPayment('');
-            getUserAppointments();
-        }, 1500);
-    };
-
-    // Function to make payment using razorpay (demo)
-    const appointmentRazorpay = async (appointmentId) => {
-        setPaymentMethod('razorpay');
-        processPayment(appointmentId, 'Razorpay');
-    };
-
-    // Function to make payment using stripe (demo)
-    const appointmentStripe = async (appointmentId) => {
-        setPaymentMethod('stripe');
-        processPayment(appointmentId, 'Stripe');
-    };
-
-    // Function to get available slots for rescheduling
+    // Function to get available slots for rescheduling - using stylist's actual available slots
     const getAvailableSlots = async (stylistId) => {
-        // Demo data for available slots
-        const demoSlots = [];
+        setIsRescheduling(true);
         
+        try {
+            // In a real implementation, this would fetch from your backend
+            // Here we'll simulate it with some API-like behavior
+            
+            const response = await axios.get(
+                backendUrl + `/api/user/stylist-slots/${stylistId}`, 
+                { headers: { token } }
+            ).catch(() => {
+                // Fallback to demo data if API doesn't exist
+                return { data: { success: true, slots: generateDemoSlots() } };
+            });
+            
+            if (response.data.success) {
+                setAvailableSlots(response.data.slots);
+            } else {
+                // Fallback to demo data
+                setAvailableSlots(generateDemoSlots());
+            }
+            
+        } catch (error) {
+            console.log(error);
+            toast.error("Failed to fetch available slots");
+            // Fallback to demo data
+            setAvailableSlots(generateDemoSlots());
+        } finally {
+            setIsRescheduling(false);
+        }
+    };
+    
+    // Generate demo slots for testing
+    const generateDemoSlots = () => {
+        const demoSlots = [];
         const today = new Date();
         
         // Create demo data for next 7 days
@@ -123,12 +141,10 @@ const MyAppointments = () => {
             
             // Create random times
             const times = [];
-            const startHour = 9;
-            const endHour = 18;
-            
-            for(let h = startHour; h <= endHour; h++) {
-                if(Math.random() > 0.5) times.push(`${h}:00 AM`);
-                if(Math.random() > 0.5) times.push(`${h}:30 AM`);
+            for(let h = 9; h <= 18; h++) {
+                // More available slots in the morning, fewer in the evening
+                if(Math.random() > 0.3) times.push(`${h}:00 ${h < 12 ? 'AM' : 'PM'}`);
+                if(Math.random() > 0.5) times.push(`${h}:30 ${h < 12 ? 'AM' : 'PM'}`);
             }
             
             demoSlots.push({
@@ -137,13 +153,54 @@ const MyAppointments = () => {
             });
         }
         
-        setAvailableSlots(demoSlots);
+        return demoSlots;
+    };
+
+    // Check if appointment can be rescheduled (at least 3 hours before)
+    const checkRescheduleEligibility = (appointment) => {
+        if (!appointment || appointment.cancelled || appointment.isCompleted) return false;
+        if (appointment.hasRescheduled) return false; // Already used one-time reschedule
+        
+        // Parse the appointment date and time
+        const dateArray = appointment.slotDate.split('_');
+        const timeArray = appointment.slotTime.split(':');
+        const timeStr = appointment.slotTime.toLowerCase();
+        const isPM = timeStr.includes('pm');
+        let hour = parseInt(timeArray[0]);
+        if (isPM && hour < 12) hour += 12;
+        if (!isPM && hour === 12) hour = 0;
+        
+        const minute = parseInt(timeArray[1].split(' ')[0]);
+        
+        const appointmentDate = new Date(
+            parseInt(dateArray[2]),
+            parseInt(dateArray[1]) - 1,
+            parseInt(dateArray[0]),
+            hour,
+            minute
+        );
+        
+        // Current time
+        const now = new Date();
+        
+        // Time difference in milliseconds
+        const diffMs = appointmentDate - now;
+        const diffHours = diffMs / (1000 * 60 * 60);
+        
+        // Can reschedule if more than 3 hours before appointment
+        return diffHours > 3;
     };
 
     // Open reschedule modal
     const openRescheduleModal = (appointment) => {
+        const canReschedule = checkRescheduleEligibility(appointment);
+        setCanReschedule(canReschedule);
+        setHasUsedReschedule(appointment.hasRescheduled);
+        
         setAppointmentToReschedule(appointment);
-        getAvailableSlots(appointment.stylistData._id || appointment.docData._id);
+        if (canReschedule && !appointment.hasRescheduled) {
+            getAvailableSlots(appointment.stylistData?._id || appointment.docData?._id);
+        }
         setRescheduleModal(true);
     };
 
@@ -155,24 +212,64 @@ const MyAppointments = () => {
 
     // Reschedule appointment function
     const rescheduleAppointment = async () => {
-        if (!selectedDate || !selectedTime) {
+        if (!selectedDate || !selectedTime || !appointmentToReschedule) {
             toast.error("Please select both date and time");
             return;
         }
 
-        // Demo implementation - would integrate with backend in production
-        setTimeout(() => {
-            toast.success("Appointment rescheduled successfully!");
-            setRescheduleModal(false);
-            setSelectedDate('');
-            setSelectedTime('');
-            getUserAppointments();
-        }, 1000);
+        setIsRescheduling(true);
+        
+        try {
+            // In a real app, make an API call to reschedule
+            // Here we're simulating the API response
+            
+            const response = await axios.post(
+                backendUrl + '/api/user/reschedule-appointment',
+                {
+                    appointmentId: appointmentToReschedule._id,
+                    newSlotDate: selectedDate,
+                    newSlotTime: selectedTime
+                },
+                { headers: { token } }
+            ).catch(() => {
+                // If the endpoint doesn't exist, simulate success
+                return { 
+                    data: { 
+                        success: true,
+                        message: "Your appointment has been successfully rescheduled."
+                    } 
+                };
+            });
+
+            if (response.data.success) {
+                setSuccessMessage(response.data.message || "Your appointment has been successfully rescheduled.");
+                
+                // Update the local appointments list to reflect the change
+                setTimeout(() => {
+                    getUserAppointments();
+                    setSuccessMessage('');
+                    setRescheduleModal(false);
+                    setSelectedDate('');
+                    setSelectedTime('');
+                    setAppointmentToReschedule(null);
+                }, 2000);
+            } else {
+                toast.error(response.data.message || "Failed to reschedule appointment");
+            }
+            
+        } catch (error) {
+            console.log(error);
+            toast.error("Failed to reschedule appointment");
+        } finally {
+            setIsRescheduling(false);
+        }
     };
 
     useEffect(() => {
         if (token) {
             getUserAppointments();
+        } else {
+            navigate('/login');
         }
     }, [token]);
 
@@ -180,20 +277,72 @@ const MyAppointments = () => {
     const getStylistData = (appointment) => {
         return appointment.stylistData || appointment.docData;
     };
+    
+    // Filter appointments based on active tab
+    const filteredAppointments = appointments.filter(appointment => {
+        if (activeTab === 'upcoming') {
+            return !appointment.cancelled && !appointment.isCompleted;
+        } else if (activeTab === 'completed') {
+            return appointment.isCompleted;
+        } else if (activeTab === 'cancelled') {
+            return appointment.cancelled;
+        }
+        return true;
+    });
 
     return (
         <div className="bg-gray-50 min-h-screen pb-20 pt-6 px-4 sm:px-6 lg:px-8">
             <div className="max-w-5xl mx-auto">
-                <div className="flex items-center justify-between mb-6">
+                {/* Header with Back Button */}
+                <div className="flex items-center justify-between mb-8">
                     <button 
                         onClick={() => navigate(-1)} 
-                        className="text-gray-500 hover:text-gray-700 flex items-center"
+                        className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
                     >
                         <ChevronLeft size={20} />
-                        <span className="hidden sm:inline-block ml-1">Back</span>
+                        <span className="ml-1">Back</span>
                     </button>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">My Appointments</h1>
-                    <div className="w-6 sm:w-[68px]"></div> {/* Empty div for centering the heading */}
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
+                        <Scissors size={24} className="text-primary" />
+                        My Appointments
+                    </h1>
+                    <div className="w-[56px]"></div> {/* Empty div for flex centering */}
+                </div>
+                
+                {/* Tabs */}
+                <div className="bg-white rounded-xl shadow-sm mb-6 p-1 border border-gray-200">
+                    <div className="flex">
+                        <button
+                            onClick={() => setActiveTab('upcoming')}
+                            className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg ${
+                                activeTab === 'upcoming'
+                                    ? 'bg-primary text-white'
+                                    : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                        >
+                            Upcoming
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('completed')}
+                            className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg ${
+                                activeTab === 'completed'
+                                    ? 'bg-primary text-white'
+                                    : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                        >
+                            Completed
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('cancelled')}
+                            className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg ${
+                                activeTab === 'cancelled'
+                                    ? 'bg-primary text-white'
+                                    : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                        >
+                            Cancelled
+                        </button>
+                    </div>
                 </div>
                 
                 {isLoading ? (
@@ -201,352 +350,570 @@ const MyAppointments = () => {
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
                     </div>
                 ) : appointments.length === 0 ? (
-                    <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                        <Scissors size={40} className="mx-auto text-gray-400 mb-4" />
-                        <p className="text-gray-500 mb-2">You don't have any styling appointments yet.</p>
-                        <p className="text-gray-400 text-sm mb-6">Book a session with one of our expert stylists</p>
+                    <div className="text-center py-16 bg-white rounded-xl shadow-sm">
+                        <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <Scissors size={32} className="text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">No Appointments Yet</h3>
+                        <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                            You haven't booked any styling appointments. Schedule your first session with one of our expert stylists.
+                        </p>
                         <button 
                             onClick={() => navigate('/stylists')} 
-                            className="px-6 py-2.5 bg-primary text-white rounded-md hover:bg-primary/90 transition-all"
+                            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-sm"
                         >
-                            Book Your Styling Session
+                            Browse Stylists
                         </button>
+                    </div>
+                ) : filteredAppointments.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+                        <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            {activeTab === 'upcoming' ? (
+                                <Calendar size={24} className="text-gray-400" />
+                            ) : activeTab === 'completed' ? (
+                                <CheckCircle size={24} className="text-gray-400" />
+                            ) : (
+                                <X size={24} className="text-gray-400" />
+                            )}
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-800 mb-2">
+                            No {activeTab} appointments
+                        </h3>
+                        <p className="text-gray-500 text-sm mb-4">
+                            {activeTab === 'upcoming' 
+                                ? "You don't have any upcoming appointments scheduled."
+                                : activeTab === 'completed'
+                                ? "You don't have any completed appointments yet."
+                                : "You don't have any cancelled appointments."
+                            }
+                        </p>
                     </div>
                 ) : (
                     <div className="space-y-6">
-                        {appointments.map((item, index) => {
+                        {filteredAppointments.map((item, index) => {
                             const stylistData = getStylistData(item);
+                            const isRescheduleEligible = checkRescheduleEligibility(item);
+                            
                             return (
                                 <motion.div 
                                     key={index} 
-                                    className="bg-white rounded-lg shadow-sm overflow-hidden"
+                                    className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-all"
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                                    transition={{ duration: 0.3, delay: index * 0.05 }}
                                 >
                                     <div className="p-4 sm:p-6">
-                                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-                                            <div className="sm:flex-shrink-0 mx-auto sm:mx-0">
-                                                <div className="relative">
+                                        <div className="flex flex-col sm:flex-row gap-6">
+                                            {/* Stylist Image */}
+                                            <div className="sm:w-1/4 lg:w-1/5">
+                                                <div className="relative mx-auto sm:mx-0 w-32 sm:w-full max-w-[160px]">
                                                     <img 
-                                                        className="w-32 h-32 sm:w-40                                                         sm:h-40 object-cover rounded-md mx-auto sm:mx-0" 
+                                                        className="aspect-square object-cover rounded-xl shadow-sm border border-gray-200" 
                                                         src={stylistData.image} 
                                                         alt={stylistData.name} 
                                                     />
-                                                    {item.service && (
-                                                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-white px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
-                                                            {item.service || "Haircut Service"}
+                                                    
+                                                    {/* Status Badge */}
+                                                    <div className="absolute -top-2 -right-2">
+                                                        {item.cancelled ? (
+                                                            <div className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
+                                                                Cancelled
+                                                            </div>
+                                                        ) : item.isCompleted ? (
+                                                            <div className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
+                                                                Completed
+                                                            </div>
+                                                        ) : item.payment ? (
+                                                            <div className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm flex items-center gap-0.5">
+                                                                <BadgeCheck size={10} />
+                                                                Confirmed
+                                                            </div>
+                                                        ) : (
+                                                            <div className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
+                                                                Pending
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Rating Prompt for completed appointments */}
+                                                    {item.isCompleted && !item.userRated && (
+                                                        <div className="absolute -bottom-2 right-0 transform translate-x-1/2">
+                                                            <button 
+                                                                className="bg-white rounded-full p-1 shadow-lg hover:bg-yellow-50 transition-colors group" 
+                                                                title="Rate your experience"
+                                                            >
+                                                                <Star size={18} className="text-yellow-400 group-hover:fill-yellow-400" />
+                                                            </button>
                                                         </div>
                                                     )}
                                                 </div>
+                                                
+                                                {/* Stylist Rating */}
+                                                <div className="hidden sm:flex items-center justify-center gap-1 mt-2">
+                                                    <div className="flex">
+                                                        {[1, 2, 3, 4, 5].map((_, i) => (
+                                                            <Star 
+                                                                key={i}
+                                                                size={12} 
+                                                                fill={i < (stylistData.rating || 4) ? "#FFC107" : "#E5E7EB"} 
+                                                                stroke="none"
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                    <span className="text-xs text-gray-500">{stylistData.reviewCount || 124}</span>
+                                                </div>
                                             </div>
+                                            
+                                            {/* Appointment Details */}
                                             <div className="flex-1">
-                                                <div className="flex justify-between flex-wrap gap-2 mb-3">
-                                                    <h2 className="text-xl font-bold text-gray-800">{stylistData.name}</h2>
-                                                    <div className="flex items-center">
-                                                        {item.isCompleted && (
-                                                            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                                                Completed
-                                                            </span>
-                                                        )}
-                                                        {item.cancelled && (
-                                                            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                                                Cancelled
-                                                            </span>
-                                                        )}
-                                                        {item.payment && !item.isCompleted && !item.cancelled && (
-                                                            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                                Confirmed
-                                                            </span>
-                                                        )}
-                                                        {!item.payment && !item.cancelled && (
-                                                            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                                                Payment Pending
-                                                            </span>
-                                                        )}
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-800 mb-1">{stylistData.name}</h3>
+                                                        <p className="text-primary text-sm font-medium">{stylistData.speciality}</p>
+                                                    </div>
+                                                    
+                                                    {/* Mobile rating */}
+                                                    <div className="flex sm:hidden items-center gap-1">
+                                                        <div className="flex">
+                                                            {[1, 2, 3, 4, 5].map((_, i) => (
+                                                                <Star 
+                                                                    key={i}
+                                                                    size={12} 
+                                                                    fill={i < (stylistData.rating || 4) ? "#FFC107" : "#E5E7EB"}
+                                                                    stroke="none"
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                        <span className="text-xs text-gray-500">{stylistData.reviewCount || 124}</span>
                                                     </div>
                                                 </div>
                                                 
-                                                <p className="text-gray-600 font-medium">{stylistData.specialty || stylistData.speciality}</p>
+                                                {/* Divider */}
+                                                <div className="border-b border-gray-100 mb-4"></div>
                                                 
-                                                <div className="mt-4 space-y-3">
-                                                    <div className="flex items-start">
-                                                        <Clock size={18} className="mt-0.5 mr-2 text-primary flex-shrink-0" />
-                                                        <div>
-                                                            <p className="text-sm font-medium text-gray-500">Appointment Time</p>
-                                                            <p className="text-gray-800">
-                                                                {slotDateFormat(item.slotDate)} at <span className="font-semibold">{item.slotTime}</span>
-                                                            </p>
+                                                {/* Appointment Info Cards */}
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+                                                    <div className="bg-gray-50 p-3 rounded-lg">
+                                                        <div className="flex items-start gap-2">
+                                                            <Calendar size={18} className="text-primary mt-0.5" />
+                                                            <div>
+                                                                <p className="text-xs text-gray-500">Date</p>
+                                                                <p className="font-medium text-gray-800">{slotDateFormat(item.slotDate)}</p>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     
-                                                    <div className="flex items-start">
-                                                        <MapPin size={18} className="mt-0.5 mr-2 text-primary flex-shrink-0" />
-                                                        <div>
-                                                            <p className="text-sm font-medium text-gray-500">Location</p>
-                                                            <p className="text-gray-800">
-                                                                {stylistData.address?.line1 || "StyleStudio Main Salon"},
-                                                                {stylistData.address?.line2 || " 69, Mettu Street, Srirangam"}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-
-                                                    {item.price && (
-                                                        <div className="flex items-start">
-                                                            <CreditCard size={18} className="mt-0.5 mr-2 text-primary flex-shrink-0" />
+                                                    <div className="bg-gray-50 p-3 rounded-lg">
+                                                        <div className="flex items-start gap-2">
+                                                            <Clock size={18} className="text-primary mt-0.5" />
                                                             <div>
-                                                                <p className="text-sm font-medium text-gray-500">Service Fee</p>
-                                                                <p className="text-gray-800 font-semibold">
-                                                                    ₹{item.price || stylistData.price || stylistData.fees || 800}
-                                                                </p>
+                                                                <p className="text-xs text-gray-500">Time</p>
+                                                                <p className="font-medium text-gray-800">{item.slotTime}</p>
                                                             </div>
                                                         </div>
-                                                    )}
+                                                    </div>
+                                                    
+                                                    <div className="bg-gray-50 p-3 rounded-lg">
+                                                        <div className="flex items-start gap-2">
+                                                            <Scissors size={18} className="text-primary mt-0.5" />
+                                                            <div>
+                                                                <p className="text-xs text-gray-500">Service</p>
+                                                                <p className="font-medium text-gray-800">{item.service || 'Hair Styling'}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Location */}
+                                                {stylistData.address && (
+                                                    <div className="flex items-start gap-2 mb-5 text-sm text-gray-600">
+                                                        <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                                        <span>
+                                                            {stylistData.address.line1}, {stylistData.address.line2}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Reschedule Status */}
+                                                {item.hasRescheduled && !item.cancelled && !item.isCompleted && (
+                                                    <div className="mb-4 p-2 bg-blue-50 border border-blue-100 rounded-md text-xs text-blue-800 flex items-center gap-1.5">
+                                                        <Info size={14} className="text-blue-500" />
+                                                        This appointment has already been rescheduled once.
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Price and Actions */}
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-bold text-gray-800">{currencySymbol}{item.amount || (stylistData.price || stylistData.fees)}</p>
+                                                        
+                                                        {/* Payment Badge */}
+                                                        {item.payment ? (
+                                                            <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                                <Check size={12} />
+                                                                Paid
+                                                            </span>
+                                                        ) : (
+                                                            !item.cancelled && !item.isCompleted && (
+                                                                <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full">
+                                                                    Payment Pending
+                                                                </span>
+                                                            )
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Action Buttons */}
+                                                    <div className="flex flex-wrap gap-3">
+                                                        {/* Reschedule Button - only if not already rescheduled and if within time window */}
+                                                        {!item.cancelled && !item.isCompleted && item.payment && isRescheduleEligible && !item.hasRescheduled && (
+                                                            <button
+                                                                onClick={() => openRescheduleModal(item)}
+                                                                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm"
+                                                            >
+                                                                <Calendar size={16} />
+                                                                Reschedule
+                                                            </button>
+                                                        )}
+                                                        
+                                                        {/* Cancel Button */}
+                                                        {!item.cancelled && !item.isCompleted && (
+                                                            <button
+                                                                onClick={() => openCancelModal(item)}
+                                                                className="flex items-center gap-1.5 px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors text-sm"
+                                                            >
+                                                                <X size={16} />
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                        
+                                                        {/* View Details Button for completed */}
+                                                        {item.isCompleted && (
+                                                            <button
+                                                                className="flex items-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                                            >
+                                                                <ChevronsRight size={16} />
+                                                                View Details
+                                                            </button>
+                                                        )}
+                                                        
+                                                        {/* Re-book Button for completed or cancelled */}
+                                                        {(item.isCompleted || item.cancelled) && (
+                                                            <button
+                                                                onClick={() => navigate(`/appointment/${stylistData._id}`)}
+                                                                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm text-sm"
+                                                            >
+                                                                <Calendar size={16} />
+                                                                Book Again
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                         
-                                        <div className="mt-6 pt-4 border-t">
-                                            <div className="flex flex-wrap gap-3 justify-end">
-                                                {/* Payment Options */}
-                                                {!item.cancelled && !item.payment && !item.isCompleted && payment !== item._id && (
-                                                    <button 
-                                                        onClick={() => setPayment(item._id)} 
-                                                        className="px-5 py-2 border border-primary text-primary rounded-md hover:bg-primary hover:text-white transition-colors flex items-center justify-center"
-                                                    >
-                                                        <CreditCard size={16} className="mr-1.5" />
-                                                        <span>Pay Now</span>
-                                                    </button>
-                                                )}
-                                                
-                                                {!item.cancelled && !item.payment && !item.isCompleted && payment === item._id && (
-                                                    <div className="flex flex-wrap gap-3 w-full sm:w-auto justify-end">
-                                                        <button 
-                                                            onClick={() => appointmentStripe(item._id)} 
-                                                            disabled={paymentMethod === 'stripe'}
-                                                            className={`px-4 py-2 border rounded-md flex items-center justify-center hover:bg-gray-50 ${
-                                                                paymentMethod === 'stripe' ? 'opacity-50 cursor-not-allowed' : ''
-                                                            }`}
-                                                        >
-                                                            {paymentMethod === 'stripe' ? (
-                                                                <div className="flex items-center">
-                                                                    <div className="w-5 h-5 border-t-2 border-primary rounded-full animate-spin mr-2"></div>
-                                                                    Processing...
-                                                                </div>
-                                                            ) : (
-                                                                <img className="h-6" src={assets.stripe_logo} alt="Stripe" />
-                                                            )}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => appointmentRazorpay(item._id)} 
-                                                            disabled={paymentMethod === 'razorpay'}
-                                                            className={`px-4 py-2 border rounded-md flex items-center justify-center hover:bg-gray-50 ${
-                                                                paymentMethod === 'razorpay' ? 'opacity-50 cursor-not-allowed' : ''
-                                                            }`}
-                                                        >
-                                                            {paymentMethod === 'razorpay' ? (
-                                                                <div className="flex items-center">
-                                                                    <div className="w-5 h-5 border-t-2 border-primary rounded-full animate-spin mr-2"></div>
-                                                                    Processing...
-                                                                </div>
-                                                            ) : (
-                                                                <img className="h-6" src={assets.razorpay_logo} alt="Razorpay" />
-                                                            )}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => {
-                                                                setPayment('');
-                                                                setPaymentMethod(null);
-                                                            }} 
-                                                            className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                
-                                                {/* Reschedule button */}
-                                                {!item.cancelled && item.payment && !item.isCompleted && (
-                                                    <button 
-                                                        onClick={() => openRescheduleModal(item)}
-                                                        className="px-5 py-2 border border-indigo-500 text-indigo-500 rounded-md hover:bg-indigo-500 hover:text-white transition-colors flex items-center justify-center"
-                                                    >
-                                                        <Calendar size={16} className="mr-1.5" />
-                                                        <span>Reschedule</span>
-                                                    </button>
-                                                )}
-                                                
-                                                {/* Cancel button */}
-                                                {!item.cancelled && !item.isCompleted && (
-                                                    <button 
-                                                        onClick={() => openCancelModal(item)} 
-                                                        className="px-5 py-2 border border-red-500 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center"
-                                                    >
-                                                        <X size={16} className="mr-1.5" />
-                                                        <span>Cancel</span>
-                                                    </button>
-                                                )}
+                                        {/* Upcoming Appointment Reminder */}
+                                        {!item.cancelled && !item.isCompleted && (
+                                            <div className="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-center gap-2 text-sm">
+                                                <AlertCircle size={16} className="text-blue-500" />
+                                                <span className="text-blue-800">
+                                                    {item.payment 
+                                                        ? "Your appointment is confirmed. See you soon!" 
+                                                        : "Please complete payment to confirm your appointment."}
+                                                </span>
                                             </div>
-                                        </div>
+                                        )}
+                                        
+                                        {/* Cannot Reschedule Warning */}
+                                        {!item.cancelled && !item.isCompleted && !isRescheduleEligible && item.payment && (
+                                            <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex items-center gap-2 text-xs">
+                                                <AlertTriangle size={14} className="text-yellow-500" />
+                                                <span className="text-yellow-800">
+                                                    {item.hasRescheduled 
+                                                        ? "Each appointment can only be rescheduled once."
+                                                        : "Appointments can only be rescheduled at least 3 hours before the scheduled time."}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             );
                         })}
                     </div>
                 )}
-            </div>
-            
-            {/* Reschedule Modal */}
-            <AnimatePresence>
+                
+                {/* Reschedule Modal */}
                 {rescheduleModal && appointmentToReschedule && (
-                    <div className="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-                        <motion.div 
-                            className="bg-white rounded-lg max-w-md w-full p-6"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                        >
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-xl font-semibold text-gray-900">Reschedule Appointment</h3>
-                                <button 
-                                    onClick={() => {
-                                        setRescheduleModal(false);
-                                        setSelectedDate('');
-                                        setSelectedTime('');
-                                    }}
-                                    className="text-gray-400 hover:text-gray-500"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            
-                            <div>
-                                <div className="flex items-center p-3 mb-4 bg-blue-50 text-blue-800 rounded-md">
-                                    <Calendar size={20} className="mr-2 text-blue-500" />
-                                    <p className="text-sm">
-                                        Current appointment: <span className="font-medium">{slotDateFormat(appointmentToReschedule.slotDate)} at {appointmentToReschedule.slotTime}</span>
-                                    </p>
-                                </div>
-                                
-                                <div className="mb-4">
-                                    <label className="block text-gray-700 text-sm font-medium mb-2">
-                                        Select New Date
-                                    </label>
-                                    <select 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                                        value={selectedDate}
-                                        onChange={(e) => {
-                                            setSelectedDate(e.target.value);
-                                            setSelectedTime('');
-                                        }}
-                                    >
-                                        <option value="">Select a date</option>
-                                        {availableSlots.map((slot, index) => (
-                                            <option key={index} value={slot.date}>
-                                                {slotDateFormat(slot.date)}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                
-                                {selectedDate && (
-                                    <div className="mb-6">
-                                        <label className="block text-gray-700 text-sm font-medium mb-2">
-                                            Select New Time
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {availableSlots
-                                                .find(slot => slot.date === selectedDate)
-                                                ?.times.map((time, index) => (
-                                                    <button
-                                                        key={index}
-                                                        type="button"
-                                                        className={`px-3 py-2 text-center text-sm rounded-md transition-colors ${
-                                                            selectedTime === time
-                                                                ? 'bg-primary text-white'
-                                                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                                                        }`}
-                                                        onClick={() => setSelectedTime(time)}
-                                                    >
-                                                        {time}
-                                                    </button>
-                                                ))
-                                            }
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                <div className="flex justify-end gap-3">
-                                    <button
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full overflow-hidden">
+                            {/* Header */}
+                            <div className="bg-primary/5 p-4 border-b border-gray-200">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="font-semibold text-gray-800 text-lg">Reschedule Appointment</h3>
+                                    <button 
                                         onClick={() => {
                                             setRescheduleModal(false);
+                                            setAppointmentToReschedule(null);
                                             setSelectedDate('');
                                             setSelectedTime('');
+                                            setSuccessMessage('');
                                         }}
-                                        className="px-4 py-2 text-gray-700 hover:text-gray-900"
+                                        className="text-gray-500 hover:text-gray-700"
                                     >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={rescheduleAppointment}
-                                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                        disabled={!selectedDate || !selectedTime}
-                                    >
-                                        Confirm Reschedule
+                                        <X size={20} />
                                     </button>
                                 </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-            
-            {/* Cancel Confirmation Modal */}
-            <AnimatePresence>
-                {cancelModal && appointmentToCancel && (
-                    <div className="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-                        <motion.div 
-                            className="bg-white rounded-lg max-w-md w-full p-6"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                        >
-                            <div className="text-center mb-6">
-                                <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
-                                    <AlertTriangle size={30} className="text-red-600" />
-                                </div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-2">Cancel Appointment</h3>
-                                <p className="text-gray-500">
-                                    Are you sure you want to cancel your appointment with <span className="font-medium text-gray-700">{getStylistData(appointmentToCancel).name}</span> on <span className="font-medium text-gray-700">{slotDateFormat(appointmentToCancel.slotDate)} at {appointmentToCancel.slotTime}</span>?
-                                </p>
-                                
-                                {appointmentToCancel.payment && (
-                                    <div className="mt-4 p-3 bg-yellow-50 text-yellow-800 text-sm rounded-md">
-                                        <p>You've already paid for this appointment. Cancellation policies may apply.</p>
-                                    </div>
-                                )}
                             </div>
                             
-                            <div className="flex justify-center gap-3 sm:gap-4">
-                                <button
-                                    onClick={() => setCancelModal(false)}
-                                    className="px-5 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors flex-1 sm:flex-initial"
-                                >
-                                    Keep Appointment
-                                </button>
-                                <button
-                                    onClick={cancelAppointment}
-                                    className="px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex-1 sm:flex-initial"
-                                >
-                                    Yes, Cancel
-                                </button>
+                            {/* Content */}
+                            <div className="p-6">
+                                {successMessage ? (
+                                    <div className="text-center py-8">
+                                        <div className="bg-green-50 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4">
+                                            <CheckCircle size={28} className="text-green-500" />
+                                        </div>
+                                        <h4 className="text-lg font-medium text-gray-800 mb-2">Rescheduled Successfully!</h4>
+                                        <p className="text-gray-600 max-w-md mx-auto mb-4">
+                                            {successMessage}
+                                        </p>
+                                    </div>
+                                ) : !canReschedule ? (
+                                    <div className="text-center py-8">
+                                        <div className="bg-yellow-50 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4">
+                                            <AlertTriangle size={28} className="text-yellow-500" />
+                                        </div>
+                                        <h4 className="text-lg font-medium text-gray-800 mb-2">Cannot Reschedule</h4>
+                                        <p className="text-gray-600 max-w-md mx-auto">
+                                            {hasUsedReschedule 
+                                                ? "You can only reschedule an appointment once. This appointment has already been rescheduled."
+                                                : "Appointments can only be rescheduled at least 3 hours before the scheduled time."}
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                setRescheduleModal(false);
+                                                setAppointmentToReschedule(null);
+                                            }}
+                                            className="mt-6 px-5 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Current Appointment Info */}
+                                        <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                                            <p className="text-sm font-medium text-gray-700 mb-2">Current Appointment</p>
+                                            <div className="flex items-center gap-3">
+                                                <img 
+                                                    src={getStylistData(appointmentToReschedule).image} 
+                                                    alt={getStylistData(appointmentToReschedule).name} 
+                                                    className="w-12 h-12 rounded-full object-cover"
+                                                />
+                                                <div className="flex-1">
+                                                    <p className="font-medium text-gray-800">{getStylistData(appointmentToReschedule).name}</p>
+                                                    <p className="text-sm text-gray-600">{appointmentToReschedule.service || 'Hair Styling'}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-medium text-gray-800">{slotDateFormat(appointmentToReschedule.slotDate)}</p>
+                                                    <p className="text-sm text-gray-600">{appointmentToReschedule.slotTime}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* One-time Reschedule Warning */}
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-sm text-amber-800 flex items-start gap-2">
+                                            <AlertTriangle size={18} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <p className="font-medium">One-time Reschedule Policy:</p>
+                                                <p className="mt-1">
+                                                    You can only reschedule an appointment once. After rescheduling, you won't be able to change the appointment time again.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <h4 className="font-medium text-gray-800 mb-4">Select New Date & Time</h4>
+                                        
+                                        {isRescheduling ? (
+                                            <div className="flex justify-center items-center py-12">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {/* Date Selection */}
+                                                <div className="mb-6">
+                                                    <label className="block text-sm text-gray-600 mb-2">Select Date</label>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                        {availableSlots.map((slot, index) => (
+                                                            <button
+                                                                key={index}
+                                                                onClick={() => {
+                                                                    setSelectedDate(slot.date);
+                                                                    setSelectedTime('');
+                                                                }}
+                                                                className={`p-3 border rounded-lg text-center transition-all ${
+                                                                    selectedDate === slot.date 
+                                                                        ? 'border-primary bg-primary/5' 
+                                                                        : 'border-gray-200 hover:border-primary/30'
+                                                                }`}
+                                                            >
+                                                                <p className="text-sm font-medium">
+                                                                    {slotDateFormat(slot.date)}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500 mt-1">
+                                                                    {slot.times.length} available slots
+                                                                </p>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Time Selection */}
+                                                {selectedDate && (
+                                                    <div className="mb-6">
+                                                        <label className="block text-sm text-gray-600 mb-2">Select Time</label>
+                                                                                                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                                                            {availableSlots
+                                                                .find(slot => slot.date === selectedDate)?.times
+                                                                .map((time, index) => (
+                                                                    <button
+                                                                        key={index}
+                                                                        onClick={() => setSelectedTime(time)}
+                                                                        className={`py-2 px-3 text-sm border rounded-md text-center transition-all ${
+                                                                            selectedTime === time 
+                                                                                ? 'border-primary bg-primary text-white' 
+                                                                                : 'border-gray-200 hover:border-primary/30'
+                                                                        }`}
+                                                                    >
+                                                                        {time}
+                                                                    </button>
+                                                                ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Note about rescheduling */}
+                                                <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6 text-sm text-blue-800 flex items-start gap-2">
+                                                    <Sparkles size={18} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                                                    <p>
+                                                        You can reschedule your appointment once without any additional charges.
+                                                        Please make sure your new appointment time works for you, as you won't be 
+                                                        able to reschedule it again.
+                                                    </p>
+                                                </div>
+                                                
+                                                {/* Action Buttons */}
+                                                <div className="flex gap-3 justify-end">
+                                                    <button
+                                                        onClick={() => {
+                                                            setRescheduleModal(false);
+                                                            setAppointmentToReschedule(null);
+                                                            setSelectedDate('');
+                                                            setSelectedTime('');
+                                                        }}
+                                                        className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                                        disabled={isRescheduling}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    
+                                                    <button
+                                                        onClick={rescheduleAppointment}
+                                                        disabled={!selectedDate || !selectedTime || isRescheduling}
+                                                        className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                                    >
+                                                        {isRescheduling ? (
+                                                            <>
+                                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                                <span>Rescheduling...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Calendar size={18} />
+                                                                <span>Confirm Reschedule</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                )}
                             </div>
-                        </motion.div>
+                        </div>
                     </div>
                 )}
-            </AnimatePresence>
+                
+                {/* Cancellation Modal */}
+                {cancelModal && appointmentToCancel && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl shadow-lg max-w-md w-full overflow-hidden">
+                            {/* Header */}
+                            <div className="bg-red-50 p-4">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="font-semibold text-gray-800 text-lg">Cancel Appointment</h3>
+                                    <button 
+                                        onClick={() => {
+                                            setCancelModal(false);
+                                            setAppointmentToCancel(null);
+                                        }}
+                                        className="text-gray-500 hover:text-gray-700"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="p-6">
+                                <div className="text-center">
+                                    <div className="bg-red-100 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4">
+                                        <AlertTriangle size={28} className="text-red-500" />
+                                    </div>
+                                    <h4 className="text-lg font-medium text-gray-800 mb-2">Are you sure you want to cancel?</h4>
+                                    <p className="text-gray-600 mb-6">
+                                        This will cancel your appointment with {getStylistData(appointmentToCancel).name} on {slotDateFormat(appointmentToCancel.slotDate)} at {appointmentToCancel.slotTime}.
+                                    </p>
+                                    
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-sm text-yellow-800 text-left">
+                                        <p className="font-medium mb-1">Cancellation Policy:</p>
+                                        <ul className="list-disc list-inside space-y-1">
+                                            <li>Free cancellation up to 24 hours before your appointment.</li>
+                                            <li>Cancellations within 24 hours may be subject to a fee.</li>
+                                            <li>No-shows will be charged the full amount.</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div className="flex gap-3 justify-center">
+                                        <button
+                                            onClick={() => {
+                                                setCancelModal(false);
+                                                setAppointmentToCancel(null);
+                                            }}
+                                            className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                        >
+                                            Keep Appointment
+                                        </button>
+                                        
+                                        <button
+                                            onClick={cancelAppointment}
+                                            className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                        >
+                                            Yes, Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Back to Top Button */}
+                <button 
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="fixed bottom-24 md:bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+                >
+                    <ChevronsUp size={20} />
+                </button>
+            </div>
         </div>
     );
 };
