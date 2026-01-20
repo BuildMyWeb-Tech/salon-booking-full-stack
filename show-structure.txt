@@ -5,20 +5,6 @@
    📄 FETCH_HEAD
    📄 HEAD
    📁 hooks
-      📄 applypatch-msg.sample
-      📄 commit-msg.sample
-      📄 fsmonitor-watchman.sample
-      📄 post-update.sample
-      📄 pre-applypatch.sample
-      📄 pre-commit.sample
-      📄 pre-merge-commit.sample
-      📄 pre-push.sample
-      📄 pre-rebase.sample
-      📄 pre-receive.sample
-      📄 prepare-commit-msg.sample
-      📄 push-to-checkout.sample
-      📄 sendemail-validate.sample
-      📄 update.sample
    📄 index
    📁 info
       📄 exclude
@@ -29,21 +15,13 @@
             📄 main
             📄 Mauli
          📁 remotes
-            📁 origin
-               📄 Ajai
-               📄 HEAD
-               📄 main
-               📄 Mauli
+   📁 objects
+   📄 ORIG_HEAD
    📁 refs
       📁 heads
          📄 main
          📄 Mauli
       📁 remotes
-         📁 origin
-            📄 Ajai
-            📄 HEAD
-            📄 main
-            📄 Mauli
       📁 tags
 📄 .gitattributes
 📄 .gitignore
@@ -62,28 +40,10 @@
    📁 src
       📄 App.jsx
       📁 assets
-         📄 add_icon.svg
-         📄 admin_logo.svg
-         📄 appointments_icon.svg
-         📄 appointment_icon.svg
-         📄 assets.js
-         📄 cancel_icon.svg
-         📄 doctor_icon.svg
-         📄 earning_icon.svg
-         📄 home_icon.svg
-         📄 image.png
-         📄 list_icon.svg
-         📄 patients_icon.svg
-         📄 patient_icon.svg
-         📄 people_icon.svg
-         📄 scissors-solid.svg
-         📄 specializations_icon.jpg
-         📄 specializations_icon.svg
-         📄 tick_icon.svg
-         📄 upload_area.svg
       📁 components
          📄 Navbar.jsx
          📄 Sidebar.jsx
+         📄 StylistPanel.jsx
       📁 context
          📄 AdminContext.jsx
          📄 AppContext.jsx
@@ -96,6 +56,7 @@
             📄 AllAppointments.jsx
             📄 Dashboard.jsx
             📄 DoctorsList.jsx
+            📄 MyProfile.jsx
             📄 ServicesCategory.jsx
          📁 Doctor
             📄 DoctorAppointments.jsx
@@ -114,8 +75,8 @@
    📁 controllers
       📄 adminController.js
       📄 doctorController.js
+      📄 userController original.js
       📄 userController.js
-   📄 demo.js
    📁 middleware
       📄 authAdmin.js
       📄 authDoctor.js
@@ -132,9 +93,6 @@
       📄 doctorRoute.js
       📄 userRoute.js
    📄 server.js
-   📄 show-structure.txt
-📄 demo.js
-📄 demo.jsx
 📁 frontend
    📄 .env
    📄 .eslintrc.cjs
@@ -145,61 +103,23 @@
    📄 postcss.config.js
    📁 public
       📄 favicon.svg
+      📄 icon-192.png
+      📄 icon-512.png
+      📄 manifest.json
+      📄 service-worker.js
       📄 vite.svg
    📄 README.md
    📁 src
       📄 App.jsx
       📁 assets
-         📄 about_image.png
-         📄 appointment_img.png
-         📄 arrow_icon.svg
-         📄 assets.js
-         📄 beard-grooming.jpeg
-         📄 chats_icon.svg
-         📄 contact_image.png
-         📄 cross_icon.png
-         📄 Dermatologist.svg
-         📄 doc1.png
-         📄 doc10.png
-         📄 doc11.png
-         📄 doc12.png
-         📄 doc13.png
-         📄 doc14.png
-         📄 doc15.png
-         📄 doc2.png
-         📄 doc3.png
-         📄 doc4.png
-         📄 doc5.png
-         📄 doc6.png
-         📄 doc7.png
-         📄 doc8.png
-         📄 doc9.png
-         📄 dropdown_icon.svg
-         📄 Gastroenterologist.svg
-         📄 General_physician.svg
-         📄 google-icon.png
-         📄 group_profiles.png
-         📄 Gynecologist.svg
-         📄 hair-styling.jpeg
-         📄 header_img.png
-         📄 image.png
-         📄 info_icon.svg
-         📄 logo.svg
-         📄 menu_icon.svg
-         📄 Neurologist.svg
-         📄 Pediatricians.svg
-         📄 profile_pic.png
-         📄 razorpay_logo.png
-         📄 stripe_logo.png
-         📄 upload_area.png
-         📄 upload_icon.png
-         📄 verified_icon.svg
+         
       📁 components
          📄 Banner.jsx
          📄 Footer.jsx
          📄 Header.jsx
          📄 Navbar.jsx
          📄 RelatedDoctors.jsx
+         📄 ScrollToTop.jsx
          📄 SpecialityMenu.jsx
          📄 TopDoctors.jsx
       📁 context
@@ -215,8 +135,8 @@
          📄 Login.jsx
          📄 MyAppointments.jsx
          📄 MyProfile.jsx
+         📄 Services.jsx
          📄 Verify.jsx
    📄 tailwind.config.js
    📄 vercel.json
    📄 vite.config.js
-📄 show-structure.js

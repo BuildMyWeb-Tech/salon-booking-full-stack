@@ -4,20 +4,23 @@ import { toast } from 'react-toastify'
 import axios from 'axios'
 import { AdminContext } from '../../context/AdminContext'
 import { AppContext } from '../../context/AppContext'
-import { Pencil } from 'lucide-react'
+import { Pencil, Eye, EyeOff, User, Mail, Lock, Phone, Award, Briefcase, Scissors, Hash, Instagram, Clock, FileText } from 'lucide-react'
 
 const AddStylist = () => {
     const [stylistImg, setStylistImg] = useState(false)
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
+    const [phone, setPhone] = useState('')
     const [password, setPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
     const [experience, setExperience] = useState('1 Year')
     const [price, setPrice] = useState('')
     const [about, setAbout] = useState('')
-    const [specialty, setSpecialty] = useState('Haircut & Styling')
+    const [specialty, setSpecialty] = useState('Hair Styling Specialist')
     const [certification, setCertification] = useState('')
     const [instagram, setInstagram] = useState('')
     const [workingHours, setWorkingHours] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     const { backendUrl } = useContext(AppContext)
     const { aToken } = useContext(AdminContext)
@@ -30,11 +33,14 @@ const AddStylist = () => {
                 return toast.error('Profile Image Required')
             }
 
+            setIsSubmitting(true)
+            
             const formData = new FormData();
 
             formData.append('image', stylistImg)
             formData.append('name', name)
             formData.append('email', email)
+            formData.append('phone', phone) // Add phone number to formData
             formData.append('password', password)
             formData.append('experience', experience)
             formData.append('price', Number(price))
@@ -44,99 +50,157 @@ const AddStylist = () => {
             formData.append('instagram', instagram)
             formData.append('workingHours', workingHours)
 
-            // console log formdata            
-            formData.forEach((value, key) => {
-                console.log(`${key}: ${value}`);
-            });
-
             const { data } = await axios.post(backendUrl + '/api/admin/add-doctor', formData, { headers: { aToken } })
             if (data.success) {
                 toast.success(data.message)
-                setStylistImg(false)
-                setName('')
-                setPassword('')
-                setEmail('')
-                setCertification('')
-                setAbout('')
-                setPrice('')
-                setInstagram('')
-                setWorkingHours('')
+                resetForm()
             } else {
                 toast.error(data.message)
             }
 
         } catch (error) {
-            toast.error(error.message)
+            toast.error(error.message || 'Something went wrong')
             console.log(error)
+        } finally {
+            setIsSubmitting(false)
         }
+    }
+
+    const resetForm = () => {
+        setStylistImg(false)
+        setName('')
+        setEmail('')
+        setPhone('')
+        setPassword('')
+        setCertification('')
+        setAbout('')
+        setPrice('')
+        setInstagram('')
+        setWorkingHours('')
+    }
+
+    const togglePasswordVisibility = () => {
+        setShowPassword(prevState => !prevState);
     }
 
     return (
         <form onSubmit={onSubmitHandler} className='m-5 w-full'>
-            <p className='mb-5 text-2xl font-medium text-gray-800'>Add New Stylist</p>
+            <div className='flex justify-between items-center mb-5'>
+                <h1 className='text-2xl font-bold text-gray-800'>Add New Stylist</h1>
+                <button 
+                    type="button"
+                    onClick={resetForm}
+                    className="text-gray-500 hover:text-primary transition-colors text-sm font-medium"
+                >
+                    Reset Form
+                </button>
+            </div>
 
-            <div className='bg-white px-8 py-8 border rounded-lg shadow-sm w-full max-w-4xl max-h-[80vh] overflow-y-auto'>
-                <div className='flex flex-col items-center justify-center mb-8'>
+            <div className='bg-white px-6 py-8 sm:p-8 border rounded-lg shadow-sm w-full max-w-5xl max-h-[85vh] overflow-y-auto'>
+                {/* Profile Image Upload Section */}
+                <div className='flex flex-col items-center justify-center mb-8 p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50'>
                     <div className='relative mb-3'>
-                        <div className='w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200'>
-                            <img 
-                                className='w-full h-full object-cover' 
-                                src={stylistImg ? URL.createObjectURL(stylistImg) : assets.upload_area} 
-                                alt="Stylist profile" 
-                            />
+                        <div className='w-32 h-32 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center'>
+                            {stylistImg ? (
+                                <img 
+                                    className='w-full h-full object-cover' 
+                                    src={URL.createObjectURL(stylistImg)} 
+                                    alt="Stylist profile" 
+                                />
+                            ) : (
+                                <User size={48} className="text-gray-300" />
+                            )}
                         </div>
-                        <label htmlFor="stylist-img" className='absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer'>
+                        <label 
+                            htmlFor="stylist-img" 
+                            className='absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-colors'
+                        >
                             <Pencil size={16} />
                         </label>
-                        <input onChange={(e) => setStylistImg(e.target.files[0])} type="file" name="" id="stylist-img" hidden />
+                        <input 
+                            onChange={(e) => setStylistImg(e.target.files[0])} 
+                            type="file" 
+                            name="" 
+                            id="stylist-img" 
+                            hidden 
+                            accept="image/*"
+                        />
                     </div>
-                    <p className='text-gray-500 text-sm'>Upload stylist profile picture</p>
+                    <p className='text-gray-500 text-sm mb-2'>Upload stylist profile picture</p>
+                    <p className='text-xs text-gray-400'>Recommended: Square image, at least 300x300px</p>
                 </div>
 
-                <div className='flex flex-col lg:flex-row items-start gap-8 text-gray-600'>
-                    <div className='w-full lg:flex-1 flex flex-col gap-4'>
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Full Name</label>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-600'>
+                    {/* Left Column */}
+                    <div className='space-y-5'>
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <User size={16} className="mr-1.5" /> Full Name
+                                <span className="text-red-500 ml-1">*</span>
+                            </label>
                             <input 
                                 onChange={e => setName(e.target.value)} 
                                 value={name} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
+                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
                                 type="text" 
                                 placeholder='Enter stylist name' 
                                 required 
                             />
                         </div>
 
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Email Address</label>
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Mail size={16} className="mr-1.5" /> Email Address
+                                <span className="text-red-500 ml-1">*</span>
+                            </label>
                             <input 
                                 onChange={e => setEmail(e.target.value)} 
                                 value={email} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
+                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
                                 type="email" 
                                 placeholder='Enter email address' 
                                 required 
                             />
                         </div>
 
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Password</label>
-                            <input 
-                                onChange={e => setPassword(e.target.value)} 
-                                value={password} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="password" 
-                                placeholder='Create password' 
-                                required 
-                            />
-                        </div>
+                        
 
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Experience</label>
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Lock size={16} className="mr-1.5" /> Password
+                                <span className="text-red-500 ml-1">*</span>
+                            </label>
+                            <div className='relative'>
+                                <input 
+                                    onChange={e => setPassword(e.target.value)} 
+                                    value={password} 
+                                    className='border rounded-md px-3 py-2.5 pr-10 w-full focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder='Create password' 
+                                    required 
+                                />
+                                <button 
+                                    type="button" 
+                                    className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700'
+                                    onClick={togglePasswordVisibility}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-500">Minimum 8 characters recommended</p>
+                        </div>
+                        
+
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Award size={16} className="mr-1.5" /> Experience
+                                <span className="text-red-500 ml-1">*</span>
+                            </label>
                             <select 
                                 onChange={e => setExperience(e.target.value)} 
                                 value={experience} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
+                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none bg-white' 
+                                required
                             >
                                 <option value="1 Year">1 Year</option>
                                 <option value="2 Years">2 Years</option>
@@ -147,17 +211,32 @@ const AddStylist = () => {
                                 <option value="10+ Years">10+ Years</option>
                             </select>
                         </div>
-
-                        
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Clock size={16} className="mr-1.5" /> Working Hours
+                            </label>
+                            <input 
+                                onChange={e => setWorkingHours(e.target.value)} 
+                                value={workingHours} 
+                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
+                                type="text" 
+                                placeholder='e.g.  10AM-7PM' 
+                            />
+                        </div>
                     </div>
 
-                    <div className='w-full lg:flex-1 flex flex-col gap-4'>
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Specialty</label>
+                    {/* Right Column */}
+                    <div className='space-y-5'>
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Scissors size={16} className="mr-1.5" /> Specialty
+                                <span className="text-red-500 ml-1">*</span>
+                            </label>
                             <select 
                                 onChange={e => setSpecialty(e.target.value)} 
                                 value={specialty} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary'
+                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none bg-white'
+                                required
                             >
                                 <option value="Hair Styling Specialist">Hair Styling Specialist</option>
                                 <option value="Beard & Grooming Specialist">Beard & Grooming Specialist</option>
@@ -165,78 +244,117 @@ const AddStylist = () => {
                                 <option value="Hair Treatment Specialist">Hair Treatment Specialist</option>
                                 <option value="Bridal Hairstylist">Bridal Hairstylist</option>
                                 <option value="Unisex Hairstylist">Unisex Hairstylist</option>
-
                             </select>
                         </div>
 
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Certification</label>
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <FileText size={16} className="mr-1.5" /> Certification
+                                <span className="text-red-500 ml-1">*</span>
+                            </label>
                             <input 
                                 onChange={e => setCertification(e.target.value)} 
                                 value={certification} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
+                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
                                 type="text" 
                                 placeholder='Professional certifications' 
                                 required 
                             />
                         </div>
 
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Base Price</label>
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Phone size={16} className="mr-1.5" /> Phone Number
+                                <span className="text-red-500 ml-1">*</span>
+                            </label>
                             <input 
-                                onChange={e => setPrice(e.target.value)} 
-                                value={price} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="number" 
-                                placeholder='Starting price for services' 
+                                onChange={e => setPhone(e.target.value)} 
+                                value={phone} 
+                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
+                                type="tel" 
+                                placeholder='Enter phone number' 
                                 required 
                             />
+                            <p className="text-xs text-gray-500">This number will be displayed for clients to contact the stylist</p>
                         </div>
 
-                        {/* <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Instagram Handle</label>
-                            <input 
-                                onChange={e => setInstagram(e.target.value)} 
-                                value={instagram} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="text" 
-                                placeholder='@username (optional)' 
-                            />
-                        </div> 
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Hash size={16} className="mr-1.5" /> Base Price
+                                <span className="text-red-500 ml-1">*</span>
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
+                                <input 
+                                    onChange={e => setPrice(e.target.value)} 
+                                    value={price} 
+                                    className='border rounded-md pl-7 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
+                                    type="number" 
+                                    placeholder='Starting price for services' 
+                                    required 
+                                />
+                            </div>
+                        </div>
 
-                        <div className='flex-1 flex flex-col gap-1'>
-                            <label className='text-sm font-medium text-gray-700'>Working Hours</label>
-                            <input 
-                                onChange={e => setWorkingHours(e.target.value)} 
-                                value={workingHours} 
-                                className='border rounded-md px-3 py-2 focus:outline-none focus:border-primary' 
-                                type="text" 
-                                placeholder='e.g. Tue-Sat: 10AM-7PM' 
-                                required 
-                            />
-                        </div>*/}
+                        {/* <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Instagram size={16} className="mr-1.5" /> Instagram Handle
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">@</span>
+                                <input 
+                                    onChange={e => setInstagram(e.target.value)} 
+                                    value={instagram} 
+                                    className='border rounded-md pl-7 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
+                                    type="text" 
+                                    placeholder='username (optional)' 
+                                />
+                            </div>
+                        </div> */}
+
+                        
                     </div>
                 </div>
 
-                <div>
-                    <label className='text-sm font-medium text-gray-700 block mt-6 mb-2'>About The Stylist</label>
+                {/* About Section - Full Width */}
+                <div className="mt-6">
+                    <label className='text-sm font-medium text-gray-700 flex items-center mb-1.5'>
+                        <FileText size={16} className="mr-1.5" /> About The Stylist
+                        <span className="text-red-500 ml-1">*</span>
+                    </label>
                     <textarea 
                         onChange={e => setAbout(e.target.value)} 
                         value={about} 
-                        className='w-full px-4 pt-3 border rounded-md focus:outline-none focus:border-primary' 
+                        className='w-full px-4 pt-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
                         rows={4} 
                         placeholder="Describe the stylist's expertise, style philosophy, and approach to client service"
                         required
                     ></textarea>
+                    <p className="text-xs text-gray-500 mt-1">
+                        Include relevant experience, specializations, and unique styling approach to help clients connect with the stylist
+                    </p>
                 </div>
 
-                <div className='flex justify-end mt-6'>
-                    <button 
-                        type='submit' 
-                        className='bg-primary px-8 py-3 text-white rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2'
-                    >
-                        Add Stylist
-                    </button>
+                <div className="mt-2 pt-4 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 mb-4">
+                        <span className="text-red-500 mr-1">*</span> Required fields
+                    </p>
+                    <div className='flex justify-end'>
+                        <button 
+                            type='submit' 
+                            disabled={isSubmitting}
+                            className='bg-primary px-8 py-3 text-white rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed'
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    <span>Adding Stylist...</span>
+                                </>
+                            ) : (
+                                <>Add Stylist</>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
         </form>

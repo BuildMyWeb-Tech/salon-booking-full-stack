@@ -15,29 +15,31 @@ import Login from './pages/Login';
 import DoctorAppointments from './pages/Doctor/DoctorAppointments';
 import DoctorDashboard from './pages/Doctor/DoctorDashboard';
 import DoctorProfile from './pages/Doctor/DoctorProfile';
+import MyProfile from './pages/Admin/MyProfile';
 
 const App = () => {
-
   const { dToken } = useContext(DoctorContext)
   const { aToken } = useContext(AdminContext)
 
   return dToken || aToken ? (
-    <div className='bg-[#F8F9FD]'>
+    <div className='bg-[#F8F9FD] min-h-screen'>
       <ToastContainer />
-      <Navbar />
-      <div className='flex items-start'>
-        <Sidebar />
-        <Routes>
-          <Route path='/' element={<Dashboard />} />
-          <Route path='/admin-dashboard' element={<Dashboard />} />
-          <Route path='/all-appointments' element={<AllAppointments />} />
-          <Route path='/add-stylist' element={<AddDoctor />} />
-          <Route path='/services-category' element={<ServiceCategory />} />
-          <Route path='/stylist-list' element={<DoctorsList />} />
-          <Route path='/doctor-dashboard' element={<DoctorDashboard />} />
-          <Route path='/doctor-appointments' element={<DoctorAppointments />} />
-          <Route path='/doctor-profile' element={<DoctorProfile />} />
-        </Routes>
+      <Sidebar />
+      <div className='flex flex-col min-h-screen'>
+        <Navbar />
+        <div className='md:ml-20 lg:ml-64 p-4 sm:p-6 pb-20 md:pb-6 flex-grow'>
+          <Routes>  
+            <Route path='/' element={<Dashboard />} />
+            <Route path='/all-appointments' element={<AllAppointments />} />
+            <Route path='/add-stylist' element={<AddDoctor />} />
+            <Route path='/services-category' element={<ServiceCategory />} />
+            <Route path='/stylist-list' element={<DoctorsList />} />
+            <Route path='/doctor-dashboard' element={<DoctorDashboard />} />
+            <Route path='/doctor-appointments' element={<DoctorAppointments />} />
+            <Route path='/doctor-profile' element={<DoctorProfile />} />
+            <Route path="/my-profile" element={<MyProfile />} />
+          </Routes>
+        </div>
       </div>
     </div>
   ) : (

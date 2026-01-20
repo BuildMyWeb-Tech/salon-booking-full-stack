@@ -1,231 +1,315 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { AdminContext } from '../../context/AdminContext'
-import { Scissors, Search, Filter, Plus, Phone, Mail, MapPin, Award, Star, ArrowUpDown } from 'lucide-react'
+import {
+  Scissors,
+  Search,
+  Filter,
+  Plus,
+  Phone,
+  Mail,
+  Award,
+  ArrowUpDown,
+  Pencil,
+  Trash2,
+  X,
+  AlertTriangle,
+  Check,
+  Clock,
+  UserCheck,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const StylistsList = () => {
-  const { doctors: stylists, changeAvailability, aToken, getAllDoctors: getAllStylists } = useContext(AdminContext)
+  const {
+    doctors: stylists,
+    changeAvailability,
+    aToken,
+    getAllDoctors: getAllStylists,
+    deleteDoctor
+  } = useContext(AdminContext)
+
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterSpeciality, setFilterSpeciality] = useState('all')
+  const [filterSpecialty, setFilterSpecialty] = useState('all')
   const [sortBy, setSortBy] = useState('name')
   const [sortOrder, setSortOrder] = useState('asc')
   const [loading, setLoading] = useState(true)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [stylistToDelete, setStylistToDelete] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 9
 
   useEffect(() => {
     if (aToken) {
       setLoading(true)
-      getAllStylists().finally(() => {
-        setLoading(false)
-      })
+      getAllStylists().finally(() => setLoading(false))
     }
   }, [aToken])
 
-  // Extract unique specialities for filter dropdown
-  const specialities = ['all', ...new Set(stylists.map(stylist => stylist.speciality))]
+  /* ===== UNIQUE SPECIALTIES FROM ADD STYLIST DATA ===== */
+  const specialties = ['all', ...new Set(stylists.map(s => s.specialty || s.speciality))]
 
-  // Filter and sort stylists
+  /* ===== FILTER + SORT LOGIC ===== */
   const filteredStylists = stylists
     .filter(stylist => {
-      // Filter by search term
-      const matchesSearch = stylist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        stylist.speciality.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (stylist.about && stylist.about.toLowerCase().includes(searchTerm.toLowerCase()))
+      const matchesSearch =
+        stylist.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (stylist.specialty || stylist.speciality)?.toLowerCase().includes(searchTerm.toLowerCase())
 
-      // Filter by speciality
-      const matchesSpeciality = filterSpeciality === 'all' || stylist.speciality === filterSpeciality
+      const matchesSpecialty =
+        filterSpecialty === 'all' || 
+        (stylist.specialty === filterSpecialty) || 
+        (stylist.speciality === filterSpecialty)
 
-      return matchesSearch && matchesSpeciality
+      return matchesSearch && matchesSpecialty
     })
     .sort((a, b) => {
-      // Sort by selected field
-      let comparison = 0
+      let result = 0
+
       if (sortBy === 'name') {
-        comparison = a.name.localeCompare(b.name)
-      } else if (sortBy === 'speciality') {
-        comparison = a.speciality.localeCompare(b.speciality)
-      } else if (sortBy === 'experience') {
-        // Extract years from experience string or default to 0
-        const aYears = parseInt(a.experience?.match(/\d+/)?.[0] || 0)
-        const bYears = parseInt(b.experience?.match(/\d+/)?.[0] || 0)
-        comparison = aYears - bYears
+        result = a.name.localeCompare(b.name)
       }
 
-      // Apply sort direction
-      return sortOrder === 'asc' ? comparison : -comparison
+      if (sortBy === 'specialty') {
+        const aSpecialty = a.specialty || a.speciality || ''
+        const bSpecialty = b.specialty || b.speciality || ''
+        result = aSpecialty.localeCompare(bSpecialty)
+      }
+
+      if (sortBy === 'experience') {
+        const aExp = parseInt(a.experience?.match(/\d+/)?.[0] || 0)
+        const bExp = parseInt(b.experience?.match(/\d+/)?.[0] || 0)
+        result = aExp - bExp
+      }
+
+      return sortOrder === 'asc' ? result : -result
     })
 
-  const toggleSortOrder = () => {
-    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+  // Pagination
+  const totalPages = Math.ceil(filteredStylists.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedStylists = filteredStylists.slice(startIndex, startIndex + itemsPerPage)
+
+  // Handle delete button click
+  const handleDeleteClick = (stylist) => {
+    setStylistToDelete(stylist)
+    setShowDeleteModal(true)
+  }
+
+  // Confirm delete action
+  const confirmDelete = async () => {
+    if (!stylistToDelete) return
+
+    try {
+      setIsDeleting(true)
+      await deleteDoctor(stylistToDelete._id)
+      setShowDeleteModal(false)
+      setStylistToDelete(null)
+    } catch (error) {
+      console.error("Error deleting stylist:", error)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
     <div className='w-full max-w-7xl mx-auto px-4 py-6'>
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        {/* Header */}
-        <div className="p-6 border-b bg-gradient-to-r from-primary/5 to-transparent">
+
+        {/* HEADER */}
+        <div className="p-6 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className='text-2xl font-bold text-gray-800 flex items-center gap-2'>
-                <Scissors className="h-6 w-6 text-primary" />
-                Stylists Directory
+                <Scissors className="text-primary h-6 w-6" strokeWidth={2} />
+                Salon Stylists
               </h1>
-              <p className='text-gray-500'>Manage your salon's team of professional stylists</p>
+              <p className='text-gray-500 mt-1'>
+                Manage professional hairstylists and availability
+              </p>
             </div>
-            
-           <Link
-            to="/add-doctor"
-            className="bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
-          >
-            <Plus size={18} />
-            Add New Stylist
-          </Link>
+
+            <Link
+              to="/add-stylist"
+              className="bg-primary text-white py-2.5 px-5 rounded-lg hover:bg-primary/90 transition-all flex items-center gap-2 shadow-sm hover:shadow transform hover:-translate-y-0.5"
+            >
+              <Plus size={18} />
+              Add Stylist
+            </Link>
           </div>
         </div>
 
-        {/* Filters and Search */}
-        <div className="p-4 border-b bg-gray-50">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="relative flex-grow">
-              <input
-                type="text"
-                placeholder="Search stylists by name, speciality..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-              <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            </div>
-            
-            <div className="flex gap-3">
-              <div className="relative">
-                <select
-                  value={filterSpeciality}
-                  onChange={e => setFilterSpeciality(e.target.value)}
-                  className="appearance-none pl-10 pr-8 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                >
-                  <option value="all">All Specialities</option>
-                  {specialities.filter(s => s !== 'all').map((speciality, idx) => (
-                    <option key={idx} value={speciality}>{speciality}</option>
-                  ))}
-                </select>
-                <Filter className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-              
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={e => setSortBy(e.target.value)}
-                  className="appearance-none pl-10 pr-8 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-                >
-                  <option value="name">Sort by Name</option>
-                  <option value="speciality">Sort by Speciality</option>
-                  <option value="experience">Sort by Experience</option>
-                </select>
-                <button 
-                  onClick={toggleSortOrder} 
-                  className="absolute left-3 top-2.5"
-                  title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
-                >
-                  <ArrowUpDown className="h-5 w-5 text-gray-400" />
-                </button>
+        {/* SEARCH + FILTER */}
+        <div className="p-4 border-b bg-gray-50 flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:outline-none shadow-sm"
+              placeholder="Search by name or specialty..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-3 flex-wrap sm:flex-nowrap">
+            <div className="relative min-w-[140px]">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <select
+                value={filterSpecialty}
+                onChange={e => setFilterSpecialty(e.target.value)}
+                className="appearance-none pl-9 pr-8 py-2.5 w-full border rounded-lg focus:ring-2 focus:ring-primary/30 focus:outline-none shadow-sm"
+              >
+                {specialties.map((sp, i) => (
+                  <option key={i} value={sp}>
+                    {sp === 'all' ? 'All Specialties' : sp}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronDown size={16} className="text-gray-400" />
               </div>
             </div>
+
+            <div className="relative min-w-[140px]">
+              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value)}
+                className="appearance-none pl-9 pr-8 py-2.5 w-full border rounded-lg focus:ring-2 focus:ring-primary/30 focus:outline-none shadow-sm"
+              >
+                <option value="name">Sort by Name</option>
+                <option value="specialty">Sort by Specialty</option>
+                <option value="experience">Sort by Experience</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronDown size={16} className="text-gray-400" />
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className={`px-3 py-2 border rounded-lg shadow-sm hover:bg-gray-100 transition-colors flex items-center justify-center ${sortOrder === 'desc' ? 'bg-gray-100' : 'bg-white'}`}
+              title={`Currently: ${sortOrder === 'asc' ? 'Ascending' : 'Descending'}`}
+            >
+              {sortOrder === 'asc' ? 
+                <ChevronUp size={18} className="text-gray-600" /> : 
+                <ChevronDown size={18} className="text-gray-600" />
+              }
+            </button>
           </div>
         </div>
 
-        {/* Stylists Grid */}
+        {/* Results Summary */}
+        <div className="px-6 py-3 border-b text-sm text-gray-500 flex flex-wrap justify-between items-center">
+          <div>
+            Showing {filteredStylists.length > 0 ? startIndex + 1 : 0}-
+            {Math.min(startIndex + itemsPerPage, filteredStylists.length)} of {filteredStylists.length} results
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`h-2 w-2 rounded-full ${sortOrder === 'asc' ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+            <span>{sortOrder === 'asc' ? 'A to Z' : 'Z to A'} by {sortBy === 'name' ? 'name' : sortBy === 'specialty' ? 'specialty' : 'experience'}</span>
+          </div>
+        </div>
+
+        {/* CONTENT */}
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <div className="flex flex-col justify-center items-center h-64">
+            <div className="animate-spin h-12 w-12 border-4 border-t-primary border-gray-200 rounded-full mb-4"></div>
+            <p className="text-gray-500">Loading stylists...</p>
           </div>
-        ) : filteredStylists.length > 0 ? (
-          <div className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredStylists.map((stylist, index) => (
-                <div 
-                  key={index} 
-                  className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md border border-gray-100 transition-all duration-300 hover:translate-y-[-5px]"
+        ) : filteredStylists.length === 0 ? (
+          <div className="text-center py-16 px-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
+              <Scissors size={24} />
+            </div>
+            <h3 className="text-lg font-medium text-gray-800 mb-2">No stylists found</h3>
+            <p className="text-gray-500 max-w-md mx-auto mb-6">
+              {searchTerm || filterSpecialty !== 'all' ? 
+                'Try adjusting your search or filters to find what you\'re looking for.' : 
+                'Get started by adding your first stylist to the team.'}
+            </p>
+            <Link
+              to="/add-stylist"
+              className="inline-flex items-center gap-2 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition"
+            >
+              <Plus size={16} />
+              Add Your First Stylist
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {paginatedStylists.map(stylist => (
+                <div
+                  key={stylist._id}
+                  className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-all hover:border-gray-300 hover:translate-y-[-2px]"
                 >
-                  <div className="relative">
-                    {/* Stylist Image */}
-                    <div className="aspect-[4/3] overflow-hidden bg-gray-100">
-                      <img 
-                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" 
-                        src={stylist.image} 
-                        alt={stylist.name} 
-                      />
-                    </div>
-                    
-                    {/* Availability Badge */}
+                  {/* IMAGE WITH STATUS OVERLAY */}
+                  <div className="aspect-[4/3] bg-gray-100 relative">
+                    <img
+                      src={stylist.image}
+                      alt={stylist.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Status Badge */}
                     <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-medium ${
-                      stylist.available 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {stylist.available ? 'Available' : 'Not Available'}
+                      stylist.available ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                    } shadow-sm flex items-center gap-1`}>
+                      {stylist.available ? 
+                        <><UserCheck size={12} /> Available</> : 
+                        <><Clock size={12} /> Not Available</>
+                      }
                     </div>
-                    
-                    {/* Experience Badge (if available) */}
+                    {/* Experience Badge */}
                     {stylist.experience && (
-                      <div className="absolute bottom-3 left-3 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5">
+                      <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm flex items-center gap-1.5">
                         <Award size={12} />
                         {stylist.experience}
                       </div>
                     )}
                   </div>
-                  
-                  <div className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800">{stylist.name}</h3>
-                        <p className="text-primary font-medium text-sm">{stylist.specialty}</p>
-                      </div>
-                      
-                      {/* Rating (sample data) */}
-                      <div className="flex items-center gap-1">
-                        <Star size={16} className="text-yellow-400 fill-yellow-400" />
-                        <span className="text-gray-600 text-sm font-medium">
-                          {(stylist.rating || (4 + Math.random()).toFixed(1)).slice(0, 3)}
-                        </span>
-                      </div>
+
+                  {/* DETAILS */}
+                  <div className="p-4 space-y-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        {stylist.name}
+                      </h3>
+
+                      <p className="text-primary text-sm font-medium">
+                        {stylist.specialty || stylist.speciality}
+                      </p>
                     </div>
-                    
-                    {/* Contact Info */}
-                    <div className="mt-3 space-y-1.5">
+
+                    <div className="space-y-2 pt-2">
                       {stylist.phone && (
                         <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Phone size={14} />
-                          <span>{stylist.phone}</span>
+                          <Phone size={14} className="text-gray-400" />
+                          {stylist.phone}
                         </div>
                       )}
-                      
+
                       {stylist.email && (
                         <div className="flex items-center gap-2 text-sm text-gray-600 truncate">
-                          <Mail size={14} />
+                          <Mail size={14} className="text-gray-400" />
                           <span className="truncate">{stylist.email}</span>
                         </div>
                       )}
-                      
-                      {stylist.location && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <MapPin size={14} />
-                          <span>{stylist.location}</span>
-                        </div>
-                      )}
                     </div>
-                    
-                    {/* Availability Toggle */}
-                    <div className="mt-4 pt-3 border-t">
-                      <label className="flex items-center gap-2 cursor-pointer">
+
+                    {/* AVAILABILITY TOGGLE */}
+                    <div className="pt-3 border-t">
+                      <label className="flex items-center gap-3 cursor-pointer">
                         <div className="relative">
-                          <input 
-                            type="checkbox" 
-                            checked={stylist.available} 
-                            onChange={() => changeAvailability(stylist._id)} 
+                          <input
+                            type="checkbox"
+                            checked={stylist.available}
+                            onChange={() => changeAvailability(stylist._id)}
                             className="sr-only peer"
                           />
-                          <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary peer-focus:ring-2 peer-focus:ring-primary/30 transition-colors"></div>
-                          <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition peer-checked:translate-x-5"></div>
+                          <div className="w-11 h-6 bg-gray-200 peer-checked:bg-primary rounded-full relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
                         </div>
                         <span className="text-sm font-medium text-gray-700">
                           {stylist.available ? 'Currently Available' : 'Mark as Available'}
@@ -233,43 +317,137 @@ const StylistsList = () => {
                       </label>
                     </div>
                     
-                    {/* Action Buttons */}
-                    {/* <div className="flex gap-2 mt-4">
-                      <button className="flex-1 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
-                        View Profile
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                    {/* ACTION BUTTONS */}
+                    <div className="flex gap-2 mt-4">
+                      <Link 
+                        to={`/edit-stylist/${stylist._id}`}
+                        className="flex-1 py-2.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center justify-center gap-1.5"
+                      >
+                        <Pencil size={14} />
                         Edit
+                      </Link>
+                      <button 
+                        onClick={() => handleDeleteClick(stylist)}
+                        className="flex-1 py-2.5 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium flex items-center justify-center gap-1.5"
+                      >
+                        <Trash2 size={14} />
+                        Delete
                       </button>
-                    </div> */}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Scissors className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-800 mb-1">No stylists found</h3>
-            <p className="text-gray-500 mb-6 max-w-md">
-              {searchTerm || filterSpeciality !== 'all' 
-                ? 'Try changing your search criteria or filters' 
-                : 'Add your first stylist to get started with your salon team'}
-            </p>
-            <Link
-              to="/add-doctor"
-              className="bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
-            >
-              <Plus size={18} />
-              Add New Stylist
-            </Link>
-          </div>
+            
+            {/* PAGINATION */}
+            {totalPages > 1 && (
+              <div className="p-5 border-t flex justify-center">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-md border bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-9 h-9 rounded-md flex items-center justify-center text-sm transition-colors ${
+                        currentPage === i + 1
+                          ? 'bg-primary text-white font-medium'
+                          : 'border bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-md border bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
+      
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 animate-fadeIn">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                  <AlertTriangle size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-gray-800">Confirm Deletion</h3>
+              </div>
+              <button 
+                onClick={() => setShowDeleteModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <p className="text-gray-600 mb-2">
+              Are you sure you want to delete the stylist <span className="font-medium text-gray-800">{stylistToDelete?.name}</span>?
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              This action cannot be undone and will remove all associated data.
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-70 flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    <span>Delete Stylist</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
+// Adding missing ChevronDown and ChevronUp components
+const ChevronDown = ({ size, className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="m6 9 6 6 6-6"/>
+  </svg>
+)
+
+const ChevronUp = ({ size, className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="m18 15-6-6-6 6"/>
+  </svg>
+)
 
 export default StylistsList

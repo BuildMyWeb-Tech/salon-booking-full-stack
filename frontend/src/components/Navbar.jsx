@@ -290,7 +290,7 @@ const Navbar = () => {
             <span className="text-xs mt-1">Service</span>
           </NavLink>
 
-          <NavLink to="/doctors" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+          <NavLink to="/stylists" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
             <Scissors size={20} />
             <span className="text-xs mt-1">Stylist</span>
           </NavLink>
@@ -300,7 +300,7 @@ const Navbar = () => {
             <span className="text-xs mt-1">Appointment</span>
           </NavLink>
 
-          <NavLink to="/profile" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+          <NavLink to="/my-profile" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
             <User size={20} />
             <span className="text-xs mt-1">Profile</span>
           </NavLink>
@@ -310,7 +310,7 @@ const Navbar = () => {
       {/* Spacer for fixed navbar */}
       <div className="h-20"></div>
       {/* Spacer for bottom nav on mobile */}
-      <div className="h-16 md:h-0 mb-5"></div>
+      <div className=" md:h-0 "></div>
     </>
   )
 }

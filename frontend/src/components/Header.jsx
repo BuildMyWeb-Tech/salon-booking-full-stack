@@ -1,45 +1,158 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { assets } from '../assets/assets'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import {
+  Scissors,
+  Palette,
+  Sparkles,
+  Clock,
+  ArrowRight
+} from 'lucide-react'
 
-const Header = () => {
-    return (
-        <div className='w-full max-w-full bg-primary rounded-lg px-4 py-10 sm:px-6 md:px-8 lg:px-12 overflow-hidden'>
-            <div className='container mx-auto flex flex-col md:flex-row items-center'>
-                {/* --------- Header Left --------- */}
-                <div className='w-full md:w-1/2 flex flex-col items-center md:items-start justify-center gap-5 md:gap-6 mb-10 md:mb-0'>
-                    <h1 className='text-3xl sm:text-4xl lg:text-5xl xl:text-6xl text-white font-bold leading-tight text-center md:text-left'>
-                         Book Your Stylist <br className='hidden md:block' /> With Flexible Time
-                    </h1>
-                    
-                    <div className='flex flex-col sm:flex-row items-center gap-4 text-white'>
-                        <img className='w-28 sm:w-32' src={assets.group_profiles} alt="Our stylists" />
-                        <p className='text-sm md:text-base text-center md:text-left opacity-90'>
-                            Discover our talented team of creative stylists and schedule your perfect hair transformation today.
-                        </p>
-                    </div>
-                    
-                    <a href='#services' className='mt-2 md:mt-4 flex items-center justify-center gap-3 bg-white text-primary font-medium px-8 py-3 rounded-full text-sm md:text-base hover:bg-opacity-90 hover:shadow-lg transition-all duration-300 transform hover:scale-105'>
-                        Book Now 
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                        </svg>
-                    </a>
-                </div>
+const Banner = () => {
+  const navigate = useNavigate()
+  const [activeStep, setActiveStep] = useState(1)
 
-                {/* --------- Header Right --------- */}
-                <div className='w-full md:w-1/2 relative'>
-                    <div className='relative h-64 sm:h-80 md:h-96 lg:h-[450px] overflow-hidden rounded-lg'>
-                        <img 
-                            className='w-full h-full object-cover object-center transform scale-105 hover:scale-100 transition-all duration-700' 
-                            src={assets.header_img} 
-                            alt="Professional hair stylists at work" 
-                        />
-                        <div className='absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent opacity-70'></div>
-                    </div>
-                </div>
-            </div>
+  const services = [
+    { name: 'Haircuts', icon: <Scissors size={16} /> },
+    { name: 'Styling', icon: <Sparkles size={16} /> },
+    { name: 'Coloring', icon: <Palette size={16} /> },
+    { name: 'Treatments', icon: <Sparkles size={16} /> },
+    { name: 'Extensions', icon: <Scissors size={16} /> }
+  ]
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveStep(prev => (prev === 3 ? 1 : prev + 1))
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const FastBookingCard = ({ className = '' }) => (
+    <motion.div
+      className={`bg-white rounded-2xl p-6 shadow-2xl w-[280px] ${className}`}
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <div className='flex items-center gap-3 mb-4'>
+        <div className='w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary'>
+          <Clock size={22} />
         </div>
-    )
+        <div>
+          <p className='font-semibold text-gray-800'>Fast Booking</p>
+          <p className='text-gray-500 text-sm'>Book in seconds</p>
+        </div>
+      </div>
+
+      <div className='flex justify-between items-center gap-3 text-center'>
+        {[1, 2, 3].map(step => (
+          <div key={step} className='flex flex-col items-center'>
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-500 ${
+                activeStep === step
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-100 text-gray-400'
+              }`}
+            >
+              {step}
+            </div>
+            <span className='text-xs text-gray-500 mt-1 whitespace-nowrap'>
+              {step === 1 && 'Choose Stylist'}
+              {step === 2 && 'Pick Time'}
+              {step === 3 && 'Confirm'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  )
+
+  return (
+    <section className='w-full bg-gray-50'>
+      <div className='container mx-auto px-4'>
+        <motion.div
+          className='bg-gradient-to-r from-primary via-purple-600 to-indigo-600 rounded-2xl overflow-hidden shadow-2xl'
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className='flex flex-col md:flex-row'>
+
+            {/* LEFT CONTENT */}
+            <div className='w-full md:w-3/5 p-8 sm:p-10 lg:p-16'>
+              <div className='max-w-xl'>
+
+                <div className='inline-block mb-4 bg-white/20 backdrop-blur px-4 py-1 rounded-full'>
+                  <span className='text-white text-sm font-medium'>
+                    Premium Salon Experience
+                  </span>
+                </div>
+
+                <h2 className='text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight'>
+                  Elevate Your Look <br />
+                  With Expert Salon Care
+                </h2>
+
+                <p className='text-white/90 text-sm sm:text-base mb-6'>
+                  From precision cuts to complete makeovers, our professional stylists
+                  deliver personalized services designed for you.
+                </p>
+
+                <div className='flex flex-wrap gap-2 mb-8'>
+                  {services.map((service, index) => (
+                    <span
+                      key={index}
+                      className='flex items-center gap-2 px-3 py-1 bg-white/10 text-white text-sm rounded-full'
+                    >
+                      {service.icon}
+                      {service.name}
+                    </span>
+                  ))}
+                </div>
+
+                <div className='flex flex-col sm:flex-row gap-4'>
+                  <button
+                    onClick={() => navigate('/stylists')}
+                    className='bg-white text-primary px-8 py-3 rounded-full font-medium flex items-center justify-center gap-2'
+                  >
+                    Book Appointment
+                    <ArrowRight size={18} />
+                  </button>
+
+                  <button
+                    onClick={() => navigate('/login')}
+                    className='border-2 border-white text-white px-8 py-3 rounded-full font-medium'
+                  >
+                    Create Account
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT IMAGE — ONLY TAB & LAP */}
+            <div className='hidden md:block md:w-2/5 relative'>
+              <img
+                src={assets.hair_styling || assets.hero_img}
+                alt='Salon'
+                className='w-full h-full object-contain'
+              />
+
+              {/* FAST BOOKING — DESKTOP */}
+              <div className='absolute bottom-8 left-[-60px]'>
+                <FastBookingCard />
+              </div>
+            </div>
+          </div>
+
+          {/* FAST BOOKING — MOBILE ONLY */}
+          <div className='md:hidden py-8 flex justify-center'>
+            <FastBookingCard />
+          </div>
+
+        </motion.div>
+      </div>
+    </section>
+  )
 }
 
-export default Header
+export default Banner
