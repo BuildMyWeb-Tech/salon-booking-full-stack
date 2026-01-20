@@ -5,24 +5,27 @@ import './index.css'
 import { BrowserRouter } from 'react-router-dom'
 import AppContextProvider from './context/AppContext.jsx'
 
+// ---- React App Mount ----
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <BrowserRouter>
-    <AppContextProvider>
-      <App />
-    </AppContextProvider>
-  </BrowserRouter>,
+  <React.StrictMode>
+    <BrowserRouter>
+      <AppContextProvider>
+        <App />
+      </AppContextProvider>
+    </BrowserRouter>
+  </React.StrictMode>
 )
 
-// ✅ PWA: Register Service Worker (VITE)
+// ---- Register Service Worker (Vite PWA Compatible) ----
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/service-worker.js')
-      .then(() => {
-        console.log('Service Worker registered successfully')
+      .register('/service-worker.js', { scope: '/' })
+      .then(reg => {
+        console.log('✅ Service Worker registered:', reg)
       })
-      .catch(error => {
-        console.error('Service Worker registration failed:', error)
+      .catch(err => {
+        console.error('❌ Service Worker failed:', err)
       })
   })
 }

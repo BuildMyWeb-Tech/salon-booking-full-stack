@@ -1,19 +1,25 @@
-import React from 'react'
-import { assets } from '../assets/assets'
-import {
+import React from "react";
+import { assets } from "../assets/assets";
+import { 
   Phone,
   Mail,
   MapPin,
   Instagram,
   Facebook,
   Twitter,
-  Scissors,
-  ChevronRight,
-  ShieldCheck,
-  FileText,
+  Sparkles,
+  UserCircle,
+  Palette,
+  Droplets,
+  Flower2,
+  Users,
+  Lock,
+  FileCheck,
+  RotateCcw,
   HelpCircle,
-  ShoppingBag
-} from 'lucide-react'
+  ChevronRight
+} from "lucide-react";
+
 
 const Footer = () => {
   return (
@@ -46,12 +52,12 @@ const Footer = () => {
           <p className="text-lg font-semibold mb-6">QUICK LINKS</p>
           <ul className="flex flex-col gap-3 text-gray-600">
             {[
-              { name: 'Home', href: '/' },
-              { name: 'Our Stylists', href: '/stylists' },
-              { name: 'Services', href: '/services' },
-              { name: 'About Us', href: '/about' },
-              { name: 'Contact Us', href: '/contact' }
-            ].map(link => (
+              { name: "Home", href: "/" },
+              { name: "Our Stylists", href: "/stylists" },
+              { name: "Services", href: "/services" },
+              { name: "About Us", href: "/about" },
+              { name: "Contact Us", href: "/contact" },
+            ].map((link) => (
               <li key={link.name}>
                 <a
                   href={link.href}
@@ -70,20 +76,20 @@ const Footer = () => {
           <p className="text-lg font-semibold mb-6">OUR SERVICES</p>
           <ul className="flex flex-col gap-3 text-gray-600">
             {[
-              'Hair Styling Specialist',
-              'Beard & Grooming Specialist',
-              'Hair Coloring Specialist',
-              'Hair Treatment Specialist',
-              'Bridal Hairstylist',
-              'Unisex Hairstylist'
-            ].map(service => (
-              <li key={service}>
+              { name: "Hair Styling Specialist", icon: Sparkles, href: "/services" },
+              { name: "Beard & Grooming Specialist", icon: UserCircle, href: "/services" },
+              { name: "Hair Coloring Specialist", icon: Palette, href: "/services" },
+              { name: "Hair Treatment Specialist", icon: Droplets, href: "/services" },
+              { name: "Bridal Hairstylist", icon: Flower2, href: "/services" },
+              { name: "Unisex Hairstylist", icon: Users, href: "/services" },
+            ].map((item) => (
+              <li key={item.name}>
                 <a
-                  href="/services"
+                  href={item.href}
                   className="flex items-center gap-2 hover:text-primary transition"
                 >
-                  <Scissors size={16} className="text-primary" />
-                  {service}
+                  <item.icon size={16} className="text-primary" />
+                  {item.name}
                 </a>
               </li>
             ))}
@@ -95,14 +101,14 @@ const Footer = () => {
           <p className="text-lg font-semibold mb-6">LEGAL</p>
           <ul className="flex flex-col gap-3 text-gray-600">
             {[
-              { name: 'Privacy Policy', icon: ShieldCheck , href: '/' },
-              { name: 'Terms & Conditions', icon: FileText , href: '/'  },
-              { name: 'Refund & Cancellation', icon: FileText , href: '/'  },
-              { name: 'FAQs', icon: HelpCircle , href: '/'  }
-            ].map(item => (
+              { name: "Privacy Policy", icon: Lock, href: "/privacy-policy" },
+              { name: "Terms & Conditions", icon: FileCheck, href: "/terms" },
+              { name: "Refund & Cancellation", icon: RotateCcw, href: "/refund-policy" },
+              { name: "FAQs", icon: HelpCircle, href: "/faqs" },
+            ].map((item) => (
               <li key={item.name}>
                 <a
-                  href="/"
+                  href={item.href}
                   className="flex items-center gap-2 hover:text-primary transition"
                 >
                   <item.icon size={16} className="text-primary" />
@@ -112,8 +118,6 @@ const Footer = () => {
             ))}
           </ul>
         </div>
-
-        
 
         {/* CONTACT */}
         <div>
@@ -143,7 +147,8 @@ const Footer = () => {
             <li className="flex items-start gap-3">
               <MapPin size={18} className="text-primary mt-1" />
               <span>
-                69, Mettu Street,<br />
+                69, Mettu Street,
+                <br />
                 Srirangam, Trichy – 620006
               </span>
             </li>
@@ -158,7 +163,7 @@ const Footer = () => {
         </p>
 
         <p className="text-sm text-gray-600 mt-3 sm:mt-0">
-          Designed & Developed by{' '}
+          Designed & Developed by{" "}
           <a
             href="https://buildmyweb.info/"
             target="_blank"
@@ -170,7 +175,7 @@ const Footer = () => {
         </p>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Footer
+export default Footer;

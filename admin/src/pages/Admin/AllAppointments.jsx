@@ -135,6 +135,7 @@ const AllAppointments = () => {
       appointment.userData?.name || '',
       appointment.userData?.phone || '',
       appointment.docData?.name || '',
+      appointment.service || '',
       appointment.docData?.specialty || appointment.docData?.speciality || ''
     ].map(s => s.toLowerCase()).join(' ');
     
@@ -197,6 +198,9 @@ const AllAppointments = () => {
       )
     );
     
+    // Also switch to completed tab to show the newly completed appointment
+    setFilterStatus('completed');
+    
     // Then update server
     markAppointmentCompleted(id);
   }
@@ -209,6 +213,9 @@ const AllAppointments = () => {
         app._id === id ? {...app, isCompleted: false} : app
       )
     );
+    
+    // Also switch to upcoming tab 
+    setFilterStatus('upcoming');
     
     // Then update server
     markAppointmentIncomplete(id);
@@ -229,6 +236,9 @@ const AllAppointments = () => {
           app._id === appointmentToDelete._id ? {...app, cancelled: true} : app
         )
       );
+      
+      // Also switch to cancelled tab to show the cancelled appointment
+      setFilterStatus('cancelled');
       
       // Then update server
       cancelAppointment(appointmentToDelete._id);
@@ -336,7 +346,7 @@ const AllAppointments = () => {
                   'Customer Name': item.userData?.name || '',
                   'Phone Number': item.userData?.phone || '',
                   'Stylist Name': item.docData?.name || '',
-                  'Service': item.docData?.specialty || item.docData?.speciality || '',
+                  'Service': item.service || item.docData?.specialty || item.docData?.speciality || '',
                   'Date': formatDateForExport(item.slotDate) || '',
                   'Time': item.slotTime || '',
                   'Status': item.cancelled ? 'Cancelled' : 
