@@ -2,9 +2,10 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { assets } from '../assets/assets';
-// import RelatedStylists from '../components/RelatedStylists';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { loadStripe } from '@stripe/stripe-js';
+// import { useRazorpay } from 'react-razorpay';
 import { 
   Phone, 
   Scissors, 
@@ -32,6 +33,11 @@ const Appointment = () => {
     const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+    // Payment gateway setup
+   
+    const stripePromise = loadStripe('pk_test_51NpjZGSJQz3QA6GnHyUmwbQtcYfeTHfQdl0i7YpeCor7Vl6qXn2nKUDRdx6AldHDhxnRUiUJRuAdBECFIwE0QQGy00Ys6rUGi8');
+    const razorpayKeyId = 'rzp_test_8NBbBv2vkvuTtj';
+
     const [stylistInfo, setStylistInfo] = useState(null);
     const [stylistSlots, setStylistSlots] = useState([]);
     const [slotIndex, setSlotIndex] = useState(0);
@@ -46,6 +52,17 @@ const Appointment = () => {
     const [paymentSuccess, setPaymentSuccess] = useState(false);
 
     const navigate = useNavigate();
+
+    const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 
     // Dynamically loaded services based on stylist's specialty
     const getServicesBySpeciality = (speciality) => {
@@ -160,6 +177,37 @@ const Appointment = () => {
         setLoading(false);
     };
 
+    const handlePayment = async () => {
+  const res = await loadRazorpayScript();
+  if (!res) {
+    alert("Razorpay SDK failed to load");
+    return;
+  }
+
+  const options = {
+    key: import.meta.env.VITE_RAZORPAY_KEY_ID,  // ✅ Correct for Vite
+    amount: amount * 100,
+    currency: "INR",
+    name: "Salon Booking",
+    description: "Service Payment",
+    handler: function (response) {
+      console.log("Payment Success:", response);
+      confirmBooking(response.razorpay_payment_id);
+    },
+    prefill: {
+      name: user?.name,
+      email: user?.email,
+    },
+    theme: {
+      color: "#4F46E5",
+    },
+  };
+
+  const paymentObject = new window.Razorpay(options);
+  paymentObject.open();
+};
+
+
     const initiateBooking = () => {
         if (!token) {
             toast.warning('Login to book appointment');
@@ -174,21 +222,85 @@ const Appointment = () => {
             return toast.warning('Please select a service');
         }
 
-        setShowPaymentModal(true);
+        if (!paymentMethod) {
+            return toast.warning('Please select a payment method');
+        }
+
+        processPayment(paymentMethod);
     };
 
     const processPayment = async (method) => {
         setPaymentMethod(method);
         setPaymentLoading(true);
         
-        // Simulating payment processing
-        setTimeout(() => {
+        try {
+            if (method === 'stripe') {
+                // Stripe payment flow
+                const stripe = await stripePromise;
+                
+                // In a real implementation, you'd create a payment intent on your server
+                // For this demo, we'll simulate a successful payment
+                setTimeout(() => {
+                    setPaymentLoading(false);
+                    setPaymentSuccess(true);
+                    
+                    // After successful payment, book the appointment
+                    completeBooking(method);
+                }, 1500);
+                
+            } else if (method === 'razorpay') {
+                // Razorpay payment flow
+                const options = {
+                    key: razorpayKeyId,
+                    amount: selectedService.price * 100, // Razorpay expects amount in smallest currency unit
+                    currency: "INR",
+                    name: "Salon Stylist",
+                    description: `Booking with ${stylistInfo.name} for ${selectedService.name}`,
+                    image: assets.logo || "https://example.com/your_logo.png",
+                    handler: function (response) {
+                        // Payment successful
+                        setPaymentLoading(false);
+                        setPaymentSuccess(true);
+                        
+                        // After successful payment, book the appointment
+                        completeBooking('razorpay');
+                    },
+                    prefill: {
+                        name: "Customer Name",
+                        email: "customer@example.com",
+                        contact: "9999999999"
+                    },
+                    notes: {
+                        address: "Salon Address"
+                    },
+                    theme: {
+                        color: "#8B5CF6" // Use your primary color
+                    },
+                    modal: {
+                        ondismiss: function() {
+                            setPaymentLoading(false);
+                        }
+                    }
+                };
+                
+                const rzpay = new Razorpay(options);
+                rzpay.open();
+                
+            } else {
+                // Fallback for other payment methods or errors
+                setTimeout(() => {
+                    setPaymentLoading(false);
+                    setPaymentSuccess(true);
+                    
+                    // After successful payment, book the appointment
+                    completeBooking(method);
+                }, 1500);
+            }
+        } catch (error) {
+            console.error("Payment error:", error);
             setPaymentLoading(false);
-            setPaymentSuccess(true);
-            
-            // After successful payment, book the appointment
-            completeBooking(method);
-        }, 1500);
+            toast.error("Payment failed. Please try again.");
+        }
     };
 
     const completeBooking = async (paymentMethod) => {
@@ -376,7 +488,7 @@ const Appointment = () => {
                                         <div className="text-sm text-gray-500 flex items-center gap-2">
                                             <Award size={14} className="text-primary" />
                                             Experience
-                                                                                </div>
+                                        </div>
                                         <div className="text-xl font-bold text-gray-800 mt-1">{stylistInfo.experience}</div>
                                     </div>
                                     
@@ -649,7 +761,7 @@ const Appointment = () => {
                                     
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <button
-                                            onClick={() => processPayment('stripe')}
+                                            onClick={() => setPaymentMethod('stripe')}
                                             className={`flex items-center justify-between p-4 border rounded-xl transition-all ${
                                                 paymentMethod === 'stripe'
                                                     ? 'border-primary bg-primary/5'
@@ -665,7 +777,7 @@ const Appointment = () => {
                                         </button>
                                         
                                         <button
-                                            onClick={() => processPayment('razorpay')}
+                                            onClick={() => setPaymentMethod('razorpay')}
                                             className={`flex items-center justify-between p-4 border rounded-xl transition-all ${
                                                 paymentMethod === 'razorpay'
                                                     ? 'border-primary bg-primary/5'
@@ -687,6 +799,7 @@ const Appointment = () => {
                                     <button 
                                         onClick={initiateBooking}
                                         disabled={paymentLoading || bookingLoading}
+                                        /* Action Button continued */
                                         className="w-full py-4 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors shadow-sm hover:shadow flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
                                     >
                                         {paymentLoading ? (

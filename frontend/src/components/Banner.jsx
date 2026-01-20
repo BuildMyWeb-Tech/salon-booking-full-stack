@@ -1,11 +1,13 @@
 import React from 'react'
 import { assets } from '../assets/assets'
 import { motion } from 'framer-motion'
+import { Zap, SprayCan, Scissors } from "lucide-react";
+
 
 const Header = () => {
   return (
     <section className="w-full bg-primary rounded-lg overflow-hidden">
-      <div className="container mx-auto px-4 py-10 sm:px-6 md:px-8 lg:px-12">
+      <div className="container mx-auto px-4 py-10 sm:px-6 ">
         <div className="flex flex-col lg:flex-row items-center gap-10">
 
           {/* ---------- LEFT CONTENT ---------- */}
@@ -47,57 +49,60 @@ const Header = () => {
           {/* ---------- RIGHT IMAGE ---------- */}
           <div className="w-full lg:w-1/2 relative">
 
-            {/* MOBILE & TABLET → FULL IMAGE (NO CROPPING) */}
-            <div className="block lg:hidden">
-              <img
-                src={assets.banner_img}
-                alt="Salon Banner"
-                className="w-full h-auto object-contain rounded-xl"
-              />
-            </div>
+            {/* MOBILE → NO IMAGE */}
+            <div className="block sm:hidden"></div>
 
-            {/* LAPTOP & DESKTOP → HERO BANNER */}
-            <div className="hidden lg:block relative h-[450px] rounded-xl overflow-hidden">
+            {/* TABLET & LAPTOP/DESKTOP → FULL UNCROPPED IMAGE */}
+            <div className="hidden sm:block relative rounded-xl overflow-hidden">
               <img
                 src={assets.banner_img}
                 alt="Salon Banner"
-                className="w-full h-full object-cover"
+                className="w-full h-auto object-contain"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-primary/40 to-transparent" />
             </div>
           </div>
+
         </div>
 
         {/* ---------- HIGHLIGHTS ---------- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-          {[
+        {[
             {
-              title: 'Express Styling',
-              desc: 'Quick professional styling for busy schedules',
+            title: 'Express Styling',
+            desc: 'Quick professional styling for busy schedules',
+            icon: Zap,
             },
             {
-              title: 'Premium Products',
-              desc: 'Salon-quality products for lasting results',
+            title: 'Premium Products',
+            desc: 'Salon-quality products for lasting results',
+            icon: SprayCan,
             },
             {
-              title: 'Expert Stylists',
-              desc: 'Trend-driven professionals with experience',
+            title: 'Expert Stylists',
+            desc: 'Trend-driven professionals with experience',
+            icon: Scissors,
             },
-          ].map((item, i) => (
+        ].map((item, i) => (
             <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + i * 0.1 }}
-              className="bg-white p-6 rounded-xl shadow-sm"
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 + i * 0.1 }}
+            className="bg-white p-6 rounded-xl shadow-sm flex items-start gap-4"
             >
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            <item.icon size={28} className="text-primary shrink-0" />
+
+            <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-1">
                 {item.title}
-              </h3>
-              <p className="text-sm text-gray-600">{item.desc}</p>
+                </h3>
+                <p className="text-sm text-gray-600">{item.desc}</p>
+            </div>
             </motion.div>
-          ))}
+        ))}
         </div>
+
+
       </div>
     </section>
   )
