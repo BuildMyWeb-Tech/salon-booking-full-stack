@@ -292,13 +292,13 @@ const Stylists = () => {
                       </p>
                       
                       {/* Rating */}
-                      <div className="flex items-center gap-1.5 text-sm mb-2">
+                      {/* <div className="flex items-center gap-1.5 text-sm mb-2">
                         <div className="bg-yellow-400 text-white p-1 rounded flex items-center">
                           <Star size={12} fill="white" />
                         </div>
                         <span className="text-white font-medium">{stylist.rating || "4.8"}</span>
                         <span className="text-white/70">({stylist.reviewCount || "124"} reviews)</span>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
 
@@ -381,11 +381,11 @@ const Stylists = () => {
                         <Award size={14} className="text-gray-400" />
                         {stylist.experience}
                       </span>
-                      <div className="flex items-center gap-1">
+                      {/* <div className="flex items-center gap-1">
                         <Star size={14} fill="#FACC15" className="text-yellow-400" />
                         <span className="font-medium">{stylist.rating || "4.8"}</span>
                         <span className="text-gray-500">({stylist.reviewCount || "124"})</span>
-                      </div>
+                      </div> */}
                     </div>
 
                     <p className="text-gray-600 line-clamp-2 text-sm mb-3">
