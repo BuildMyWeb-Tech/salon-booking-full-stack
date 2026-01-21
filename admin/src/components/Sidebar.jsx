@@ -13,7 +13,7 @@ import {
   Cog,
   MenuIcon,
   X,
-  Scissors
+  Scissors,LayoutGrid ,CalendarClock, CreditCard, Users 
 } from "lucide-react";
 
 const iconClass = "min-w-[23px] w-[23px] h-[23px]";
@@ -98,7 +98,7 @@ const Sidebar = () => {
                 `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
                 ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
               }>
-                <UsersRound className={iconClass} />
+                <Scissors   className={iconClass} />
                 {!collapsed && <p>Stylists</p>}
               </NavLink>
             </li>
@@ -113,6 +113,70 @@ const Sidebar = () => {
                 {!collapsed && <p>Add Stylist</p>}
               </NavLink>
             </li>
+
+            {/* Services Category */}
+            <li>
+              <NavLink
+                to="/services-category"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                  ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                }
+              >
+                <LayoutGrid className={iconClass} />
+                {!collapsed && <p>Services Category</p>}
+              </NavLink>
+            </li>
+
+
+            {/* Slot Management */}
+            <li>
+              <NavLink
+                to="/slot-management"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                  ${isActive
+                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                    : 'hover:bg-gray-50'}`
+                }
+              >
+                <CalendarClock className={iconClass} />
+                {!collapsed && <p>Slot Management</p>}
+              </NavLink>
+            </li>
+
+            {/* Payments */}
+            <li>
+              <NavLink
+                to="/payments"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                  ${isActive
+                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                    : 'hover:bg-gray-50'}`
+                }
+              >
+                <CreditCard className={iconClass} />
+                {!collapsed && <p>Payments</p>}
+              </NavLink>
+            </li>
+
+            {/* Customerss */}
+            <li>
+              <NavLink
+                to="/Customers"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                  ${isActive
+                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                    : 'hover:bg-gray-50'}`
+                }
+              >
+                <Users className={iconClass} />
+                {!collapsed && <p>Customers</p>}
+              </NavLink>
+            </li>
+
 
             {/* Settings */}
             <li>
@@ -200,7 +264,7 @@ const Sidebar = () => {
                 }
                 onClick={() => setMobileOpen(false)}
               >
-                <UsersRound className={iconClass} />
+                <Scissors  className={iconClass} />
                 <p>Stylists</p>
               </NavLink>
             </li>
@@ -218,6 +282,73 @@ const Sidebar = () => {
                 <p>Add Stylist</p>
               </NavLink>
             </li>
+
+            <li>
+              <NavLink
+                to="/services-category"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5
+                  ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                }
+                onClick={() => setMobileOpen(false)}
+              >
+                <LayoutGrid className={iconClass} />
+                <p>Services Category</p>
+              </NavLink>
+            </li>
+
+
+            {/* Slot Management */}
+            <li>
+              <NavLink
+                to="/slot-management"
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5
+                  ${isActive
+                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                    : 'hover:bg-gray-50'}`
+                }
+              >
+                <CalendarClock className={iconClass} />
+                <p>Slot Management</p>
+              </NavLink>
+            </li>
+
+            {/* Payments */}
+            <li>
+              <NavLink
+                to="/payments"
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5
+                  ${isActive
+                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                    : 'hover:bg-gray-50'}`
+                }
+              >
+                <CreditCard className={iconClass} />
+                <p>Payments</p>
+              </NavLink>
+            </li>
+
+            {/* Customerss */}
+            <li>
+              <NavLink
+                to="/Customers"
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5
+                  ${isActive
+                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                    : 'hover:bg-gray-50'}`
+                }
+              >
+                <Users className={iconClass} />
+                <p>Customers</p>
+              </NavLink>
+            </li>
+
 
             <li>
               <NavLink 
@@ -267,11 +398,11 @@ const Sidebar = () => {
                 `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
               }
             >
-              <UsersRound className="w-6 h-6" />
+              <Scissors   className="w-6 h-6" />
               <span>Stylists</span>
             </NavLink>
 
-            <NavLink 
+            {/* <NavLink 
               to="/add-stylist" 
               className={({ isActive }) => 
                 `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
@@ -279,7 +410,47 @@ const Sidebar = () => {
             >
               <UserPlus2 className="w-6 h-6" />
               <span>Add Stylist</span>
+            </NavLink> */}
+
+            {/* Slot Management */}
+            <NavLink
+              to="/slot-management"
+              className={({ isActive }) =>
+                `flex flex-col items-center text-xs ${
+                  isActive ? 'text-primary' : 'text-gray-500'
+                }`
+              }
+            >
+              <CalendarClock className="w-6 h-6" />
+              <span>Slots</span>
             </NavLink>
+
+            {/* Payments */}
+            <NavLink
+              to="/payments"
+              className={({ isActive }) =>
+                `flex flex-col items-center text-xs ${
+                  isActive ? 'text-primary' : 'text-gray-500'
+                }`
+              }
+            >
+              <CreditCard className="w-6 h-6" />
+              <span>Payments</span>
+            </NavLink>
+
+            {/* Customers */}
+            {/* <NavLink
+              to="/Customers"
+              className={({ isActive }) =>
+                `flex flex-col items-center text-xs ${
+                  isActive ? 'text-primary' : 'text-gray-500'
+                }`
+              }
+            >
+              <Users className="w-6 h-6" />
+              <span>Customerss</span>
+            </NavLink>
+
 
             <NavLink 
               to="/my-profile" 
@@ -289,7 +460,7 @@ const Sidebar = () => {
             >
               <Cog className="w-6 h-6" />
               <span>Settings</span>
-            </NavLink>
+            </NavLink> */}
           </div>
         </div>
       )}
