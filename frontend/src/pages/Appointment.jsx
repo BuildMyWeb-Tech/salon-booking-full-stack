@@ -66,48 +66,49 @@ const Appointment = () => {
 
     // Dynamically loaded services based on stylist's specialty
     const getServicesBySpeciality = (speciality) => {
-      const baseServices = [
-        { id: 1, name: "Classic Haircut", price: 500, duration: "30 min" },
-        { id: 2, name: "Styling & Blowout", price: 800, duration: "45 min" },
-      ];
-      
-      const specialityServices = {
-        'Hair Styling Specialist': [
-          { id: 3, name: "Premium Style Cut", price: 1200, duration: "60 min" },
-          { id: 4, name: "Hair Texture Service", price: 1800, duration: "90 min" },
+    const baseServices = [
+        { id: 1, name: "Classic Haircut", price: 500 },
+        { id: 2, name: "Styling & Blowout", price: 800 },
+    ];
+    
+    const specialityServices = {
+        "Hair Styling Specialist": [
+        { id: 3, name: "Premium Style Cut", price: 1200 },
+        { id: 4, name: "Hair Texture Service", price: 1800 },
         ],
-        'Hair Coloring Specialist': [
-          { id: 5, name: "Root Touch-up", price: 1500, duration: "60 min" },
-          { id: 6, name: "Full Color", price: 2500, duration: "120 min" },
-          { id: 7, name: "Highlights", price: 3000, duration: "150 min" },
+        "Hair Coloring Specialist": [
+        { id: 5, name: "Root Touch-up", price: 1500 },
+        { id: 6, name: "Full Color", price: 2500 },
+        { id: 7, name: "Highlights", price: 3000 },
         ],
-        'Beard & Grooming Specialist': [
-          { id: 8, name: "Beard Trim & Shape", price: 400, duration: "20 min" },
-          { id: 9, name: "Luxury Shave", price: 800, duration: "40 min" },
-          { id: 10, name: "Beard Color", price: 1200, duration: "45 min" },
+        "Beard & Grooming Specialist": [
+        { id: 8, name: "Beard Trim & Shape", price: 400 },
+        { id: 9, name: "Luxury Shave", price: 800 },
+        { id: 10, name: "Beard Color", price: 1200 },
         ],
-        'Hair Treatment Specialist': [
-          { id: 11, name: "Deep Conditioning", price: 1000, duration: "45 min" },
-          { id: 12, name: "Scalp Treatment", price: 1500, duration: "60 min" },
-          { id: 13, name: "Keratin Treatment", price: 4000, duration: "180 min" },
+        "Hair Treatment Specialist": [
+        { id: 11, name: "Deep Conditioning", price: 1000 },
+        { id: 12, name: "Scalp Treatment", price: 1500 },
+        { id: 13, name: "Keratin Treatment", price: 4000 },
         ],
-        'Bridal Hairstylist': [
-          { id: 14, name: "Bridal Trial", price: 2000, duration: "90 min" },
-          { id: 15, name: "Wedding Day Style", price: 5000, duration: "120 min" },
-          { id: 16, name: "Bridesmaid Style", price: 2500, duration: "60 min" },
+        "Bridal Hairstylist": [
+        { id: 14, name: "Bridal Trial", price: 2000 },
+        { id: 15, name: "Wedding Day Style", price: 5000 },
+        { id: 16, name: "Bridesmaid Style", price: 2500 },
         ],
-        'Unisex Hairstylist': [
-          { id: 17, name: "Men's Haircut", price: 400, duration: "30 min" },
-          { id: 18, name: "Women's Haircut", price: 700, duration: "45 min" },
-          { id: 19, name: "Kids Haircut", price: 300, duration: "30 min" },
+        "Unisex Hairstylist": [
+        { id: 17, name: "Men's Haircut", price: 400 },
+        { id: 18, name: "Women's Haircut", price: 700 },
+        { id: 19, name: "Kids Haircut", price: 300 },
         ],
-      };
-      
-      return [
+    };
+
+    return [
         ...baseServices,
         ...(specialityServices[speciality] || [])
-      ];
+    ];
     };
+
 
     const fetchStylistInfo = async () => {
         const stylistInfo = stylists.find((stylist) => stylist._id === docId);
@@ -399,15 +400,15 @@ const Appointment = () => {
                                     {stylistInfo.available && (
                                         <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm flex items-center gap-1">
                                             <CheckCircle size={12} />
-                                            Available Today
+                                            Available 
                                         </div>
                                     )}
                                     
-                                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-white border shadow-sm px-3 py-1 rounded-full flex items-center gap-1">
+                                    {/* <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-white border shadow-sm px-3 py-1 rounded-full flex items-center gap-1">
                                         <Star size={14} className="text-yellow-400 fill-yellow-400" />
                                         <span className="font-semibold text-gray-800">{stylistInfo.rating || "4.8"}</span>
                                         <span className="text-gray-500 text-xs">({stylistInfo.reviewCount || "124"})</span>
-                                    </div>
+                                    </div> */}
                                 </div>
                                 
                                 <div className="mt-6 space-y-3">
@@ -552,10 +553,10 @@ const Appointment = () => {
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <h3 className="font-semibold text-gray-800">{service.name}</h3>
-                                                    <p className="text-sm text-gray-500 mt-1.5 flex items-center gap-1.5">
+                                                    {/* <p className="text-sm text-gray-500 mt-1.5 flex items-center gap-1.5">
                                                         <Clock size={14} className="text-gray-400" /> 
                                                         {service.duration}
-                                                    </p>
+                                                    </p> */}
                                                 </div>
                                                 {selectedService?.id === service.id && (
                                                     <CheckCircle2 size={20} className="text-primary" />

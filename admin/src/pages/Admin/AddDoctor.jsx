@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState ,useRef ,useEffect } from 'react'
 import { assets } from '../../assets/assets'
 import { toast } from 'react-toastify'
 import axios from 'axios'
@@ -16,7 +16,12 @@ const AddStylist = () => {
     const [experience, setExperience] = useState('1 Year')
     const [price, setPrice] = useState('')
     const [about, setAbout] = useState('')
-    const [specialty, setSpecialty] = useState('Hair Styling Specialist')
+    // const [specialty, setSpecialty] = useState('Hair Styling Specialist')
+    const [specialty, setSpecialty] = useState([])
+    const [open, setOpen] = useState(false)
+    const dropdownRef = useRef(null)
+
+
     const [certification, setCertification] = useState('')
     const [instagram, setInstagram] = useState('')
     const [workingHours, setWorkingHours] = useState('')
@@ -79,9 +84,36 @@ const AddStylist = () => {
         setWorkingHours('')
     }
 
+    const specialtyOptions = [
+    'Hair Styling Specialist',
+    'Beard & Grooming Specialist',
+    'Hair Coloring Specialist',
+    'Hair Treatment Specialist',
+    'Bridal Hairstylist',
+    'Unisex Hairstylist'
+    ]
+
+
     const togglePasswordVisibility = () => {
         setShowPassword(prevState => !prevState);
     }
+
+    useEffect(() => {
+    const handleClickOutside = (event) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpen(false)
+        }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
+
+    return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+        document.removeEventListener('touchstart', handleClickOutside)
+    }
+    }, [])
+
 
     return (
         <form onSubmit={onSubmitHandler} className='m-5 w-full'>
@@ -211,6 +243,13 @@ const AddStylist = () => {
                                 <option value="10+ Years">10+ Years</option>
                             </select>
                         </div>
+
+                        
+                        
+                    </div>
+
+                    {/* Right Column */}
+                    <div className='space-y-5'>
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <Clock size={16} className="mr-1.5" /> Working Hours
@@ -223,29 +262,7 @@ const AddStylist = () => {
                                 placeholder='e.g.  10AM-7PM' 
                             />
                         </div>
-                    </div>
-
-                    {/* Right Column */}
-                    <div className='space-y-5'>
-                        <div className='flex flex-col gap-1.5'>
-                            <label className='text-sm font-medium text-gray-700 flex items-center'>
-                                <Scissors size={16} className="mr-1.5" /> Specialty
-                                <span className="text-red-500 ml-1">*</span>
-                            </label>
-                            <select 
-                                onChange={e => setSpecialty(e.target.value)} 
-                                value={specialty} 
-                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none bg-white'
-                                required
-                            >
-                                <option value="Hair Styling Specialist">Hair Styling Specialist</option>
-                                <option value="Beard & Grooming Specialist">Beard & Grooming Specialist</option>
-                                <option value="Hair Coloring Specialist">Hair Coloring Specialist</option>
-                                <option value="Hair Treatment Specialist">Hair Treatment Specialist</option>
-                                <option value="Bridal Hairstylist">Bridal Hairstylist</option>
-                                <option value="Unisex Hairstylist">Unisex Hairstylist</option>
-                            </select>
-                        </div>
+                        
 
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
@@ -278,7 +295,25 @@ const AddStylist = () => {
                             <p className="text-xs text-gray-500">This number will be displayed for clients to contact the stylist</p>
                         </div>
 
+                        
+
                         <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Instagram size={16} className="mr-1.5" /> Instagram Handle
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">@</span>
+                                <input 
+                                    onChange={e => setInstagram(e.target.value)} 
+                                    value={instagram} 
+                                    className='border rounded-md pl-7 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
+                                    type="text" 
+                                    placeholder='username (optional)' 
+                                />
+                            </div>
+                        </div> 
+
+                        {/* <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <Hash size={16} className="mr-1.5" /> Base Price
                                 <span className="text-red-500 ml-1">*</span>
@@ -294,27 +329,85 @@ const AddStylist = () => {
                                     required 
                                 />
                             </div>
-                        </div>
-
-                        {/* <div className='flex flex-col gap-1.5'>
-                            <label className='text-sm font-medium text-gray-700 flex items-center'>
-                                <Instagram size={16} className="mr-1.5" /> Instagram Handle
-                            </label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">@</span>
-                                <input 
-                                    onChange={e => setInstagram(e.target.value)} 
-                                    value={instagram} 
-                                    className='border rounded-md pl-7 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
-                                    type="text" 
-                                    placeholder='username (optional)' 
-                                />
-                            </div>
                         </div> */}
 
                         
                     </div>
                 </div>
+
+                {/* Dropdown Multi-Select */}
+                <div ref={dropdownRef} className="mt-6 w-full relative">
+                <label className="text-sm font-medium text-gray-700 flex items-center mb-1">
+                    <FileText size={16} className="mr-1.5" />
+                    Specialty
+                    <span className="text-red-500 ml-1">*</span>
+                </label>
+
+                {/* Input */}
+                <div
+                    onClick={() => setOpen(prev => !prev)}
+                    className="w-full min-h-[46px] border rounded-md px-3 py-2
+                            flex flex-wrap items-center gap-2 cursor-pointer
+                            focus-within:ring-2 focus-within:ring-primary/50
+                            bg-white"
+                >
+                    {specialty.length === 0 && (
+                    <span className="text-gray-400 text-sm">
+                        Select specialties
+                    </span>
+                    )}
+
+                    {specialty.map(item => (
+                    <span
+                        key={item}
+                        className="bg-primary/10 text-primary text-xs font-medium
+                                px-2 py-1 rounded-full flex items-center gap-1"
+                    >
+                        {item}
+                        <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            setSpecialty(specialty.filter(s => s !== item))
+                        }}
+                        className="hover:text-red-500"
+                        >
+                        ×
+                        </button>
+                    </span>
+                    ))}
+                </div>
+
+                {/* Dropdown */}
+                {open && (
+                    <div className="absolute z-30 mt-2 w-full bg-white border rounded-md shadow-lg max-h-56 overflow-y-auto">
+                    {specialtyOptions.map(option => {
+                        const selected = specialty.includes(option)
+
+                        return (
+                        <div
+                            key={option}
+                            onClick={() =>
+                            setSpecialty(
+                                selected
+                                ? specialty.filter(s => s !== option)
+                                : [...specialty, option]
+                            )
+                            }
+                            className={`px-4 py-2 cursor-pointer text-sm
+                            ${selected
+                                ? 'bg-primary/10 text-primary font-medium'
+                                : 'hover:bg-gray-100'}
+                            `}
+                        >
+                            {option}
+                        </div>
+                        )
+                    })}
+                    </div>
+                )}
+                </div>
+
 
                 {/* About Section - Full Width */}
                 <div className="mt-6">
@@ -334,6 +427,12 @@ const AddStylist = () => {
                         Include relevant experience, specializations, and unique styling approach to help clients connect with the stylist
                     </p>
                 </div>
+
+                
+
+
+
+                
 
                 <div className="mt-2 pt-4 border-t border-gray-100">
                     <p className="text-xs text-gray-500 mb-4">
