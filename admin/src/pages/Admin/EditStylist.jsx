@@ -1,18 +1,25 @@
+// src/pages/Admin/EditStylist.jsx
 import React, { useContext, useState, useRef, useEffect } from 'react';
-import { assets } from '../../assets/assets';
+import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { AdminContext } from '../../context/AdminContext';
 import { AppContext } from '../../context/AppContext';
-import { Pencil, Eye, EyeOff, User, Mail, Lock, Phone, Award, Briefcase, Scissors, Hash, Instagram, Clock, FileText } from 'lucide-react';
+import { Pencil, Eye, EyeOff, User, Mail, Phone, Award, Hash, Instagram, Clock, FileText, ArrowLeft, Scissors } from 'lucide-react';
 
-const AddStylist = () => {
-    const [stylistImg, setStylistImg] = useState(false);
+const EditStylist = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { getDoctorById, updateDoctor } = useContext(AdminContext);
+    const { backendUrl } = useContext(AppContext);
+    const { aToken } = useContext(AdminContext);
+
+    // Form state
+    const [stylistImg, setStylistImg] = useState(null);
+    const [imagePreview, setImagePreview] = useState('');
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
     const [experience, setExperience] = useState('1 Year');
     const [price, setPrice] = useState('');
     const [about, setAbout] = useState('');
@@ -22,34 +29,60 @@ const AddStylist = () => {
     const [certification, setCertification] = useState('');
     const [instagram, setInstagram] = useState('');
     const [workingHours, setWorkingHours] = useState('');
+    
+    // UI state
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // New state for service categories
+    const [loading, setLoading] = useState(true);
     const [serviceCategories, setServiceCategories] = useState([]);
     const [loadingCategories, setLoadingCategories] = useState(true);
 
-    const { backendUrl } = useContext(AppContext);
-    const { aToken } = useContext(AdminContext);
-
+    // Load stylist data
     useEffect(() => {
-        fetchServiceCategories();
-        
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setOpen(false);
+        const fetchStylistData = async () => {
+            try {
+                setLoading(true);
+                const stylist = await getDoctorById(id);
+                
+                if (stylist) {
+                    // Set form fields
+                    setName(stylist.name || '');
+                    setEmail(stylist.email || '');
+                    setPhone(stylist.phone || '');
+                    setExperience(stylist.experience || '1 Year');
+                    setPrice(stylist.price?.toString() || '');
+                    setAbout(stylist.about || '');
+                    
+                    // Handle specialty as array or string
+                    if (Array.isArray(stylist.specialty)) {
+                        setSpecialty(stylist.specialty);
+                    } else if (stylist.specialty) {
+                        setSpecialty([stylist.specialty]);
+                    }
+                    
+                    setCertification(stylist.certification || '');
+                    setInstagram(stylist.instagram || '');
+                    setWorkingHours(stylist.workingHours || '');
+                    setImagePreview(stylist.image || '');
+                } else {
+                    toast.error('Could not find stylist data');
+                    navigate('/stylist-list');
+                }
+            } catch (error) {
+                console.error('Error loading stylist:', error);
+                toast.error('Failed to load stylist data');
+                navigate('/stylist-list');
+            } finally {
+                setLoading(false);
             }
         };
 
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('touchstart', handleClickOutside);
+        fetchServiceCategories();
+        if (id) {
+            fetchStylistData();
+        }
+    }, [id]);
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            document.removeEventListener('touchstart', handleClickOutside);
-        };
-    }, []);
-
-    // Fetch service categories from the backend
+    // Fetch service categories
     const fetchServiceCategories = async () => {
         setLoadingCategories(true);
         try {
@@ -68,14 +101,28 @@ const AddStylist = () => {
         }
     };
 
+    // Handle dropdown clicks outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, []);
+
+    // Form submission
     const onSubmitHandler = async (event) => {
         event.preventDefault();
 
         try {
-            if (!stylistImg) {
-                return toast.error('Profile Image Required');
-            }
-
             if (specialty.length === 0) {
                 return toast.error('Please select at least one specialty');
             }
@@ -84,13 +131,15 @@ const AddStylist = () => {
             
             const formData = new FormData();
 
-            formData.append('image', stylistImg);
+            if (stylistImg) {
+                formData.append('image', stylistImg);
+            }
+            
             formData.append('name', name);
             formData.append('email', email);
             formData.append('phone', phone);
-            formData.append('password', password);
             formData.append('experience', experience);
-            formData.append('price', Number(price));
+            formData.append('price', price);
             formData.append('about', about);
             
             // Convert specialty array to string for backend processing
@@ -100,41 +149,30 @@ const AddStylist = () => {
             formData.append('instagram', instagram);
             formData.append('workingHours', workingHours);
 
-            const { data } = await axios.post(
-                `${backendUrl}/api/admin/add-doctor`, 
-                formData, 
-                { headers: { aToken } }
-            );
+            const updatedStylist = await updateDoctor(id, formData);
             
-            if (data.success) {
-                toast.success(data.message);
-                resetForm();
-            } else {
-                toast.error(data.message);
+            if (updatedStylist) {
+                // toast.success('Stylist updated successfully');
+                navigate('/stylist-list');
             }
         } catch (error) {
-            toast.error(error.message || 'Something went wrong');
-            console.log(error);
+            toast.error(error.message || 'Failed to update stylist');
+            console.error(error);
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const resetForm = () => {
-        setStylistImg(false);
-        setName('');
-        setEmail('');
-        setPhone('');
-        setPassword('');
-        setCertification('');
-        setAbout('');
-        setPrice('');
-        setInstagram('');
-        setWorkingHours('');
-        setSpecialty([]);
+    // Handle image change
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setStylistImg(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
     };
 
-    // Fallback to static options if API fails
+    // Specialty options
     const fallbackSpecialtyOptions = [
         'Hair Styling Specialist',
         'Beard & Grooming Specialist',
@@ -148,21 +186,28 @@ const AddStylist = () => {
         ? serviceCategories.map(service => service.name) 
         : fallbackSpecialtyOptions;
 
-    const togglePasswordVisibility = () => {
-        setShowPassword(prevState => !prevState);
-    };
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                <p className="ml-3 text-gray-600">Loading stylist data...</p>
+            </div>
+        );
+    }
 
     return (
         <form onSubmit={onSubmitHandler} className='m-5 w-full'>
             <div className='flex justify-between items-center mb-5'>
-                <h1 className='text-2xl font-bold text-gray-800'>Add New Stylist</h1>
-                <button 
-                    type="button"
-                    onClick={resetForm}
-                    className="text-gray-500 hover:text-primary transition-colors text-sm font-medium"
-                >
-                    Reset Form
-                </button>
+                <div className="flex items-center gap-3">
+                    <button 
+                        type="button" 
+                        onClick={() => navigate('/stylist-list')}
+                        className="text-gray-600 hover:text-primary"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <h1 className='text-2xl font-bold text-gray-800'>Edit Stylist</h1>
+                </div>
             </div>
 
             <div className='bg-white px-6 py-8 sm:p-8 border rounded-lg shadow-sm w-full max-w-5xl max-h-[85vh] overflow-y-auto'>
@@ -170,10 +215,10 @@ const AddStylist = () => {
                 <div className='flex flex-col items-center justify-center mb-8 p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50'>
                     <div className='relative mb-3'>
                         <div className='w-32 h-32 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center'>
-                            {stylistImg ? (
+                            {imagePreview ? (
                                 <img 
                                     className='w-full h-full object-cover' 
-                                    src={URL.createObjectURL(stylistImg)} 
+                                    src={imagePreview} 
                                     alt="Stylist profile" 
                                 />
                             ) : (
@@ -187,16 +232,15 @@ const AddStylist = () => {
                             <Pencil size={16} />
                         </label>
                         <input 
-                            onChange={(e) => setStylistImg(e.target.files[0])} 
+                            onChange={handleImageChange} 
                             type="file" 
-                            name="" 
                             id="stylist-img" 
                             hidden 
                             accept="image/*"
                         />
                     </div>
-                    <p className='text-gray-500 text-sm mb-2'>Upload stylist profile picture</p>
-                    <p className='text-xs text-gray-400'>Recommended: Square image, at least 300x300px</p>
+                    <p className='text-gray-500 text-sm mb-2'>Update stylist profile picture</p>
+                    <p className='text-xs text-gray-400'>Leave empty to keep current image</p>
                 </div>
 
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-600'>
@@ -230,31 +274,6 @@ const AddStylist = () => {
                                 placeholder='Enter email address' 
                                 required 
                             />
-                        </div>
-
-                        <div className='flex flex-col gap-1.5'>
-                            <label className='text-sm font-medium text-gray-700 flex items-center'>
-                                <Lock size={16} className="mr-1.5" /> Password
-                                <span className="text-red-500 ml-1">*</span>
-                            </label>
-                            <div className='relative'>
-                                <input 
-                                    onChange={e => setPassword(e.target.value)} 
-                                    value={password} 
-                                    className='border rounded-md px-3 py-2.5 pr-10 w-full focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder='Create password' 
-                                    required 
-                                />
-                                <button 
-                                    type="button" 
-                                    className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700'
-                                    onClick={togglePasswordVisibility}
-                                >
-                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </button>
-                            </div>
-                            <p className="text-xs text-gray-500">Minimum 8 characters recommended</p>
                         </div>
 
                         <div className='flex flex-col gap-1.5'>
@@ -471,19 +490,26 @@ const AddStylist = () => {
                     <p className="text-xs text-gray-500 mb-4">
                         <span className="text-red-500 mr-1">*</span> Required fields
                     </p>
-                    <div className='flex justify-end'>
+                    <div className='flex justify-end gap-3'>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/stylist-list')}
+                            className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                            Cancel
+                        </button>
                         <button 
                             type='submit' 
                             disabled={isSubmitting}
-                            className='bg-primary px-8 py-3 text-white rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed'
+                            className='bg-primary px-8 py-2.5 text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed'
                         >
                             {isSubmitting ? (
                                 <>
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    <span>Adding Stylist...</span>
+                                    <span>Updating Stylist...</span>
                                 </>
                             ) : (
-                                <>Add Stylist</>
+                                <>Save Changes</>
                             )}
                         </button>
                     </div>
@@ -493,4 +519,4 @@ const AddStylist = () => {
     );
 };
 
-export default AddStylist;
+export default EditStylist;

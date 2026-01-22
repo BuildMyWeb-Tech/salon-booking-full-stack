@@ -6,15 +6,18 @@ import { BrowserRouter } from 'react-router-dom'
 import AdminContextProvider from './context/AdminContext.jsx'
 import DoctorContextProvider from './context/DoctorContext.jsx'
 import AppContextProvider from './context/AppContext.jsx'
+import SlotManagementContextProvider from './context/SlotManagementContext.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <BrowserRouter>
-    <AdminContextProvider>
-      <DoctorContextProvider>
-        <AppContextProvider>
+ <BrowserRouter>
+  <AdminContextProvider>
+    <DoctorContextProvider>
+      <AppContextProvider>
+        <SlotManagementContextProvider>
           <App />
-        </AppContextProvider>
-      </DoctorContextProvider>
-    </AdminContextProvider>
-  </BrowserRouter>,
+        </SlotManagementContextProvider>
+      </AppContextProvider>
+    </DoctorContextProvider>
+  </AdminContextProvider>
+</BrowserRouter>,
 )

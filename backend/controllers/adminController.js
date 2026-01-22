@@ -5,6 +5,10 @@ import bcrypt from "bcrypt";
 import validator from "validator";
 import { v2 as cloudinary } from "cloudinary";
 import userModel from "../models/userModel.js";
+import SlotSettings from '../models/SlotSettings.js';
+import BlockedDate from '../models/BlockedDate.js';
+import RecurringHoliday from '../models/RecurringHoliday.js';
+import SpecialWorkingDay from '../models/SpecialWorkingDay.js';
 
 // API for admin login
 const loginAdmin = async (req, res) => {
@@ -29,17 +33,54 @@ const loginAdmin = async (req, res) => {
 
 // API to get all appointments list
 const appointmentsAdmin = async (req, res) => {
-    try {
+  try {
+    const appointments = await appointmentModel
+      .find({})
+      .populate('userId', 'name phone email image')
+      .populate('doctorId', 'name image speciality price') // Changed from docId to doctorId
+      .sort({ createdAt: -1 });
 
-        const appointments = await appointmentModel.find({})
-        res.json({ success: true, appointments })
+    const processedAppointments = appointments.map(app => {
+      const appObj = app.toObject();
 
-    } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
-    }
+      // ✅ Normalize userData
+      if (!appObj.userData && appObj.userId) {
+        appObj.userData = {
+          _id: appObj.userId._id,
+          name: appObj.userId.name,
+          phone: appObj.userId.phone,
+          email: appObj.userId.email,
+          image: appObj.userId.image
+        };
+      }
 
-}
+      // ✅ Normalize docData (THIS FIXES YOUR UI CRASH)
+      if (!appObj.docData && appObj.doctorId) { // Changed from docId to doctorId
+        appObj.docData = {
+          _id: appObj.doctorId._id,
+          name: appObj.doctorId.name,
+          image: appObj.doctorId.image,
+          speciality: appObj.doctorId.speciality,
+          price: appObj.doctorId.price
+        };
+      }
+
+      return appObj;
+    });
+
+    res.json({
+      success: true,
+      appointments: processedAppointments
+    });
+
+  } catch (error) {
+    console.error('Admin appointments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch appointments'
+    });
+  }
+};
 
 // API for appointment cancellation
 const appointmentCancel = async (req, res) => {
@@ -60,7 +101,7 @@ const appointmentCancel = async (req, res) => {
 // API for adding Stylist
 const addDoctor = async (req, res) => {
     try {
-        const { name, email, password, specialty, experience, about, price, certification, instagram, workingHours } = req.body
+        const { name, email, password, specialty, experience, about, price, certification, instagram, workingHours, phone } = req.body
         const imageFile = req.file
 
         // checking for all data to add stylist
@@ -86,12 +127,21 @@ const addDoctor = async (req, res) => {
         const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" })
         const imageUrl = imageUpload.secure_url
 
+        // Parse specialty if it's a JSON string
+        let specialtyArray;
+        try {
+            specialtyArray = typeof specialty === 'string' ? JSON.parse(specialty) : specialty;
+        } catch (error) {
+            specialtyArray = [specialty]; // If parsing fails, treat as a single value
+        }
+
         const stylistData = {
             name,
             email,
+            phone,
             image: imageUrl,
             password: hashedPassword,
-            specialty,
+            specialty: specialtyArray,
             certification,
             experience,
             about,
@@ -124,6 +174,182 @@ const allDoctors = async (req, res) => {
     }
 }
 
+// API to delete a stylist
+export const deleteDoctor = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (!id) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Stylist ID is required" 
+            });
+        }
+
+        // Find the stylist first to get image URL
+        const stylist = await doctorModel.findById(id);
+        
+        if (!stylist) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Stylist not found" 
+            });
+        }
+
+        // Check if stylist has appointments
+        const hasAppointments = await appointmentModel.findOne({ doctor: id });
+        
+        if (hasAppointments) {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot delete stylist with existing appointments. Cancel all appointments first."
+            });
+        }
+
+        // Delete the stylist
+        await doctorModel.findByIdAndDelete(id);
+
+        // Delete stylist's image from Cloudinary if it exists
+        if (stylist.image && stylist.image.includes('cloudinary')) {
+            const publicId = stylist.image.split('/').pop().split('.')[0];
+            await cloudinary.uploader.destroy(publicId);
+        }
+
+        return res.status(200).json({ 
+            success: true, 
+            message: "Stylist deleted successfully" 
+        });
+    } catch (error) {
+        console.error("Delete stylist error:", error);
+        return res.status(500).json({ 
+            success: false, 
+            message: error.message || "An error occurred while deleting the stylist" 
+        });
+    }
+};
+
+// API to update a stylist
+export const updateDoctor = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { 
+            name, email, phone, specialty, experience, 
+            about, price, certification, instagram, workingHours 
+        } = req.body;
+        const imageFile = req.file;
+
+        if (!id) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Stylist ID is required" 
+            });
+        }
+
+        // Find stylist to make sure it exists
+        const stylist = await doctorModel.findById(id);
+        
+        if (!stylist) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Stylist not found" 
+            });
+        }
+
+        // Build update object with provided fields
+        const updateData = {};
+        
+        if (name) updateData.name = name;
+        if (email) updateData.email = email;
+        if (phone) updateData.phone = phone;
+        if (experience) updateData.experience = experience;
+        if (about) updateData.about = about;
+        if (price) updateData.price = Number(price);
+        if (certification) updateData.certification = certification;
+        if (instagram !== undefined) updateData.instagram = instagram;
+        if (workingHours) updateData.workingHours = workingHours;
+
+        // Handle specialty array
+        if (specialty) {
+            try {
+                updateData.specialty = typeof specialty === 'string' 
+                    ? JSON.parse(specialty) 
+                    : specialty;
+            } catch (error) {
+                updateData.specialty = [specialty]; // If parsing fails, treat as single value
+            }
+        }
+
+        // Handle image upload if provided
+        if (imageFile) {
+            // Upload new image
+            const imageUpload = await cloudinary.uploader.upload(
+                imageFile.path, 
+                { resource_type: "image" }
+            );
+            updateData.image = imageUpload.secure_url;
+
+            // Delete old image from Cloudinary if it exists
+            if (stylist.image && stylist.image.includes('cloudinary')) {
+                const publicId = stylist.image.split('/').pop().split('.')[0];
+                await cloudinary.uploader.destroy(publicId);
+            }
+        }
+
+        // Update the stylist
+        const updatedStylist = await doctorModel.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        return res.status(200).json({
+            success: true,
+            message: "Stylist updated successfully",
+            stylist: updatedStylist
+        });
+    } catch (error) {
+        console.error("Update stylist error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "An error occurred while updating the stylist"
+        });
+    }
+};
+
+// API to get a single stylist by ID
+export const getDoctorById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (!id) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Stylist ID is required" 
+            });
+        }
+
+        const stylist = await doctorModel.findById(id).select('-password');
+        
+        if (!stylist) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Stylist not found" 
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            stylist
+        });
+    } catch (error) {
+        console.error("Get stylist error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "An error occurred while fetching the stylist"
+        });
+    }
+};
+
 // API to get dashboard data for admin panel
 const adminDashboard = async (req, res) => {
     try {
@@ -147,11 +373,301 @@ const adminDashboard = async (req, res) => {
     }
 }
 
+// Get Slot Settings
+export const getSlotSettings = async (req, res) => {
+  try {
+    // Find settings or create default if none exist
+    let settings = await SlotSettings.findOne();
+    if (!settings) {
+      settings = await SlotSettings.create({});
+    }
+
+    // Get related data
+    const blockedDates = await BlockedDate.find();
+    const recurringHolidays = await RecurringHoliday.find();
+    const specialWorkingDays = await SpecialWorkingDay.find();
+
+    // Combine all data
+    const response = {
+      ...settings.toObject(),
+      blockedDates,
+      recurringHolidays,
+      specialWorkingDays
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching slot settings:', error);
+    res.status(500).json({ message: 'Failed to fetch slot settings', error: error.message });
+  }
+};
+
+// Update Slot Settings
+export const updateSlotSettings = async (req, res) => {
+  try {
+    // Extract settings from request body
+    const {
+      slotStartTime, slotEndTime, slotDuration, 
+      breakTime, breakStartTime, breakEndTime, 
+      daysOpen, openSlotsFromDate, openSlotsTillDate,
+      allowRescheduling, rescheduleHoursBefore,
+      maxAdvanceBookingDays, minBookingTimeBeforeSlot
+    } = req.body;
+
+    // Update or create settings
+    let settings = await SlotSettings.findOne();
+    if (settings) {
+      // Update existing settings
+      settings.slotStartTime = slotStartTime;
+      settings.slotEndTime = slotEndTime;
+      settings.slotDuration = slotDuration;
+      settings.breakTime = breakTime;
+      settings.breakStartTime = breakStartTime;
+      settings.breakEndTime = breakEndTime;
+      settings.daysOpen = daysOpen;
+      settings.openSlotsFromDate = openSlotsFromDate;
+      settings.openSlotsTillDate = openSlotsTillDate;
+      settings.allowRescheduling = allowRescheduling;
+      settings.rescheduleHoursBefore = rescheduleHoursBefore;
+      settings.maxAdvanceBookingDays = maxAdvanceBookingDays;
+      settings.minBookingTimeBeforeSlot = minBookingTimeBeforeSlot;
+      
+      await settings.save();
+    } else {
+      // Create new settings
+      settings = await SlotSettings.create({
+        slotStartTime, slotEndTime, slotDuration, 
+        breakTime, breakStartTime, breakEndTime, 
+        daysOpen, openSlotsFromDate, openSlotsTillDate,
+        allowRescheduling, rescheduleHoursBefore,
+        maxAdvanceBookingDays, minBookingTimeBeforeSlot
+      });
+    }
+
+    res.status(200).json({ message: 'Slot settings updated successfully', settings });
+  } catch (error) {
+    console.error('Error updating slot settings:', error);
+    res.status(500).json({ message: 'Failed to update slot settings', error: error.message });
+  }
+};
+
+// Add a blocked date
+export const addBlockedDate = async (req, res) => {
+  try {
+    const { date, reason } = req.body;
+    
+    if (!date || !reason) {
+      return res.status(400).json({ message: 'Date and reason are required' });
+    }
+    
+    const blockedDate = await BlockedDate.create({ date, reason });
+    
+    res.status(201).json(blockedDate);
+  } catch (error) {
+    console.error('Error adding blocked date:', error);
+    res.status(500).json({ message: 'Failed to add blocked date', error: error.message });
+  }
+};
+
+// Remove a blocked date
+export const removeBlockedDate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await BlockedDate.findByIdAndDelete(id);
+    
+    if (!result) {
+      return res.status(404).json({ message: 'Blocked date not found' });
+    }
+    
+    res.status(200).json({ message: 'Blocked date removed successfully' });
+  } catch (error) {
+    console.error('Error removing blocked date:', error);
+    res.status(500).json({ message: 'Failed to remove blocked date', error: error.message });
+  }
+};
+
+// Add a recurring holiday
+export const addRecurringHoliday = async (req, res) => {
+  try {
+    const { name, type, value } = req.body;
+    
+    if (!name || !type || !value) {
+      return res.status(400).json({ message: 'Name, type and value are required' });
+    }
+    
+    const holiday = await RecurringHoliday.create({ name, type, value });
+    
+    res.status(201).json(holiday);
+  } catch (error) {
+    console.error('Error adding recurring holiday:', error);
+    res.status(500).json({ message: 'Failed to add recurring holiday', error: error.message });
+  }
+};
+
+// Remove a recurring holiday
+export const removeRecurringHoliday = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await RecurringHoliday.findByIdAndDelete(id);
+    
+    if (!result) {
+      return res.status(404).json({ message: 'Recurring holiday not found' });
+    }
+    
+    res.status(200).json({ message: 'Recurring holiday removed successfully' });
+  } catch (error) {
+    console.error('Error removing recurring holiday:', error);
+    res.status(500).json({ message: 'Failed to remove recurring holiday', error: error.message });
+  }
+};
+
+// Add a special working day
+export const addSpecialWorkingDay = async (req, res) => {
+  try {
+    const { date } = req.body;
+    
+    if (!date) {
+      return res.status(400).json({ message: 'Date is required' });
+    }
+    
+    const specialDay = await SpecialWorkingDay.create({ date });
+    
+    res.status(201).json(specialDay);
+  } catch (error) {
+    console.error('Error adding special working day:', error);
+    res.status(500).json({ message: 'Failed to add special working day', error: error.message });
+  }
+};
+
+// Remove a special working day
+export const removeSpecialWorkingDay = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await SpecialWorkingDay.findByIdAndDelete(id);
+    
+    if (!result) {
+      return res.status(404).json({ message: 'Special working day not found' });
+    }
+    
+    res.status(200).json({ message: 'Special working day removed successfully' });
+  } catch (error) {
+    console.error('Error removing special working day:', error);
+    res.status(500).json({ message: 'Failed to remove special working day', error: error.message });
+  }
+};
+
+// Public – Get Slot Settings (for users)
+export const getPublicSlotSettings = async (req, res) => {
+  try {
+    const settings = await SlotSettings.findOne();
+    if (!settings) {
+      return res.status(200).json(null);
+    }
+
+    const blockedDates = await BlockedDate.find();
+    const recurringHolidays = await RecurringHoliday.find();
+    const specialWorkingDays = await SpecialWorkingDay.find();
+
+    res.status(200).json({
+      ...settings.toObject(),
+      blockedDates,
+      recurringHolidays,
+      specialWorkingDays
+    });
+  } catch (error) {
+    console.error("Public slot settings error:", error);
+    res.status(500).json({ message: "Failed to fetch slot settings" });
+  }
+};
+// Mark appointment as completed
+export const markAppointmentCompleted = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    
+    if (!appointmentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Appointment ID is required'
+      });
+    }
+    
+    const appointment = await appointmentModel.findByIdAndUpdate(
+      appointmentId,
+      { isCompleted: true },
+      { new: true }
+    );
+    
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Appointment marked as completed',
+      appointment
+    });
+    
+  } catch (error) {
+    console.error('Error marking appointment completed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update appointment'
+    });
+  }
+};
+
+// Mark appointment as incomplete
+export const markAppointmentIncomplete = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    
+    if (!appointmentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Appointment ID is required'
+      });
+    }
+    
+    const appointment = await appointmentModel.findByIdAndUpdate(
+      appointmentId,
+      { isCompleted: false },
+      { new: true }
+    );
+    
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Appointment marked as incomplete',
+      appointment
+    });
+    
+  } catch (error) {
+    console.error('Error marking appointment incomplete:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update appointment'
+    });
+  }
+};
+
 export {
     loginAdmin,
     appointmentsAdmin,
     appointmentCancel,
     addDoctor,
     allDoctors,
-    adminDashboard
+    adminDashboard,
+       
 }
