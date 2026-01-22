@@ -33,13 +33,14 @@ const Appointment = () => {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     // Payment gateway setup
+
     const stripePromise = loadStripe('pk_test_51NpjZGSJQz3QA6GnHyUmwbQtcYfeTHfQdl0i7YpeCor7Vl6qXn2nKUDRdx6AldHDhxnRUiUJRuAdBECFIwE0QQGy00Ys6rUGi8');
     const razorpayKeyId = 'rzp_test_8NBbBv2vkvuTtj';
 
     const [stylistInfo, setStylistInfo] = useState(null);
-    const [selectedDate, setSelectedDate] = useState(null);
-    const [availableSlots, setAvailableSlots] = useState([]);
-    const [selectedSlotISO, setSelectedSlotISO] = useState('');
+    const [stylistSlots, setStylistSlots] = useState([]);
+    const [slotIndex, setSlotIndex] = useState(0);
+    const [slotTime, setSlotTime] = useState('');
     const [loading, setLoading] = useState(false);
     const [bookingLoading, setBookingLoading] = useState(false);
     const [selectedService, setSelectedService] = useState(null);
@@ -49,6 +50,9 @@ const Appointment = () => {
     const [currentStep, setCurrentStep] = useState(1);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [slotSettings, setSlotSettings] = useState(null);
+    const [blockedDates, setBlockedDates] = useState([]);
+    const [recurringHolidays, setRecurringHolidays] = useState([]);
+    const [specialWorkingDays, setSpecialWorkingDays] = useState([]);
 
     const navigate = useNavigate();
 
@@ -111,31 +115,35 @@ const Appointment = () => {
             const { data } = await axios.get(backendUrl + '/api/admin/public/slot-settings');
             if (data) {
                 setSlotSettings(data);
+                setBlockedDates(data.blockedDates || []);
+                setRecurringHolidays(data.recurringHolidays || []);
+                setSpecialWorkingDays(data.specialWorkingDays || []);
             }
         } catch (error) {
             console.error("Error fetching slot settings:", error);
             // Use default settings if fetch fails
-            setSlotSettings({
-                slotStartTime: "09:00",
-                slotEndTime: "17:00",
-                slotDuration: 30,
-                breakTime: false,
-                breakStartTime: "13:00",
-                breakEndTime: "14:00",
-                daysOpen: [
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                    "Sunday"
-                ],
-                allowRescheduling: true,
-                rescheduleHoursBefore: 24,
-                maxAdvanceBookingDays: 3,
-                minBookingTimeBeforeSlot: 0
-            });
+           setSlotSettings({
+  slotStartTime: "09:00",
+  slotEndTime: "17:00",
+  slotDuration: 30,
+  breakTime: false,
+  breakStartTime: "13:00",
+  breakEndTime: "14:00",
+  daysOpen: [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+  ],
+  allowRescheduling: true,
+  rescheduleHoursBefore: 24,
+  maxAdvanceBookingDays: 3,
+  minBookingTimeBeforeSlot: 0
+});
+
         }
     };
 
@@ -144,37 +152,185 @@ const Appointment = () => {
         setStylistInfo(stylistInfo);
     };
 
-    const fetchSlots = async (dateObj) => {
-        try {
-            setLoading(true);
-
-            const dateStr = dateObj.toISOString().split("T")[0];
-
-            const { data } = await axios.get(
-                `${backendUrl}/api/user/available-slots`,
-                {
-                    params: {
-                        date: dateStr,
-                        docId
-                    },
-                    headers: { token }
-                }
-            );
-
-            if (data.success) {
-                setAvailableSlots(data.slots);
-            } else {
-                setAvailableSlots([]);
-                toast.warning(data.message);
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to load slots");
-            setAvailableSlots([]);
-        } finally {
-            setLoading(false);
+    const isDateBlocked = (date) => {
+        const dateStr = date.toISOString().split('T')[0];
+        
+        // Check blocked dates
+        if (blockedDates.some(blocked => blocked.date === dateStr)) {
+            return true;
         }
+        
+        // Check recurring holidays (month-day match)
+        const monthDay = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        if (recurringHolidays.some(holiday => {
+            const holidayMonthDay = holiday.date.slice(5);
+            return holidayMonthDay === monthDay;
+        })) {
+            return true;
+        }
+        
+        return false;
     };
+
+    const isSpecialWorkingDay = (date) => {
+        const dateStr = date.toISOString().split('T')[0];
+        return specialWorkingDays.some(day => day.date === dateStr);
+    };
+
+    const isDayOpen = (date) => {
+  if (!slotSettings || !Array.isArray(slotSettings.daysOpen)) {
+    return false;
+  }
+
+  const dayName = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday"
+  ][date.getDay()];
+
+  // Special working day override
+  if (isSpecialWorkingDay(date)) return true;
+
+  return slotSettings.daysOpen.includes(dayName);
+};
+
+
+    const parseTime = (timeStr) => {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return { hours, minutes };
+    };
+
+  const getAvailableSlots = () => {
+  if (!stylistInfo || !slotSettings) return;
+
+  setLoading(true);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const slotsByDay = [];
+
+  const maxDays = slotSettings.maxAdvanceBookingDays || 3;
+
+  let startDate = new Date(today);
+  let endDate = new Date(today);
+  endDate.setDate(today.getDate() + maxDays);
+
+  // ✅ Apply admin open-from date
+  if (slotSettings.openSlotsFromDate) {
+    const fromDate = new Date(slotSettings.openSlotsFromDate);
+    if (!isNaN(fromDate)) {
+      fromDate.setHours(0, 0, 0, 0);
+      if (fromDate > startDate) startDate = fromDate;
+    }
+  }
+
+  // ✅ Apply admin open-till date
+  if (slotSettings.openSlotsTillDate) {
+    const tillDate = new Date(slotSettings.openSlotsTillDate);
+    if (!isNaN(tillDate)) {
+      tillDate.setHours(0, 0, 0, 0);
+      if (tillDate < endDate) endDate = tillDate;
+    }
+  }
+
+  const totalDays =
+    Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+  for (let i = 0; i < totalDays; i++) {
+    const currentDate = new Date(startDate);
+    currentDate.setDate(startDate.getDate() + i);
+    currentDate.setHours(0, 0, 0, 0);
+
+    // ⛔ Skip blocked or closed days
+    if (isDateBlocked(currentDate) || !isDayOpen(currentDate)) {
+      slotsByDay.push([]);
+      continue;
+    }
+
+    const { hours: sh, minutes: sm } = parseTime(slotSettings.slotStartTime);
+    const { hours: eh, minutes: em } = parseTime(slotSettings.slotEndTime);
+
+    let slotStart = new Date(currentDate);
+    slotStart.setHours(sh, sm, 0, 0);
+
+    const slotEnd = new Date(currentDate);
+    slotEnd.setHours(eh, em, 0, 0);
+
+    // ⏱ Minimum booking time (today only)
+    if (currentDate.getTime() === today.getTime()) {
+      const minStart = new Date();
+      minStart.setMinutes(
+        minStart.getMinutes() + (slotSettings.minBookingTimeBeforeSlot || 0)
+      );
+
+      if (slotStart < minStart) {
+        slotStart = new Date(minStart);
+        slotStart.setMinutes(
+          Math.ceil(slotStart.getMinutes() / slotSettings.slotDuration) *
+            slotSettings.slotDuration
+        );
+      }
+    }
+
+    const daySlots = [];
+
+    while (slotStart < slotEnd) {
+      // ⛔ Break time handling
+      if (slotSettings.breakTime) {
+        const bs = parseTime(slotSettings.breakStartTime);
+        const be = parseTime(slotSettings.breakEndTime);
+
+        const breakStart = new Date(currentDate);
+        breakStart.setHours(bs.hours, bs.minutes, 0, 0);
+
+        const breakEnd = new Date(currentDate);
+        breakEnd.setHours(be.hours, be.minutes, 0, 0);
+
+        if (slotStart >= breakStart && slotStart < breakEnd) {
+          slotStart.setMinutes(
+            slotStart.getMinutes() + slotSettings.slotDuration
+          );
+          continue;
+        }
+      }
+
+      const time = slotStart.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const slotKey = `${slotStart.getDate()}_${
+        slotStart.getMonth() + 1
+      }_${slotStart.getFullYear()}`;
+
+      const booked =
+        stylistInfo.slots_booked?.[slotKey]?.includes(time);
+
+      if (!booked) {
+        daySlots.push({
+          datetime: new Date(slotStart),
+          time,
+        });
+      }
+
+      slotStart.setMinutes(
+        slotStart.getMinutes() + slotSettings.slotDuration
+      );
+    }
+
+    slotsByDay.push(daySlots);
+  }
+
+  setStylistSlots(slotsByDay);
+  setLoading(false);
+};
+
+
 
     const processPayment = async (method) => {
         setPaymentMethod(method);
@@ -262,7 +418,7 @@ const Appointment = () => {
             return navigate('/login');
         }
 
-        if (!selectedSlotISO) {
+        if (!slotTime) {
             return toast.warning('Please select a time slot');
         }
 
@@ -279,25 +435,26 @@ const Appointment = () => {
 
     const completeBooking = async (paymentMethod) => {
         setBookingLoading(true);
-        
-        // Using ISO date format (YYYY-MM-DD)
-        const slotDate = selectedDate.toISOString().split("T")[0];
+        const date = stylistSlots[slotIndex][0].datetime;
+
+        let day = date.getDate();
+        let month = date.getMonth() + 1;
+        let year = date.getFullYear();
+
+        const slotDate = day + "_" + month + "_" + year;
 
         try {
-            const { data } = await axios.post(
-                backendUrl + '/api/user/book-appointment', 
+            const { data } = await axios.post(backendUrl + '/api/user/book-appointment', 
                 { 
                     docId, 
-                    slotDate,
-                    slotTime: selectedSlotISO,
+                    slotDate, 
+                    slotTime, 
                     service: selectedService.name, 
                     price: selectedService.price,
-                    paymentMethod
+                    paymentMethod: paymentMethod
                 }, 
                 { headers: { token } }
             );
-            console.log(selectedSlotISO);
-
             
             if (data.success) {
                 toast.success(data.message);
@@ -315,7 +472,7 @@ const Appointment = () => {
             }
         } catch (error) {
             console.log(error);
-            toast.error(error.response?.data?.message || 'Error booking appointment');
+            toast.error(error.message || 'Error booking appointment');
             setBookingLoading(false);
         }
     };
@@ -329,6 +486,15 @@ const Appointment = () => {
             fetchStylistInfo();
         }
     }, [stylists, docId]);
+const slotsLoaded = React.useRef(false);
+
+useEffect(() => {
+  if (stylistInfo && slotSettings && !slotsLoaded.current) {
+    getAvailableSlots();
+    slotsLoaded.current = true;
+  }
+}, [stylistInfo, slotSettings]);
+
 
     if (!stylistInfo || !slotSettings) {
         return (
@@ -562,54 +728,71 @@ const Appointment = () => {
                                 <div className="mb-8">
                                     <label className="block text-sm font-medium text-gray-700 mb-3">Select Date</label>
                                     
-                                    <input
-                                        type="date"
-                                        className="w-full sm:w-auto border rounded-lg px-4 py-2 focus:border-primary focus:ring-1 focus:ring-primary"
-                                        onChange={(e) => {
-                                            if (e.target.value) {
-                                                const date = new Date(e.target.value);
-                                                setSelectedDate(date);
-                                                setSelectedSlotISO('');
-                                                fetchSlots(date);
-                                            }
-                                        }}
-                                    />
+                                    {loading ? (
+                                        <div className="flex justify-center py-8">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-3 items-center overflow-x-auto pb-2">
+                                            {stylistSlots.map((slots, index) => {
+                                                if (slots.length === 0) return null;
+                                                
+                                                const date = slots[0].datetime;
+                                                const isToday = new Date().getDate() === date.getDate() && 
+                                                            new Date().getMonth() === date.getMonth();
+                                                
+                                                return (
+                                                    <div 
+                                                        key={index} 
+                                                        onClick={() => {
+                                                            setSlotIndex(index);
+                                                            setSlotTime('');
+                                                        }}
+                                                        className={`flex flex-col items-center p-4 min-w-[110px] rounded-xl cursor-pointer transition-all duration-200 ${
+                                                            slotIndex === index 
+                                                                ? 'bg-primary text-white shadow-md' 
+                                                                : 'border border-gray-200 hover:border-primary/50 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        <p className="text-xs font-medium mb-1">
+                                                            {isToday ? 'TODAY' : daysOfWeek[date.getDay()]}
+                                                        </p>
+                                                        <p className="text-2xl font-bold">{date.getDate()}</p>
+                                                        <p className="text-xs mt-1">{monthNames[date.getMonth()]}</p>
+                                                        <div className={`text-xs mt-2 px-2 py-0.5 rounded-full ${
+                                                            slotIndex === index 
+                                                                ? 'bg-white/20 text-white' 
+                                                                : 'bg-green-100 text-green-800'
+                                                        }`}>
+                                                            {slots.length} slots
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                                 
                                 {/* Time Selection */}
-                                {selectedDate && (
+                                {stylistSlots.length > 0 && stylistSlots[slotIndex] && stylistSlots[slotIndex].length > 0 && (
                                     <div className="mb-8">
-                                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                                            Available Times for {selectedDate.toLocaleDateString('en-US', { 
-                                                weekday: 'long', 
-                                                month: 'long', 
-                                                day: 'numeric' 
-                                            })}
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-3">Select Time</label>
                                         
-                                        {loading ? (
-                                            <div className="flex justify-center py-6">
-                                                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
-                                            </div>
-                                        ) : availableSlots.length === 0 ? (
-                                            <p className="text-gray-500">No slots available for this date</p>
-                                        ) : (
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                                {availableSlots.map((slot, index) => (
-                                                    <div
-                                                        key={index}
-                                                        onClick={() => setSelectedSlotISO(slot.startTime)}
-                                                        className={`py-3 px-4 text-center rounded-lg cursor-pointer transition-all ${
-                                                            slot.startTime === selectedSlotISO 
-                                                                ? 'bg-primary text-white shadow-md' 
-                                                                : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-100'
-                                                        }`}
-                                                    >
-                                                        {slot.displayTime}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                            {stylistSlots[slotIndex].map((slot, index) => (
+                                                <div
+                                                    key={index}
+                                                    onClick={() => setSlotTime(slot.time)}
+                                                    className={`py-3 px-4 text-center rounded-lg cursor-pointer transition-all ${
+                                                        slot.time === slotTime 
+                                                            ? 'bg-primary text-white shadow-md' 
+                                                            : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-100'
+                                                    }`}
+                                                >
+                                                    {slot.time}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                                 
@@ -617,15 +800,15 @@ const Appointment = () => {
                                 <div className="mt-8 flex justify-end">
                                     <button 
                                         onClick={() => {
-                                            if (selectedSlotISO) {
+                                            if (slotTime) {
                                                 setCurrentStep(3);
                                             } else {
                                                 toast.warning("Please select a time slot");
                                             }
                                         }}
-                                        disabled={!selectedSlotISO}
+                                        disabled={!slotTime}
                                         className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                                            !selectedSlotISO
+                                            !slotTime
                                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                                                 : 'bg-primary text-white hover:bg-primary/90 hover:shadow-lg'
                                         }`}
@@ -678,18 +861,13 @@ const Appointment = () => {
                                             <div>
                                                 <span className="text-gray-600 text-sm">Date & Time</span>
                                                 <p className="font-medium text-gray-800">
-                                                    {selectedDate.toLocaleDateString('en-US', { 
+                                                    {stylistSlots[slotIndex][0].datetime.toLocaleDateString('en-US', { 
                                                         weekday: 'short', 
                                                         month: 'short', 
                                                         day: 'numeric' 
                                                     })}
                                                 </p>
-                                                <p className="text-sm text-gray-500">
-                                                    {selectedSlotISO ? new Date(selectedSlotISO).toLocaleTimeString('en-US', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    }) : selectedSlotISO}
-                                                </p>
+                                                <p className="text-sm text-gray-500">{slotTime}</p>
                                             </div>
                                         </div>
                                         

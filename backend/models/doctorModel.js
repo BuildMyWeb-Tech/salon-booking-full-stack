@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
-const doctorSchema = new mongoose.Schema({
+const doctorSchema = new mongoose.Schema(
+  {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -9,13 +10,30 @@ const doctorSchema = new mongoose.Schema({
     certification: { type: String, required: true },
     experience: { type: String, required: true },
     about: { type: String, required: true },
+
     available: { type: Boolean, default: true },
-   price: { type: Number, required: true },
+
+    price: { type: Number, required: true },
+
     instagram: { type: String, default: "" },
     workingHours: { type: String, default: "10AM-7PM" },
-    slots_booked: { type: Object, default: {} },
-    date: { type: Number, required: true },
-}, { minimize: false })
 
-const doctorModel = mongoose.models.doctor || mongoose.model("doctor", doctorSchema);
-export default doctorModel;
+    /**
+     * {
+     *   "2026-01-24": [
+     *     "2026-01-24T04:00:00.000Z"
+     *   ]
+     * }
+     */
+    slots_booked: {
+      type: Map,
+      of: [String],
+      default: {}
+    },
+
+    date: { type: Number, required: true }
+  },
+  { minimize: false }
+);
+
+export default mongoose.model("doctor", doctorSchema);

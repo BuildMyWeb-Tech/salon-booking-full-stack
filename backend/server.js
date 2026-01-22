@@ -38,9 +38,6 @@ const swaggerOptions = {
       : "Development server",
   },
 ],
-
-
-
     components: {
       securitySchemes: {
         bearerAuth: {
