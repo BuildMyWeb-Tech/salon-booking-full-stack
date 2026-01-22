@@ -101,7 +101,7 @@ const appointmentCancel = async (req, res) => {
 // API for adding Stylist
 const addDoctor = async (req, res) => {
     try {
-        const { name, email, password, specialty, experience, about, price, certification, instagram, workingHours } = req.body
+        const { name, email, password, specialty, experience, about, price, certification, instagram, workingHours, phone } = req.body
         const imageFile = req.file
 
         // checking for all data to add stylist
@@ -127,12 +127,21 @@ const addDoctor = async (req, res) => {
         const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" })
         const imageUrl = imageUpload.secure_url
 
+        // Parse specialty if it's a JSON string
+        let specialtyArray;
+        try {
+            specialtyArray = typeof specialty === 'string' ? JSON.parse(specialty) : specialty;
+        } catch (error) {
+            specialtyArray = [specialty]; // If parsing fails, treat as a single value
+        }
+
         const stylistData = {
             name,
             email,
+            phone,
             image: imageUrl,
             password: hashedPassword,
-            specialty,
+            specialty: specialtyArray,
             certification,
             experience,
             about,

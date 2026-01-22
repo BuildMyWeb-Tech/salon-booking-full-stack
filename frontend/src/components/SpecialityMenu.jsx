@@ -1,4 +1,4 @@
-// frontend/src/components/SpecialityMenu.jsx
+// In SpecialityMenu.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -37,7 +37,6 @@ const SpecialityMenu = () => {
       className="w-full py-14 px-4 sm:px-6 md:px-8"
     >
       <div className="container mx-auto">
-
         {/* Heading */}
         <div className="text-center max-w-3xl mx-auto mb-10">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-3">
@@ -67,7 +66,6 @@ const SpecialityMenu = () => {
                 className="group"
               >
                 <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full">
-
                   {/* Image Wrapper */}
                   <div className="relative w-full aspect-[4/3] bg-gray-100 flex items-center justify-center">
                     <img
@@ -75,7 +73,6 @@ const SpecialityMenu = () => {
                       alt={item.name || item.speciality}
                       className="w-full h-full object-cover"
                     />
-
                     {/* Hover overlay */}
                     <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
@@ -95,7 +92,6 @@ const SpecialityMenu = () => {
                       </p>
                     )}
                   </div>
-
                 </div>
               </Link>
             ))}
