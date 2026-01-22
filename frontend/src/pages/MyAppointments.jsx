@@ -34,6 +34,8 @@ const MyAppointments = () => {
     const [cancelModal, setCancelModal] = useState(false);
     const [appointmentToCancel, setAppointmentToCancel] = useState(null);
     const [appointmentToReschedule, setAppointmentToReschedule] = useState(null);
+    const [appointmentToPay, setAppointmentToPay] = useState(null);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [canReschedule, setCanReschedule] = useState(true);
     const [hasUsedReschedule, setHasUsedReschedule] = useState(false);
     const [availableSlots, setAvailableSlots] = useState([]);
@@ -44,13 +46,21 @@ const MyAppointments = () => {
     const [isRescheduling, setIsRescheduling] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [localAppointments, setLocalAppointments] = useState([]);
+    const [paymentMethod, setPaymentMethod] = useState(null);
+    const [paymentLoading, setPaymentLoading] = useState(false);
 
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-    // Function to format the date eg. ( 20_01_2000 => 20 Jan 2000 )
+    // Function to format the date eg. ( 2026-01-23 => 23 Jan 2026 )
     const slotDateFormat = (slotDate) => {
-        const dateArray = slotDate.split('_');
-        return dateArray[0] + " " + months[Number(dateArray[1]) - 1] + " " + dateArray[2];
+        if (!slotDate) return '';
+        
+        const dateObj = new Date(slotDate);
+        const day = dateObj.getDate();
+        const month = dateObj.getMonth();
+        const year = dateObj.getFullYear();
+        
+        return `${day} ${months[month]} ${year}`;
     };
 
     // Getting User Appointments Data Using API
@@ -69,7 +79,7 @@ const MyAppointments = () => {
     };
 
     // Function to cancel appointment Using API
-   const cancelAppointment = async () => {
+    const cancelAppointment = async () => {
         if (!appointmentToCancel) return;
         
         try {
@@ -114,13 +124,19 @@ const MyAppointments = () => {
             toast.error(error.message);
             // Rollback local state if API fails
             setLocalAppointments(prevAppointments => 
-                                prevAppointments.map(app => 
+                prevAppointments.map(app => 
                     app._id === appointmentToCancel._id ? 
                     { ...app, cancelled: false } : 
                     app
                 )
             );
         }
+    };
+
+    // Open payment modal
+    const openPaymentModal = (appointment) => {
+        setAppointmentToPay(appointment);
+        setShowPaymentModal(true);
     };
 
     // Simulate completing an appointment (for demo/testing)
@@ -142,7 +158,7 @@ const MyAppointments = () => {
         toast.success("Appointment marked as completed!");
     };
 
-     // Process payment when user selects a payment method
+    // Process payment when user selects a payment method
     const processPayment = (method) => {
         if (!appointmentToPay) return;
         
@@ -168,8 +184,6 @@ const MyAppointments = () => {
             getUserAppointments(); // Refresh from server
         }, 1500);
     };
-
-
 
     // Function to get available slots for rescheduling - using stylist's actual available slots
     const getAvailableSlots = async (stylistId) => {
@@ -218,7 +232,7 @@ const MyAppointments = () => {
             const month = currentDate.getMonth() + 1;
             const year = currentDate.getFullYear();
             
-            const formattedDate = `${day}_${month}_${year}`;
+            const formattedDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
             
             // Create random times
             const times = [];
@@ -243,23 +257,7 @@ const MyAppointments = () => {
         if (appointment.hasRescheduled) return false; // Already used one-time reschedule
         
         // Parse the appointment date and time
-        const dateArray = appointment.slotDate.split('_');
-        const timeArray = appointment.slotTime.split(':');
-        const timeStr = appointment.slotTime.toLowerCase();
-        const isPM = timeStr.includes('pm');
-        let hour = parseInt(timeArray[0]);
-        if (isPM && hour < 12) hour += 12;
-        if (!isPM && hour === 12) hour = 0;
-        
-        const minute = parseInt(timeArray[1].split(' ')[0]);
-        
-        const appointmentDate = new Date(
-            parseInt(dateArray[2]),
-            parseInt(dateArray[1]) - 1,
-            parseInt(dateArray[0]),
-            hour,
-            minute
-        );
+        const appointmentDate = new Date(appointment.slotDateTime);
         
         // Current time
         const now = new Date();
@@ -280,7 +278,7 @@ const MyAppointments = () => {
         
         setAppointmentToReschedule(appointment);
         if (canReschedule && !appointment.hasRescheduled) {
-            getAvailableSlots(appointment.stylistData?._id || appointment.docData?._id);
+            getAvailableSlots(appointment.doctorId);
         }
         setRescheduleModal(true);
     };
@@ -339,7 +337,7 @@ const MyAppointments = () => {
         }
     };
 
-     useEffect(() => {
+    useEffect(() => {
         if (token) {
             getUserAppointments();
         } else {
@@ -354,9 +352,16 @@ const MyAppointments = () => {
         }
     }, [appointments]);
 
-  // Determine which data field to use (supporting both old and new structure)
+    // Determine which data field to use (supporting both old and new structure)
     const getStylistData = (appointment) => {
-        return appointment.stylistData || appointment.docData;
+        // Return stylist info for display purposes
+        return {
+            _id: appointment.doctorId,
+            name: "Stylist",
+            image: assets.defaultProfile,
+            price: appointment.amount || 0,
+            speciality: "Salon Service"
+        };
     };
     
     // Filter appointments based on active tab
@@ -371,7 +376,7 @@ const MyAppointments = () => {
         return true;
     });
 
-   return (
+    return (
         <div className="bg-gray-50 min-h-screen pb-20 pt-6 px-4 sm:px-6 lg:px-8">
             <div className="max-w-5xl mx-auto">
                 {/* Header with Back Button */}
@@ -490,8 +495,8 @@ const MyAppointments = () => {
                                                 <div className="relative mx-auto sm:mx-0 w-32 sm:w-full max-w-[160px]">
                                                     <img 
                                                         className="aspect-square object-cover rounded-xl shadow-sm border border-gray-200" 
-                                                        src={stylistData.image} 
-                                                        alt={stylistData.name} 
+                                                        src={assets.defaultProfile}
+                                                        alt="Stylist"
                                                     />
                                                     
                                                     {/* Status Badge */}
@@ -515,58 +520,16 @@ const MyAppointments = () => {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    
-                                                    {/* Rating Prompt for completed appointments */}
-                                                    {/* {item.isCompleted && !item.userRated && (
-                                                        <div className="absolute -bottom-2 right-0 transform translate-x-1/2">
-                                                            <button 
-                                                                className="bg-white rounded-full p-1 shadow-lg hover:bg-yellow-50 transition-colors group" 
-                                                                title="Rate your experience"
-                                                            >
-                                                                <Star size={18} className="text-yellow-400 group-hover:fill-yellow-400" />
-                                                            </button>
-                                                        </div>
-                                                    )} */}
                                                 </div>
-                                                
-                                                {/* Stylist Rating */}
-                                                {/* <div className="hidden sm:flex items-center justify-center gap-1 mt-2">
-                                                    <div className="flex">
-                                                        {[1, 2, 3, 4, 5].map((_, i) => (
-                                                            <Star 
-                                                                key={i}
-                                                                size={12} 
-                                                                fill={i < (stylistData.rating || 4) ? "#FFC107" : "#E5E7EB"} 
-                                                                stroke="none"
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                    <span className="text-xs text-gray-500">{stylistData.reviewCount || 124}</span>
-                                                </div> */}
                                             </div>
                                             
                                             {/* Appointment Details */}
                                             <div className="flex-1">
                                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
                                                     <div>
-                                                        <h3 className="text-lg font-semibold text-gray-800 mb-1">{stylistData.name}</h3>
-                                                        <p className="text-primary text-sm font-medium">{stylistData.speciality}</p>
+                                                        <h3 className="text-lg font-semibold text-gray-800 mb-1">Stylist</h3>
+                                                        <p className="text-primary text-sm font-medium">Salon Service</p>
                                                     </div>
-                                                    
-                                                    {/* Mobile rating */}
-                                                    {/* <div className="flex sm:hidden items-center gap-1">
-                                                        <div className="flex">
-                                                            {[1, 2, 3, 4, 5].map((_, i) => (
-                                                                <Star 
-                                                                    key={i}
-                                                                    size={12} 
-                                                                    fill={i < (stylistData.rating || 4) ? "#FFC107" : "#E5E7EB"}
-                                                                    stroke="none"
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                        <span className="text-xs text-gray-500">{stylistData.reviewCount || 124}</span>
-                                                    </div> */}
                                                 </div>
                                                 
                                                 {/* Divider */}
@@ -599,26 +562,16 @@ const MyAppointments = () => {
                                                             <Scissors size={18} className="text-primary mt-0.5" />
                                                             <div>
                                                                 <p className="text-xs text-gray-500">Service</p>
-                                                                <p className="font-medium text-gray-800">{item.service || 'Hair Styling'}</p>
+                                                                <p className="font-medium text-gray-800">Hair Styling</p>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 
-                                                {/* Location */}
-                                                {stylistData.address && (
-                                                    <div className="flex items-start gap-2 mb-5 text-sm text-gray-600">
-                                                        <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                                                        <span>
-                                                            {stylistData.address.line1}, {stylistData.address.line2}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                
                                                 {/* Price and Actions */}
                                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="font-bold text-gray-800">{currencySymbol}{item.amount || (stylistData.price || stylistData.fees)}</p>
+                                                        <p className="font-bold text-gray-800">{currencySymbol}{item.amount}</p>
                                                         
                                                         {/* Payment Badge */}
                                                         {item.payment ? (
@@ -683,7 +636,7 @@ const MyAppointments = () => {
                                                         {/* Re-book Button for completed or cancelled */}
                                                         {(item.isCompleted || item.cancelled) && (
                                                             <button
-                                                                onClick={() => navigate(`/appointment/${stylistData._id}`)}
+                                                                onClick={() => navigate(`/appointment/${item.doctorId}`)}
                                                                 className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm text-sm"
                                                             >
                                                                 <Calendar size={16} />
@@ -691,18 +644,7 @@ const MyAppointments = () => {
                                                             </button>
                                                         )}
                                                         
-                                                        {/* FOR DEMO ONLY: Complete Button */}
-                                                        {process.env.NODE_ENV === 'development' && 
-                                                         !item.isCompleted && 
-                                                         !item.cancelled && (
-                                                            <button
-                                                                onClick={() => markAppointmentComplete(item._id)}
-                                                                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm"
-                                                            >
-                                                                <CheckCircle size={16} />
-                                                                Complete (Demo)
-                                                            </button>
-                                                        )}
+                                                        
                                                     </div>
                                                 </div>
                                             </div>
@@ -736,7 +678,342 @@ const MyAppointments = () => {
                     </div>
                 )}
                 
-                {/* Payment Modal, Reschedule Modal, and Cancellation Modal components remain unchanged */}
+                {/* Payment Modal */}
+                <AnimatePresence>
+                    {showPaymentModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                        >
+                            <motion.div 
+                                className="bg-white rounded-xl overflow-hidden max-w-md w-full shadow-xl"
+                                initial={{ scale: 0.9, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.9, y: 20 }}
+                            >
+                                <div className="p-6">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <h3 className="text-lg font-semibold text-gray-800">Complete Payment</h3>
+                                        <button 
+                                            onClick={() => {
+                                                setShowPaymentModal(false);
+                                                setAppointmentToPay(null);
+                                                setPaymentMethod(null);
+                                            }} 
+                                            className="text-gray-400 hover:text-gray-500"
+                                        >
+                                            <X size={20} />
+                                        </button>
+                                    </div>
+                                    
+                                    {appointmentToPay && (
+                                        <div className="space-y-4">
+                                            <div className="bg-gray-50 p-4 rounded-lg">
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-gray-500">Appointment Date</span>
+                                                    <span className="font-medium">{slotDateFormat(appointmentToPay.slotDate)}</span>
+                                                </div>
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-gray-500">Time</span>
+                                                    <span className="font-medium">{appointmentToPay.slotTime}</span>
+                                                </div>
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-gray-500">Amount</span>
+                                                    <span className="font-bold text-primary">{currencySymbol}{appointmentToPay.amount}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="space-y-3">
+                                                <p className="text-gray-700 text-sm">Select payment method:</p>
+                                                
+                                                <button
+                                                    onClick={() => processPayment('card')}
+                                                    disabled={paymentLoading}
+                                                    className="w-full flex items-center justify-between bg-white border border-gray-200 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <CreditCard className="text-blue-500" size={20} />
+                                                        <span className="font-medium">Credit/Debit Card</span>
+                                                    </div>
+                                                    {paymentMethod === 'card' && paymentLoading && (
+                                                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                                    )}
+                                                </button>
+                                                
+                                                <button
+                                                    onClick={() => processPayment('upi')}
+                                                    disabled={paymentLoading}
+                                                    className="w-full flex items-center justify-between bg-white border border-gray-200 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <img src={assets.upi_icon || "/upi-icon.svg"} alt="UPI" className="w-5 h-5" />
+                                                        <span className="font-medium">UPI Payment</span>
+                                                    </div>
+                                                    {paymentMethod === 'upi' && paymentLoading && (
+                                                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+                
+                {/* Reschedule Modal */}
+               <AnimatePresence>
+    {rescheduleModal && (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+        >
+            <motion.div 
+                className="bg-white rounded-xl overflow-hidden max-w-lg w-full shadow-xl"
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+            >
+                <div className="flex justify-between items-center border-b border-gray-200 p-4">
+                    <h3 className="text-lg font-semibold text-gray-800">Reschedule Appointment</h3>
+                    <button 
+                        onClick={() => {
+                            setRescheduleModal(false);
+                            setAppointmentToReschedule(null);
+                            setSelectedDate('');
+                            setSelectedTime('');
+                        }} 
+                        className="text-gray-400 hover:text-gray-500"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+                
+                <div className="p-6">
+                    {!canReschedule ? (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                            <AlertTriangle size={40} className="text-yellow-500 mx-auto mb-2" />
+                            <p className="text-yellow-800 font-medium mb-1">Unable to Reschedule</p>
+                            <p className="text-yellow-700 text-sm">
+                                Appointments can only be rescheduled at least 3 hours before the scheduled time.
+                            </p>
+                        </div>
+                    ) : hasUsedReschedule ? (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                            <AlertTriangle size={40} className="text-yellow-500 mx-auto mb-2" />
+                            <p className="text-yellow-800 font-medium mb-1">Rescheduling Limit Reached</p>
+                            <p className="text-yellow-700 text-sm">
+                                You have already used your one-time reschedule for this appointment.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Current appointment details */}
+                            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                                <h4 className="font-medium text-gray-800 mb-3">Current Appointment</h4>
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <p className="text-gray-500">Date</p>
+                                        <p className="font-medium">{slotDateFormat(appointmentToReschedule?.slotDate)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-500">Time</p>
+                                        <p className="font-medium">{appointmentToReschedule?.slotTime}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Date selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Select New Date</label>
+                                <input
+                                    type="date"
+                                    className="w-full border rounded-lg p-2 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                                    onChange={(e) => {
+                                        setSelectedDate(e.target.value);
+                                        setSelectedTime('');
+                                        
+                                        // Get available slots for this date if we have a selected date
+                                        if (e.target.value) {
+                                            const selectedSlot = availableSlots.find(
+                                                slot => slot.date === e.target.value
+                                            );
+                                            
+                                            if (!selectedSlot || selectedSlot.times.length === 0) {
+                                                toast.info("No available slots for this date");
+                                            }
+                                        }
+                                    }}
+                                    min={new Date().toISOString().split('T')[0]} // Prevent past dates
+                                />
+                            </div>
+                            
+                            {/* Time selection */}
+                            {selectedDate && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Select New Time</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {isRescheduling ? (
+                                            <div className="col-span-3 py-8 text-center">
+                                                <div className="inline-block animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {availableSlots.find(slot => slot.date === selectedDate)?.times.map((time, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        type="button"
+                                                        onClick={() => setSelectedTime(time)}
+                                                        className={`p-2 text-sm rounded-md transition-colors ${
+                                                            selectedTime === time 
+                                                                ? 'bg-primary text-white' 
+                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                        }`}
+                                                    >
+                                                        {time}
+                                                    </button>
+                                                ))}
+                                                
+                                                {(!availableSlots.find(slot => slot.date === selectedDate) ||
+                                                    availableSlots.find(slot => slot.date === selectedDate)?.times.length === 0) && (
+                                                    <div className="col-span-3 p-4 text-center text-gray-500">
+                                                        No available slots for this date
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Note about rescheduling */}
+                            <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 flex items-start gap-2">
+                                <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                                <p>You can reschedule your appointment only once. Please make sure the new time works for you.</p>
+                            </div>
+                            
+                            {/* Action buttons */}
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setRescheduleModal(false);
+                                        setAppointmentToReschedule(null);
+                                        setSelectedDate('');
+                                        setSelectedTime('');
+                                    }}
+                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={rescheduleAppointment}
+                                    disabled={!selectedDate || !selectedTime || isRescheduling}
+                                    className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 ${
+                                        !selectedDate || !selectedTime || isRescheduling
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                                            : 'bg-primary text-white hover:bg-primary/90'
+                                    }`}
+                                >
+                                    {isRescheduling ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Calendar size={18} />
+                                            Reschedule
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+        </motion.div>
+    )}
+</AnimatePresence>
+
+                
+                {/* Cancel Confirmation Modal */}
+                <AnimatePresence>
+                    {cancelModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                        >
+                            <motion.div 
+                                className="bg-white rounded-xl overflow-hidden max-w-md w-full shadow-xl"
+                                initial={{ scale: 0.9, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.9, y: 20 }}
+                            >
+                                <div className="p-6">
+                                    <div className="text-center">
+                                        <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                            <AlertTriangle size={32} className="text-red-500" />
+                                        </div>
+                                        
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Cancel Appointment?</h3>
+                                        <p className="text-gray-600 mb-6">
+                                            Are you sure you want to cancel your appointment on{' '}
+                                            <span className="font-medium">{slotDateFormat(appointmentToCancel?.slotDate)}</span> at{' '}
+                                            <span className="font-medium">{appointmentToCancel?.slotTime}</span>?
+                                        </p>
+                                        
+                                        <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3 mb-6 text-sm text-yellow-800 text-left">
+                                            <p className="flex items-start gap-2">
+                                                <Info size={16} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                                                {appointmentToCancel?.payment 
+                                                    ? "Cancellations may be subject to our refund policy. Please check your email for confirmation and refund details."
+                                                    : "You can cancel unpaid appointments without any charge."
+                                                }
+                                            </p>
+                                        </div>
+                                        
+                                        <div className="flex justify-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setCancelModal(false);
+                                                    setAppointmentToCancel(null);
+                                                }}
+                                                className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                                            >
+                                                No, Keep It
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={cancelAppointment}
+                                                className="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                                            >
+                                                Yes, Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+                
+                {/* Success Message Toast */}
+                {successMessage && (
+                    <div className="fixed bottom-6 right-6 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg max-w-sm flex items-center gap-2">
+                        <CheckCircle size={20} />
+                        <p>{successMessage}</p>
+                    </div>
+                )}
                 
                 {/* Back to Top Button */}
                 <button 
