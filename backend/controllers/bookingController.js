@@ -70,93 +70,107 @@ export const getAvailableSlots = async (req, res) => {
 };
 
 
-/**
- * Book an appointment (ISO SLOT BASED – OPTION A)
- */
+// Update in your bookAppointment controller to ensure proper format
 export const bookAppointment = async (req, res) => {
   try {
-    const { userId, docId, slotDate, slotTime } = req.body;
-
+    const { userId, docId, slotDate, slotTime, service, price, paymentMethod } = req.body;
+    
     // ❌ Basic validation
     if (!userId || !docId || !slotDate || !slotTime) {
       return res.json({ success: false, message: "Missing booking data" });
     }
-
+    
     /**
      * slotTime MUST be ISO from frontend
      * Example: "2026-01-24T04:00:00.000Z"
      */
     const slotDateTime = new Date(slotTime);
-
+    
     if (isNaN(slotDateTime.getTime())) {
       return res.json({ success: false, message: "Invalid slot time" });
     }
-
+    
     console.log("BOOK SLOT:", slotDate, slotDateTime.toISOString());
     console.log("USER ID:", userId);
     console.log("DOCTOR ID:", docId);
-
-    // 🔍 Fetch doctor
+    
+    // 🔍 Fetch doctor and user for complete data
     const doctor = await doctorModel.findById(docId);
     if (!doctor || !doctor.available) {
       return res.json({ success: false, message: "Stylist unavailable" });
     }
-
+    
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+    
     // ✅ Backend slot validation (single source of truth)
     const isAvailable = await isSlotAvailable(slotDate, slotDateTime.toISOString());
     if (!isAvailable) {
       return res.json({ success: false, message: "Slot no longer available" });
     }
-
+    
     /**
      * 🚫 Prevent double booking (doctor-side)
      */
     const slotKey = slotDate; // YYYY-MM-DD
-
+    
     if (!doctor.slots_booked) doctor.slots_booked = new Map();
     if (!doctor.slots_booked.get(slotKey)) {
       doctor.slots_booked.set(slotKey, []);
     }
-
+    
     const bookedSlots = doctor.slots_booked.get(slotKey);
-
+    
     if (bookedSlots.includes(slotDateTime.toISOString())) {
       return res.json({ success: false, message: "Slot already booked" });
     }
-
+    
     // ✅ Lock slot
     bookedSlots.push(slotDateTime.toISOString());
     doctor.slots_booked.set(slotKey, bookedSlots);
     await doctor.save();
-
+    
     /**
-     * ✅ Create appointment (schema-aligned)
+     * ✅ Create appointment with complete data
      */
     const appointment = new appointmentModel({
       userId,
       doctorId: docId,
-      slotDate,
+      slotDate, // Keep the original date format
       slotTime: slotDateTime.toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
         hour12: true
       }),
       slotDateTime,
-      amount: doctor.price,
-      payment: true
+      amount: price || doctor.price,
+      service: service || doctor.speciality,
+      payment: true,
+      userData: {
+        name: user.name,
+        phone: user.phone,
+        image: user.image
+      },
+      docData: {
+        name: doctor.name,
+        image: doctor.image,
+        speciality: doctor.speciality
+      }
     });
-
+    
     await appointment.save();
-
+    
     return res.json({
       success: true,
       message: "Appointment booked successfully",
       appointmentId: appointment._id
     });
-
+    
   } catch (error) {
     console.error("Booking error:", error);
-
+    
     // 🛑 Duplicate booking protection (Mongo index)
     if (error.code === 11000) {
       return res.json({
@@ -164,11 +178,10 @@ export const bookAppointment = async (req, res) => {
         message: "Slot already booked"
       });
     }
-
+    
     res.json({ success: false, message: "Booking failed" });
   }
 };
-
 
 /**
  * Reschedule an existing appointment

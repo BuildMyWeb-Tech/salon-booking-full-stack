@@ -5,7 +5,7 @@ import {
   getSlotSettings, updateSlotSettings,
   addBlockedDate, removeBlockedDate,
   addRecurringHoliday, removeRecurringHoliday,
-  addSpecialWorkingDay, removeSpecialWorkingDay, getPublicSlotSettings 
+  addSpecialWorkingDay, removeSpecialWorkingDay, getPublicSlotSettings, markAppointmentCompleted, markAppointmentIncomplete
 } from '../controllers/adminController.js';
 import { changeAvailablity } from '../controllers/doctorController.js';
 import authAdmin from '../middleware/authAdmin.js';
@@ -29,5 +29,7 @@ adminRouter.delete("/recurring-holidays/:id", authAdmin, removeRecurringHoliday)
 adminRouter.post("/special-working-days", authAdmin, addSpecialWorkingDay);
 adminRouter.delete("/special-working-days/:id", authAdmin, removeSpecialWorkingDay);
 adminRouter.get("/public/slot-settings", getPublicSlotSettings);
+adminRouter.post("/mark-appointment-completed", authAdmin, markAppointmentCompleted);
+adminRouter.post("/mark-appointment-incomplete", authAdmin, markAppointmentIncomplete);
 
 export default adminRouter;

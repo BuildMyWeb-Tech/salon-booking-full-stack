@@ -15,13 +15,23 @@ import {
   X,
   Check,
   AlertCircle,
-  Filter
+  Filter,
+  Scissors 
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { AnimatePresence, motion } from 'framer-motion'
 
 const AllAppointments = () => {
-  const { aToken, appointments, cancelAppointment, getAllAppointments, markAppointmentCompleted, markAppointmentIncomplete } = useContext(AdminContext)
+  const { 
+    aToken, 
+    appointments, 
+    appointmentsLoading, 
+    cancelAppointment, 
+    getAllAppointments, 
+    markAppointmentCompleted, 
+    markAppointmentIncomplete 
+  } = useContext(AdminContext)
+  
   const { currency } = useContext(AppContext)
   
   const [filterStatus, setFilterStatus] = useState('all')
@@ -37,15 +47,28 @@ const AllAppointments = () => {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
   
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        await getAllAppointments();
+      } catch (error) {
+        console.error('Error in appointment fetch:', error);
+      }
+    };
+    
     if (aToken) {
-      getAllAppointments()
+      fetchData();
+    } else {
     }
-  }, [aToken])
+  }, [aToken]);
+  
+  // Debug log when appointments change
+  useEffect(() => {
+  }, [appointments]);
   
   // Update local appointments when server data changes
   useEffect(() => {
-    setLocalAppointments(appointments)
-  }, [appointments])
+    setLocalAppointments(appointments);
+  }, [appointments]);
   
   // Clear all filters
   const clearFilters = () => {
@@ -57,10 +80,12 @@ const AllAppointments = () => {
     setSortBy('date-desc')
   }
   
-  // Function to format the date eg. ( 20_01_2000 => 20 Jan 2000 )
-  const slotDateFormat = (slotDate) => {
-    if (!slotDate || !slotDate.includes('_')) return 'Invalid Date';
-    
+ // Function to format the date, handling both ISO and custom formats
+const slotDateFormat = (slotDate) => {
+  if (!slotDate) return 'Invalid Date';
+  
+  // Check if date is in DD_MM_YYYY format
+  if (slotDate.includes('_')) {
     const dateArray = slotDate.split('_');
     if (dateArray.length !== 3) return 'Invalid Date';
     
@@ -72,18 +97,38 @@ const AllAppointments = () => {
     if (month < 0 || month > 11) return 'Invalid Date';
     
     return `${day} ${months[month]} ${year}`;
-  };
-  
-  // Helper function to parse date strings in DD_MM_YYYY format
-  const parseDateString = (dateStr) => {
-    // Check if date is in DD_MM_YYYY format
-    if (dateStr && dateStr.includes('_')) {
-      const [day, month, year] = dateStr.split('_').map(Number);
-      // Month is 0-indexed in JavaScript Date, so we subtract 1 from month
-      return new Date(year, month - 1, day);
-    }
-    return new Date(dateStr);
   }
+  
+  // Handle ISO format (YYYY-MM-DD)
+  try {
+    const dateObj = new Date(slotDate);
+    if (isNaN(dateObj.getTime())) return 'Invalid Date';
+    
+    const day = dateObj.getDate();
+    const month = dateObj.getMonth();
+    const year = dateObj.getFullYear();
+    
+    return `${day} ${months[month]} ${year}`;
+  } catch (error) {
+    console.error('Date format error:', error);
+    return 'Invalid Date';
+  }
+};
+  
+  // Helper function to parse date strings in both ISO and DD_MM_YYYY formats
+const parseDateString = (dateStr) => {
+  if (!dateStr) return new Date(NaN); // Invalid date
+  
+  // Check if date is in DD_MM_YYYY format
+  if (dateStr.includes('_')) {
+    const [day, month, year] = dateStr.split('_').map(Number);
+    // Month is 0-indexed in JavaScript Date, so we subtract 1 from month
+    return new Date(year, month - 1, day);
+  }
+  
+  // Otherwise assume it's a standard date string (ISO or similar)
+  return new Date(dateStr);
+};
   
   // Check if appointment time is past
   const isAppointmentTimePast = (appointment) => {
@@ -188,6 +233,7 @@ const AllAppointments = () => {
     if (sortBy === 'price-desc') return (b.amount || 0) - (a.amount || 0);
     return 0;
   });
+  
   
   // Handle mark as completed with local state update
   const handleMarkCompleted = (id) => {
@@ -322,6 +368,12 @@ const AllAppointments = () => {
     return slotDateFormat(dateStr) || dateStr;
   }
 
+  // Manual refresh function for debugging
+  const manualRefresh = () => {
+    console.log('Manual refresh triggered');
+    getAllAppointments();
+  };
+
   return (
     <div className='w-full max-w-7xl mx-auto p-4'>
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -332,43 +384,54 @@ const AllAppointments = () => {
             <p className="text-gray-500 mt-1">Manage all customer styling appointments</p>
           </div>
           
-          <button
-            onClick={() => {
-              if (!sortedAppointments || sortedAppointments.length === 0) {
-                alert('No appointment data available')
-                return
-              }
+          <div className="flex gap-3">
+            {/* Debug refresh button */}
+            <button
+              onClick={manualRefresh}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <RotateCcw size={16} />
+              Refresh Data
+            </button>
+            
+            <button
+              onClick={() => {
+                if (!sortedAppointments || sortedAppointments.length === 0) {
+                  alert('No appointment data available')
+                  return
+                }
 
-              // Convert appointments to worksheet with formatted data
-              const worksheet = XLSX.utils.json_to_sheet(
-                sortedAppointments.map((item, index) => ({
-                  'S.No': index + 1,
-                  'Customer Name': item.userData?.name || '',
-                  'Phone Number': item.userData?.phone || '',
-                  'Stylist Name': item.docData?.name || '',
-                  'Service': item.service || item.docData?.specialty || item.docData?.speciality || '',
-                  'Date': formatDateForExport(item.slotDate) || '',
-                  'Time': item.slotTime || '',
-                  'Status': item.cancelled ? 'Cancelled' : 
-                           item.isCompleted ? 'Completed' : 
-                           isAppointmentTimePast(item) ? 'Overdue' : 'Upcoming',
-                  'Payment Status': item.payment ? 'Paid' : 'Unpaid',
-                  'Amount': item.amount ? `${currency}${item.amount}` : '0'
-                }))
-              )
+                // Convert appointments to worksheet with formatted data
+                const worksheet = XLSX.utils.json_to_sheet(
+                  sortedAppointments.map((item, index) => ({
+                    'S.No': index + 1,
+                    'Customer Name': item.userData?.name || '',
+                    'Phone Number': item.userData?.phone || '',
+                    'Stylist Name': item.docData?.name || '',
+                    'Service': item.service || item.docData?.specialty || item.docData?.speciality || '',
+                    'Date': formatDateForExport(item.slotDate) || '',
+                    'Time': item.slotTime || '',
+                    'Status': item.cancelled ? 'Cancelled' : 
+                             item.isCompleted ? 'Completed' : 
+                             isAppointmentTimePast(item) ? 'Overdue' : 'Upcoming',
+                    'Payment Status': item.payment ? 'Paid' : 'Unpaid',
+                    'Amount': item.amount ? `${currency}${item.amount}` : '0'
+                  }))
+                )
 
-              // Create workbook
-              const workbook = XLSX.utils.book_new()
-              XLSX.utils.book_append_sheet(workbook, worksheet, 'Appointments')
+                // Create workbook
+                const workbook = XLSX.utils.book_new()
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Appointments')
 
-              // Export file
-              XLSX.writeFile(workbook, 'Salon_Appointments.xlsx')
-            }}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-          >
-            <Download size={16} />
-            Export Excel
-          </button>
+                // Export file
+                XLSX.writeFile(workbook, 'Salon_Appointments.xlsx')
+              }}
+              className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+            >
+              <Download size={16} />
+              Export Excel
+            </button>
+          </div>
 
         </div>
         
@@ -538,11 +601,28 @@ const AllAppointments = () => {
         
         {/* Table Container */}
         <div className="overflow-x-auto">
-          {sortedAppointments.length === 0 ? (
+          {appointmentsLoading ? (
+            <div className="py-16 flex flex-col items-center justify-center text-gray-500">
+              <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
+              <p className="mt-4">Loading appointments...</p>
+            </div>
+          ) : sortedAppointments.length === 0 ? (
             <div className="py-16 flex flex-col items-center justify-center text-gray-500">
               <Calendar size={48} className="text-gray-300 mb-4" />
               <p>No appointments found</p>
               <p className="text-sm mt-2">Try changing your filters or search term</p>
+              {localAppointments.length === 0 && (
+                <div className="mt-4 p-4 bg-amber-50 text-amber-800 rounded-lg max-w-md text-center">
+                  <AlertTriangle size={20} className="inline-block mb-2" />
+                  <p className="text-sm">No appointments data loaded from server.</p>
+                  <button
+                    onClick={manualRefresh}
+                    className="mt-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm hover:bg-amber-700"
+                  >
+                    Try Reloading Data
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200">
@@ -765,7 +845,7 @@ const AllAppointments = () => {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Cancel Appointment</h3>
                 <p className="text-gray-500">
-                  Are you sure you want to cancel the appointment for <span className="font-medium text-gray-700">{appointmentToDelete?.userData?.name}</span> on <span className="font-medium text-gray-700">{slotDateFormat(appointmentToDelete?.slotDate)} at {appointmentToDelete?.slotTime}</span>?
+                                   Are you sure you want to cancel the appointment for <span className="font-medium text-gray-700">{appointmentToDelete?.userData?.name}</span> on <span className="font-medium text-gray-700">{slotDateFormat(appointmentToDelete?.slotDate)} at {appointmentToDelete?.slotTime}</span>?
                 </p>
               </div>
               
@@ -789,8 +869,10 @@ const AllAppointments = () => {
           </div>
         )}
       </AnimatePresence>
+      
+     
     </div>
-  )
-}
+  );
+};
 
-export default AllAppointments
+export default AllAppointments;

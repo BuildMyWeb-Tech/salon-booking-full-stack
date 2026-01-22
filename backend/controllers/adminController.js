@@ -33,17 +33,54 @@ const loginAdmin = async (req, res) => {
 
 // API to get all appointments list
 const appointmentsAdmin = async (req, res) => {
-    try {
+  try {
+    const appointments = await appointmentModel
+      .find({})
+      .populate('userId', 'name phone email image')
+      .populate('doctorId', 'name image speciality price') // Changed from docId to doctorId
+      .sort({ createdAt: -1 });
 
-        const appointments = await appointmentModel.find({})
-        res.json({ success: true, appointments })
+    const processedAppointments = appointments.map(app => {
+      const appObj = app.toObject();
 
-    } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
-    }
+      // ✅ Normalize userData
+      if (!appObj.userData && appObj.userId) {
+        appObj.userData = {
+          _id: appObj.userId._id,
+          name: appObj.userId.name,
+          phone: appObj.userId.phone,
+          email: appObj.userId.email,
+          image: appObj.userId.image
+        };
+      }
 
-}
+      // ✅ Normalize docData (THIS FIXES YOUR UI CRASH)
+      if (!appObj.docData && appObj.doctorId) { // Changed from docId to doctorId
+        appObj.docData = {
+          _id: appObj.doctorId._id,
+          name: appObj.doctorId.name,
+          image: appObj.doctorId.image,
+          speciality: appObj.doctorId.speciality,
+          price: appObj.doctorId.price
+        };
+      }
+
+      return appObj;
+    });
+
+    res.json({
+      success: true,
+      appointments: processedAppointments
+    });
+
+  } catch (error) {
+    console.error('Admin appointments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch appointments'
+    });
+  }
+};
 
 // API for appointment cancellation
 const appointmentCancel = async (req, res) => {
@@ -360,7 +397,85 @@ export const getPublicSlotSettings = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch slot settings" });
   }
 };
+// Mark appointment as completed
+export const markAppointmentCompleted = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    
+    if (!appointmentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Appointment ID is required'
+      });
+    }
+    
+    const appointment = await appointmentModel.findByIdAndUpdate(
+      appointmentId,
+      { isCompleted: true },
+      { new: true }
+    );
+    
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Appointment marked as completed',
+      appointment
+    });
+    
+  } catch (error) {
+    console.error('Error marking appointment completed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update appointment'
+    });
+  }
+};
 
+// Mark appointment as incomplete
+export const markAppointmentIncomplete = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    
+    if (!appointmentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Appointment ID is required'
+      });
+    }
+    
+    const appointment = await appointmentModel.findByIdAndUpdate(
+      appointmentId,
+      { isCompleted: false },
+      { new: true }
+    );
+    
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Appointment marked as incomplete',
+      appointment
+    });
+    
+  } catch (error) {
+    console.error('Error marking appointment incomplete:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update appointment'
+    });
+  }
+};
 
 export {
     loginAdmin,
