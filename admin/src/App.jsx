@@ -17,6 +17,7 @@ import DoctorDashboard from './pages/Doctor/DoctorDashboard';
 import DoctorProfile from './pages/Doctor/DoctorProfile';
 import MyProfile from './pages/Admin/MyProfile';
 import SlotManagement from './pages/Admin/SlotManagement';
+import EditStylist from './pages/Admin/EditStylist';
 
 const App = () => {
   const { dToken } = useContext(DoctorContext)
@@ -34,6 +35,7 @@ const App = () => {
             <Route path='/all-appointments' element={<AllAppointments />} />
             <Route path='/slot-management' element={<SlotManagement />} />
             <Route path='/add-stylist' element={<AddDoctor />} />
+            <Route path="/edit-stylist/:id" element={<EditStylist />} />
             <Route path='/services-category' element={<ServiceCategory />} />
             <Route path='/stylist-list' element={<DoctorsList />} />
             <Route path='/doctor-dashboard' element={<DoctorDashboard />} />

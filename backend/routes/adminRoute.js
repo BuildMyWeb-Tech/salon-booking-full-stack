@@ -16,7 +16,10 @@ import {
   removeSpecialWorkingDay,
   getPublicSlotSettings,
   markAppointmentCompleted,
-  markAppointmentIncomplete
+  markAppointmentIncomplete,
+  getDoctorById,
+  updateDoctor,
+  deleteDoctor,
 } from '../controllers/adminController.js';
 
 import {
@@ -36,9 +39,12 @@ const adminRouter = express.Router();
 /* ===================== AUTH ===================== */
 adminRouter.post("/login", loginAdmin);
 
-/* ===================== DOCTORS ===================== */
+/* ===================== DOCTORS/STYLISTS ===================== */
 adminRouter.post("/add-doctor", authAdmin, upload.single('image'), addDoctor);
 adminRouter.get("/all-doctors", authAdmin, allDoctors);
+adminRouter.get("/doctor/:id", authAdmin, getDoctorById);
+adminRouter.put("/doctor/:id", authAdmin, upload.single('image'), updateDoctor);
+adminRouter.delete("/doctor/:id", authAdmin, deleteDoctor);
 adminRouter.post("/change-availability", authAdmin, changeAvailablity);
 
 /* ===================== APPOINTMENTS ===================== */

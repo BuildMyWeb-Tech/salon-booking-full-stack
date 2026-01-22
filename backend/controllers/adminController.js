@@ -174,6 +174,182 @@ const allDoctors = async (req, res) => {
     }
 }
 
+// API to delete a stylist
+export const deleteDoctor = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (!id) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Stylist ID is required" 
+            });
+        }
+
+        // Find the stylist first to get image URL
+        const stylist = await doctorModel.findById(id);
+        
+        if (!stylist) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Stylist not found" 
+            });
+        }
+
+        // Check if stylist has appointments
+        const hasAppointments = await appointmentModel.findOne({ doctor: id });
+        
+        if (hasAppointments) {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot delete stylist with existing appointments. Cancel all appointments first."
+            });
+        }
+
+        // Delete the stylist
+        await doctorModel.findByIdAndDelete(id);
+
+        // Delete stylist's image from Cloudinary if it exists
+        if (stylist.image && stylist.image.includes('cloudinary')) {
+            const publicId = stylist.image.split('/').pop().split('.')[0];
+            await cloudinary.uploader.destroy(publicId);
+        }
+
+        return res.status(200).json({ 
+            success: true, 
+            message: "Stylist deleted successfully" 
+        });
+    } catch (error) {
+        console.error("Delete stylist error:", error);
+        return res.status(500).json({ 
+            success: false, 
+            message: error.message || "An error occurred while deleting the stylist" 
+        });
+    }
+};
+
+// API to update a stylist
+export const updateDoctor = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { 
+            name, email, phone, specialty, experience, 
+            about, price, certification, instagram, workingHours 
+        } = req.body;
+        const imageFile = req.file;
+
+        if (!id) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Stylist ID is required" 
+            });
+        }
+
+        // Find stylist to make sure it exists
+        const stylist = await doctorModel.findById(id);
+        
+        if (!stylist) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Stylist not found" 
+            });
+        }
+
+        // Build update object with provided fields
+        const updateData = {};
+        
+        if (name) updateData.name = name;
+        if (email) updateData.email = email;
+        if (phone) updateData.phone = phone;
+        if (experience) updateData.experience = experience;
+        if (about) updateData.about = about;
+        if (price) updateData.price = Number(price);
+        if (certification) updateData.certification = certification;
+        if (instagram !== undefined) updateData.instagram = instagram;
+        if (workingHours) updateData.workingHours = workingHours;
+
+        // Handle specialty array
+        if (specialty) {
+            try {
+                updateData.specialty = typeof specialty === 'string' 
+                    ? JSON.parse(specialty) 
+                    : specialty;
+            } catch (error) {
+                updateData.specialty = [specialty]; // If parsing fails, treat as single value
+            }
+        }
+
+        // Handle image upload if provided
+        if (imageFile) {
+            // Upload new image
+            const imageUpload = await cloudinary.uploader.upload(
+                imageFile.path, 
+                { resource_type: "image" }
+            );
+            updateData.image = imageUpload.secure_url;
+
+            // Delete old image from Cloudinary if it exists
+            if (stylist.image && stylist.image.includes('cloudinary')) {
+                const publicId = stylist.image.split('/').pop().split('.')[0];
+                await cloudinary.uploader.destroy(publicId);
+            }
+        }
+
+        // Update the stylist
+        const updatedStylist = await doctorModel.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        return res.status(200).json({
+            success: true,
+            message: "Stylist updated successfully",
+            stylist: updatedStylist
+        });
+    } catch (error) {
+        console.error("Update stylist error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "An error occurred while updating the stylist"
+        });
+    }
+};
+
+// API to get a single stylist by ID
+export const getDoctorById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (!id) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Stylist ID is required" 
+            });
+        }
+
+        const stylist = await doctorModel.findById(id).select('-password');
+        
+        if (!stylist) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Stylist not found" 
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            stylist
+        });
+    } catch (error) {
+        console.error("Get stylist error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "An error occurred while fetching the stylist"
+        });
+    }
+};
+
 // API to get dashboard data for admin panel
 const adminDashboard = async (req, res) => {
     try {
