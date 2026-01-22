@@ -18,6 +18,8 @@ import {
     rescheduleAppointment 
 } from '../controllers/bookingController.js';
 
+import { getAllServices } from '../controllers/serviceCategoryController.js';
+
 import upload from '../middleware/multer.js';
 import authUser from '../middleware/authUser.js';
 
@@ -44,5 +46,8 @@ userRouter.post("/payment-razorpay", authUser, paymentRazorpay)
 userRouter.post("/verifyRazorpay", authUser, verifyRazorpay)
 userRouter.post("/payment-stripe", authUser, paymentStripe)
 userRouter.post("/verifyStripe", authUser, verifyStripe)
+
+// Public route to get all service categories
+userRouter.get('/services', getAllServices);
 
 export default userRouter;
