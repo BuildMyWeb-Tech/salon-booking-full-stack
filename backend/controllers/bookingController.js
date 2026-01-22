@@ -14,39 +14,61 @@ export const getAvailableSlots = async (req, res) => {
 
     console.log("RAW DATE FROM FRONTEND:", date);
 
+    // ❌ Validate date
     if (!date || isNaN(new Date(date).getTime())) {
-      return res.json({ success: false, message: 'Invalid date' });
+      return res.json({ success: false, message: "Invalid date" });
     }
 
+    // 🔍 Validate doctor availability
+    let doctor = null;
     if (docId) {
-      const doctor = await doctorModel.findById(docId);
+      doctor = await doctorModel.findById(docId);
       if (!doctor || !doctor.available) {
-        return res.json({ success: false, message: 'Stylist unavailable' });
+        return res.json({ success: false, message: "Stylist unavailable" });
       }
     }
 
+    // ⏱ Generate slots (backend source of truth)
     const { slots, error } = await generateAvailableSlots(date);
-    if (error) return res.json({ success: false, message: error });
+    if (error) {
+      return res.json({ success: false, message: error });
+    }
 
-    if (docId) {
-      const doctor = await doctorModel.findById(docId);
+    // 🟢 Filter booked slots for this doctor
+    if (doctor) {
       const slotKey = date; // YYYY-MM-DD
-      const bookedSlots = doctor.slots_booked?.[slotKey] || [];
+
+      let bookedSlots = [];
+
+      // ✅ FIX: Map-safe access
+      if (doctor.slots_booked instanceof Map) {
+        bookedSlots = doctor.slots_booked.get(slotKey) || [];
+      } else {
+        bookedSlots = doctor.slots_booked?.[slotKey] || [];
+      }
 
       const availableSlots = slots.filter(
         slot => !bookedSlots.includes(slot.startTime)
       );
 
-      return res.json({ success: true, slots: availableSlots });
+      return res.json({
+        success: true,
+        slots: availableSlots
+      });
     }
 
-    res.json({ success: true, slots });
+    // 🟢 If no doctor filter
+    return res.json({
+      success: true,
+      slots
+    });
 
   } catch (error) {
-    console.error(error);
-    res.json({ success: false, message: 'Server error' });
+    console.error("Error fetching slots:", error);
+    return res.json({ success: false, message: "Server error" });
   }
 };
+
 
 /**
  * Book an appointment (ISO SLOT BASED – OPTION A)

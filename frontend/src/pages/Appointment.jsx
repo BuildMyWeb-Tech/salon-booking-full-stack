@@ -278,47 +278,56 @@ const Appointment = () => {
     };
 
     const completeBooking = async (paymentMethod) => {
-        setBookingLoading(true);
-        
-        // Using ISO date format (YYYY-MM-DD)
-        const slotDate = selectedDate.toISOString().split("T")[0];
+    setBookingLoading(true);
 
-        try {
-            const { data } = await axios.post(
-                backendUrl + '/api/user/book-appointment', 
-                { 
-                    docId, 
-                    slotDate,
-                    slotTime: selectedSlotISO,
-                    service: selectedService.name, 
-                    price: selectedService.price,
-                    paymentMethod
-                }, 
-                { headers: { token } }
-            );
-            console.log(selectedSlotISO);
+    // YYYY-MM-DD
+    const slotDate = selectedDate.toISOString().split("T")[0];
 
-            
-            if (data.success) {
-                toast.success(data.message);
-                getStylesData();
-                
-                // Set timeout to show success message before redirecting
-                setTimeout(() => {
-                    setBookingLoading(false);
-                    setShowPaymentModal(false);
-                    navigate('/my-appointments');
-                }, 2000);
-            } else {
-                toast.error(data.message);
+    try {
+        const { data } = await axios.post(
+            backendUrl + '/api/user/book-appointment',
+            {
+                docId,
+                slotDate,
+                slotTime: selectedSlotISO, // ISO string
+                service: selectedService.name,
+                price: selectedService.price,
+                paymentMethod
+            },
+            { headers: { token } }
+        );
+
+        if (data.success) {
+            toast.success(data.message);
+
+            // 🔁 1. Refresh available slots immediately
+            await fetchSlots(selectedDate);
+
+            // 🔄 2. Reset selected slot
+            setSelectedSlotISO('');
+
+            // 🔄 3. Refresh stylist data (optional)
+            getStylesData();
+
+            // ⏳ 4. Redirect after short delay
+            setTimeout(() => {
                 setBookingLoading(false);
-            }
-        } catch (error) {
-            console.log(error);
-            toast.error(error.response?.data?.message || 'Error booking appointment');
+                setShowPaymentModal(false);
+                navigate('/my-appointments');
+            }, 1500);
+
+        } else {
+            toast.error(data.message);
             setBookingLoading(false);
         }
-    };
+
+    } catch (error) {
+        console.error(error);
+        toast.error(error.response?.data?.message || 'Error booking appointment');
+        setBookingLoading(false);
+    }
+};
+
 
     useEffect(() => {
         fetchSlotSettings();
