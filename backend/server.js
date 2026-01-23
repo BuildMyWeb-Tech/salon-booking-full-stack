@@ -8,11 +8,22 @@ import connectCloudinary from "./config/cloudinary.js"
 import userRouter from "./routes/userRoute.js"
 import doctorRouter from "./routes/doctorRoute.js"
 import adminRouter from "./routes/adminRoute.js"
+import { startAppointmentCompletionCron, completePastAppointments } from './utils/appointmentCron.js'
 
 // app config
 const app = express()
 const port = process.env.PORT || 4000
-connectDB()
+
+connectDB().then(async () => {
+  console.log('✅ Database connected successfully')
+
+  // Complete any past appointments on startup
+  await completePastAppointments()
+
+  // Start the cron job for automatic completion
+  startAppointmentCompletionCron()
+})
+
 connectCloudinary()
 
 // Swagger definition
@@ -28,16 +39,16 @@ const swaggerOptions = {
         email: 'support@example.com'
       },
     },
-  servers: [
-  {
-    url: process.env.NODE_ENV === "production"
-      ? process.env.BACKEND_URL
-      : `http://localhost:${port}`,
-    description: process.env.NODE_ENV === "production"
-      ? "Production server"
-      : "Development server",
-  },
-],
+    servers: [
+      {
+        url: process.env.NODE_ENV === "production"
+          ? process.env.BACKEND_URL
+          : `http://localhost:${port}`,
+        description: process.env.NODE_ENV === "production"
+          ? "Production server"
+          : "Development server",
+      },
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -48,7 +59,7 @@ const swaggerOptions = {
       },
     },
   },
-  apis: ['./routes/*.js', './server.js'], // Path to the API docs
+  apis: ['./routes/*.js', './server.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
@@ -65,7 +76,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback){
-    // allow requests with no origin (like mobile apps or curl)
     if(!origin) return callback(null, true);
     if(allowedOrigins.indexOf(origin) === -1){
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -77,6 +87,7 @@ app.use(cors({
 }));
 
 app.set("trust proxy", 1);
+
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

@@ -127,7 +127,7 @@ const App = () => {
       <ScrollToTop />
 
       {/* ===== INSTALL MODAL ===== */}
-      {showInstallModal && (
+      {/* {showInstallModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="relative w-[90%] max-w-sm rounded-xl bg-white p-6 text-center shadow-xl animate-fadeIn">
 
@@ -162,7 +162,7 @@ const App = () => {
             </button>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* ===== ROUTES ===== */}
       <main className="flex-grow">
