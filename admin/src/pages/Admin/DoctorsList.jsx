@@ -27,7 +27,7 @@ const StylistsList = () => {
     changeAvailability,
     aToken,
     getAllDoctors: getAllStylists,
-    deleteDoctor
+    deleteDoctor: deleteStylist
   } = useContext(AdminContext)
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -104,7 +104,7 @@ const StylistsList = () => {
 
     try {
       setIsDeleting(true)
-      await deleteDoctor(stylistToDelete._id)
+      await deleteStylist(stylistToDelete._id)
       setShowDeleteModal(false)
       setStylistToDelete(null)
     } catch (error) {
