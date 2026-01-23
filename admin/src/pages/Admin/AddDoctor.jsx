@@ -4,9 +4,11 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import { AdminContext } from '../../context/AdminContext';
 import { AppContext } from '../../context/AppContext';
-import { Pencil, Eye, EyeOff, User, Mail, Lock, Phone, Award, Briefcase, Scissors, Hash, Instagram, Clock, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Pencil, Eye, EyeOff, User, Mail, Lock, Phone, Award, Briefcase, Scissors, Hash, Instagram, Clock, FileText, CheckCircle } from 'lucide-react';
 
 const AddStylist = () => {
+    const navigate = useNavigate();
     const [stylistImg, setStylistImg] = useState(false);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -23,6 +25,7 @@ const AddStylist = () => {
     const [instagram, setInstagram] = useState('');
     const [workingHours, setWorkingHours] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [success, setSuccess] = useState(false);
 
     // New state for service categories
     const [serviceCategories, setServiceCategories] = useState([]);
@@ -107,8 +110,13 @@ const AddStylist = () => {
             );
             
             if (data.success) {
+                setSuccess(true);
                 toast.success(data.message);
-                resetForm();
+                
+                // Redirect after a short delay to show success state
+                setTimeout(() => {
+                    navigate('/stylist-list');
+                }, 1500);
             } else {
                 toast.error(data.message);
             }
@@ -151,6 +159,26 @@ const AddStylist = () => {
     const togglePasswordVisibility = () => {
         setShowPassword(prevState => !prevState);
     };
+
+    // If success, show success state before redirecting
+    if (success) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
+                <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <CheckCircle size={40} className="text-green-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Stylist Added Successfully!</h2>
+                    <p className="text-gray-600 mb-8">
+                        The new stylist has been added to your team. Redirecting to the stylists list...
+                    </p>
+                    <div className="flex justify-center">
+                        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <form onSubmit={onSubmitHandler} className='m-5 w-full'>
