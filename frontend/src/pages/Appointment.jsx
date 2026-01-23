@@ -420,12 +420,12 @@ const Appointment = () => {
                 <div className="absolute inset-0 bg-pattern opacity-10"></div>
                 <div className="max-w-7xl mx-auto px-4 py-6">
                     <div className="flex items-center">
-                        <button 
+                        {/* <button 
                             onClick={() => navigate(-1)} 
                             className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 transition-colors mr-4"
                         >
                             <ChevronLeft size={22} className="text-white" />
-                        </button>
+                        </button> */}
                         <h1 className="text-2xl md:text-3xl font-bold text-white">Book Your Appointment</h1>
                     </div>
                 </div>
@@ -517,19 +517,19 @@ const Appointment = () => {
                                                 <Award size={16} className="text-primary/80" />
                                                 <span>{stylistInfo.experience}</span>
                                             </div>
-                                            <span className="hidden sm:inline text-gray-300">•</span>
+                                            {/* <span className="hidden sm:inline text-gray-300">•</span>
                                             <div className="flex items-center gap-1">
                                                 <Star size={16} fill="#FFD700" className="text-yellow-400" />
                                                 <span className="font-medium">4.9</span>
                                                 <span className="text-gray-500">(120)</span>
-                                            </div>
+                                            </div> */}
                                         </div>
                                     </div>
                                     
-                                    <button className="flex items-center gap-1.5 text-gray-600 bg-white px-3 py-1.5 rounded-full text-sm border border-gray-200 hover:text-rose-500 hover:border-rose-200 transition-colors shadow-sm">
+                                    {/* <button className="flex items-center gap-1.5 text-gray-600 bg-white px-3 py-1.5 rounded-full text-sm border border-gray-200 hover:text-rose-500 hover:border-rose-200 transition-colors shadow-sm">
                                         <Heart size={16} />
                                         <span>Favorite</span>
-                                    </button>
+                                    </button> */}
                                 </div>
                                 
                                 {/* About Section */}
@@ -747,7 +747,7 @@ const Appointment = () => {
                                     </div>
 
                                     {/* Alternative date selection method */}
-                                    <div className="mt-4 flex items-center gap-2">
+                                    {/* <div className="mt-4 flex items-center gap-2">
                                         <Calendar size={16} className="text-gray-400" />
                                         <span className="text-sm text-gray-500">Or select a specific date:</span>
                                         <input
@@ -758,12 +758,12 @@ const Appointment = () => {
                                                     const date = new Date(e.target.value);
                                                     setSelectedDate(date);
                                                     setSelectedSlotISO('');
-                                                    setSelectedDateIndex(-1); // Reset calendar strip selection
+                                                    setSelectedDateIndex(-1);
                                                     fetchSlots(date);
                                                 }
                                             }}
                                         />
-                                    </div>
+                                    </div> */}
                                 </div>
                                 
                                 {/* Time Selection */}
@@ -1043,14 +1043,14 @@ const Appointment = () => {
                 </div>
 
                 {/* Customer testimonial */}
-                <div className="max-w-2xl mx-auto mt-6 bg-white rounded-lg p-5 border border-gray-100 shadow-sm">
+                {/* <div className="max-w-2xl mx-auto mt-6 bg-white rounded-lg p-5 border border-gray-100 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
                         <MessageCircle size={18} className="text-primary" />
                         <h3 className="font-medium text-gray-800">What our customers say</h3>
                     </div>
                     <div className="flex items-start gap-3">
                         <div className="w-12 h-12 rounded-full bg-gray-100 flex-shrink-0 overflow-hidden">
-                            {/* Placeholder for customer image - don't identify */}
+                            
                             <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/10"></div>
                         </div>
                         <div>
@@ -1067,7 +1067,7 @@ const Appointment = () => {
                             </p>
                         </div>
                     </div>
-                </div>
+                </div> */}
             </div>
             
             <style jsx>{`
