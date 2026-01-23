@@ -162,6 +162,9 @@ const MyAppointments = () => {
     };
 
     const openRescheduleModal = (appointment) => {
+        // Allow rescheduling if:
+        // 1. Appointment is cancelled (any time), OR
+        // 2. Appointment is upcoming AND at least 3 hours away
         const canReschedule = appointment.cancelled || checkRescheduleEligibility(appointment);
         setCanReschedule(canReschedule);
         
@@ -368,8 +371,8 @@ const MyAppointments = () => {
                                                     
                                                     <div className="absolute -top-2 -right-2">
                                                         {item.cancelled ? (
-                                                            <div className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
-                                                                Cancelled
+                                                            <div className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+                                                                {item.cancelledBy === 'admin' ? 'Cancelled by Admin' : 'Cancelled'}
                                                             </div>
                                                         ) : item.isCompleted ? (
                                                             <div className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
@@ -448,6 +451,18 @@ const MyAppointments = () => {
                                                     </div>
                                                     
                                                     <div className="flex flex-wrap gap-3">
+                                                        {/* Show reschedule for cancelled appointments (paid users get to reschedule instead of losing money) */}
+                                                        {item.cancelled && item.payment && (
+                                                            <button
+                                                                onClick={() => openRescheduleModal(item)}
+                                                                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm"
+                                                            >
+                                                                <Calendar size={16} />
+                                                                Reschedule
+                                                            </button>
+                                                        )}
+                                                        
+                                                        {/* Show reschedule for upcoming appointments (with time check) */}
                                                         {!item.cancelled && !item.isCompleted && isRescheduleEligible && (
                                                             <button
                                                                 onClick={() => openRescheduleModal(item)}
@@ -468,7 +483,8 @@ const MyAppointments = () => {
                                                             </button>
                                                         )}
                                                         
-                                                        {(item.isCompleted || item.cancelled) && (
+                                                        {/* Only show Book Again for completed or unpaid cancelled appointments */}
+                                                        {(item.isCompleted || (item.cancelled && !item.payment)) && (
                                                             <button
                                                                 onClick={() => navigate(`/appointment/${item.doctorId}`)}
                                                                 className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm text-sm"
@@ -486,7 +502,9 @@ const MyAppointments = () => {
                                             <div className="mt-4 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center gap-2 text-sm">
                                                 <AlertCircle size={16} className="text-red-500" />
                                                 <span className="text-red-800">
-                                                    Cancelled by {item.cancelledBy === 'admin' ? 'Admin' : 'You'}
+                                                    {item.cancelledBy === 'admin' 
+                                                        ? 'Cancelled by Admin - You can reschedule to a new time slot' 
+                                                        : 'Cancelled by You'}
                                                 </span>
                                             </div>
                                         )}
@@ -592,20 +610,24 @@ const MyAppointments = () => {
                                                                 No available slots for this date
                                                             </div>
                                                         ) : (
-                                                            availableSlots.map((slot, idx) => (
-                                                                <button
-                                                                    key={idx}
-                                                                    type="button"
-                                                                    onClick={() => setSelectedTime(slot.startTime)}
-                                                                    className={`p-2 text-sm rounded-md transition-colors ${
-                                                                        selectedTime === slot.startTime 
-                                                                            ? 'bg-primary text-white' 
-                                                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                                    }`}
-                                                                >
-                                                                    {slot.displayTime.split(' - ')[0]}
-                                                                </button>
-                                                            ))
+                                                            availableSlots.map((slot, idx) => {
+                                                                // Parse the display time to show just start time
+                                                                const startTime = slot.displayTime.split(' - ')[0];
+                                                                return (
+                                                                    <button
+                                                                        key={idx}
+                                                                        type="button"
+                                                                        onClick={() => setSelectedTime(slot.startTime)}
+                                                                        className={`p-2 text-xs rounded-md transition-colors ${
+                                                                            selectedTime === slot.startTime 
+                                                                                ? 'bg-primary text-white' 
+                                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                                        }`}
+                                                                    >
+                                                                        {startTime}
+                                                                    </button>
+                                                                );
+                                                            })
                                                         )}
                                                     </div>
                                                 </div>

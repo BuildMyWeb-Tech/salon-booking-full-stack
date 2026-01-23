@@ -167,6 +167,22 @@ export const bookAppointment = async (req, res) => {
     
     // Duplicate booking protection
     if (error.code === 11000) {
+      // Roll back the slot booking on the doctor
+      try {
+        const doctor = await doctorModel.findById(docId);
+        if (doctor) {
+          const slotKey = slotDate;
+          if (doctor.slots_booked instanceof Map) {
+            const bookedSlots = doctor.slots_booked.get(slotKey) || [];
+            const filtered = bookedSlots.filter(s => s !== slotDateTime.toISOString());
+            doctor.slots_booked.set(slotKey, filtered);
+            await doctor.save();
+          }
+        }
+      } catch (rollbackError) {
+        console.error("Rollback error:", rollbackError);
+      }
+      
       return res.json({
         success: false,
         message: "Slot already booked"
