@@ -29,12 +29,11 @@ const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY)
 
 // API to register user
 const registerUser = async (req, res) => {
-
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, phone } = req.body; // ✅ Added phone
 
-        // checking for all data to register user
-        if (!name || !email || !password) {
+        // ✅ checking for all data to register user
+        if (!name || !email || !password || !phone) {
             return res.json({ success: false, message: 'Missing Details' })
         }
 
@@ -43,19 +42,37 @@ const registerUser = async (req, res) => {
             return res.json({ success: false, message: "Please enter a valid email" })
         }
 
+        // ✅ validating phone number (basic validation for 10 digits)
+        if (!validator.isMobilePhone(phone, 'any')) {
+            return res.json({ success: false, message: "Please enter a valid phone number" })
+        }
+
         // validating strong password
         if (password.length < 8) {
             return res.json({ success: false, message: "Please enter a strong password" })
         }
 
+        // ✅ Check if user already exists with email
+        const existingUser = await userModel.findOne({ email });
+        if (existingUser) {
+            return res.json({ success: false, message: "User already exists with this email" })
+        }
+
+        // ✅ Check if phone number already exists
+        const existingPhone = await userModel.findOne({ phone });
+        if (existingPhone) {
+            return res.json({ success: false, message: "Phone number already registered" })
+        }
+
         // hashing user password
-        const salt = await bcrypt.genSalt(10); // the more no. round the more time it will take
+        const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt)
 
         const userData = {
             name,
             email,
             password: hashedPassword,
+            phone // ✅ Added phone
         }
 
         const newUser = new userModel(userData)
