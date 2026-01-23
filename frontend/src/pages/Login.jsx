@@ -12,6 +12,7 @@ const Login = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState(''); // ✅ Added phone state
   const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
@@ -21,7 +22,13 @@ const Login = () => {
     event.preventDefault();
 
     if (state === 'Sign Up') {
-      const { data } = await axios.post(backendUrl + '/api/user/register', { name, email, password });
+      // ✅ Include phone in registration
+      const { data } = await axios.post(backendUrl + '/api/user/register', { 
+        name, 
+        email, 
+        password,
+        phone // ✅ Added phone
+      });
 
       if (data.success) {
         localStorage.setItem('token', data.token);
@@ -81,17 +88,32 @@ const Login = () => {
             </div>
 
             {state === 'Sign Up' && (
-              <div className='w-full'>
-                <p className='text-[#5E5E5E] mb-1'>Full Name</p>
-                <input 
-                  onChange={(e) => setName(e.target.value)} 
-                  value={name} 
-                  className='border border-[#DADADA] rounded w-full p-2 mt-1 focus:outline-primary' 
-                  type="text" 
-                  placeholder="Enter your full name"
-                  required 
-                />
-              </div>
+              <>
+                <div className='w-full'>
+                  <p className='text-[#5E5E5E] mb-1'>Full Name</p>
+                  <input 
+                    onChange={(e) => setName(e.target.value)} 
+                    value={name} 
+                    className='border border-[#DADADA] rounded w-full p-2 mt-1 focus:outline-primary' 
+                    type="text" 
+                    placeholder="Enter your full name"
+                    required 
+                  />
+                </div>
+
+                {/* ✅ Added Phone Number Field */}
+                <div className='w-full'>
+                  <p className='text-[#5E5E5E] mb-1'>Phone Number</p>
+                  <input 
+                    onChange={(e) => setPhone(e.target.value)} 
+                    value={phone} 
+                    className='border border-[#DADADA] rounded w-full p-2 mt-1 focus:outline-primary' 
+                    type="tel" 
+                    placeholder="Enter your phone number"
+                    required 
+                  />
+                </div>
+              </>
             )}
             
             <div className='w-full'>
@@ -141,18 +163,14 @@ const Login = () => {
               type="button"
               onClick={handleGoogleLogin}
               className='w-full flex items-center justify-center gap-2 border border-gray-300 p-2 rounded-md hover:bg-gray-50 transition-colors'
-              >
-
+            >
               <img 
                 src={GoogleImage}
                 alt="Google Image" 
-                className=' object-cover size-8'
+                className='object-cover size-8'
               />
-              
               <span>Google</span>
             </button>
-
-            
             
             <div className='text-center mt-3'>
               {state === 'Sign Up' ? (

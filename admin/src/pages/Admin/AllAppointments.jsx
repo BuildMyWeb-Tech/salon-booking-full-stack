@@ -162,60 +162,56 @@ const parseDateString = (dateStr) => {
   
   // Filter appointments based on status, payment status, search term, and date range
   const filteredAppointments = localAppointments.filter(appointment => {
-    // Status filter
-    const matchesStatus = 
-      filterStatus === 'all' ||
-      (filterStatus === 'upcoming' && !appointment.isCompleted && !appointment.cancelled) ||
-      (filterStatus === 'completed' && appointment.isCompleted) ||
-      (filterStatus === 'cancelled' && appointment.cancelled)
+  // Status filter - MUST be mutually exclusive
+  const matchesStatus = 
+    filterStatus === 'all' ||
+    (filterStatus === 'upcoming' && !appointment.isCompleted && !appointment.cancelled) ||
+    (filterStatus === 'completed' && appointment.isCompleted && !appointment.cancelled) ||  // ✅ Fixed: exclude cancelled
+    (filterStatus === 'cancelled' && appointment.cancelled);  // ✅ Cancelled takes precedence
+  
+  // Payment filter
+  const matchesPayment = 
+    filterPayment === 'all' ||
+    (filterPayment === 'paid' && appointment.payment) ||
+    (filterPayment === 'unpaid' && !appointment.payment);
+  
+  // Search filter
+  const searchString = [
+    appointment.userData?.name || '',
+    appointment.userData?.phone || '',
+    appointment.docData?.name || '',
+    appointment.service || '',
+    appointment.docData?.specialty || appointment.docData?.speciality || ''
+  ].map(s => s.toLowerCase()).join(' ');
+  
+  const matchesSearch = !searchTerm || searchString.includes(searchTerm.toLowerCase());
+  
+  // Date filter
+  let matchesDateRange = true;
+  if (startDate || endDate) {
+    const appointmentDate = parseDateString(appointment.slotDate);
     
-    // Payment filter
-    const matchesPayment = 
-      filterPayment === 'all' ||
-      (filterPayment === 'paid' && appointment.payment) ||
-      (filterPayment === 'unpaid' && !appointment.payment)
-    
-    // Search filter - handle null or undefined gracefully
-    const searchString = [
-      appointment.userData?.name || '',
-      appointment.userData?.phone || '',
-      appointment.docData?.name || '',
-      appointment.service || '',
-      appointment.docData?.specialty || appointment.docData?.speciality || ''
-    ].map(s => s.toLowerCase()).join(' ');
-    
-    const matchesSearch = !searchTerm || searchString.includes(searchTerm.toLowerCase());
-    
-    // Date filter
-    let matchesDateRange = true;
-    if (startDate || endDate) {
-      // Parse the appointment date correctly
-      const appointmentDate = parseDateString(appointment.slotDate);
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
       
-      if (startDate && endDate) {
-        // Create start date at beginning of day (00:00:00)
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        
-        // Create end date at end of day (23:59:59)
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        
-        // Include both start and end dates in the range
-        matchesDateRange = appointmentDate >= start && appointmentDate <= end;
-      } else if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        matchesDateRange = appointmentDate >= start;
-      } else if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        matchesDateRange = appointmentDate <= end;
-      }
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      matchesDateRange = appointmentDate >= start && appointmentDate <= end;
+    } else if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      matchesDateRange = appointmentDate >= start;
+    } else if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      matchesDateRange = appointmentDate <= end;
     }
-    
-    return matchesStatus && matchesPayment && matchesSearch && matchesDateRange;
-  });
+  }
+  
+  return matchesStatus && matchesPayment && matchesSearch && matchesDateRange;
+});
   
   // Sort appointments
   const sortedAppointments = [...filteredAppointments].sort((a, b) => {

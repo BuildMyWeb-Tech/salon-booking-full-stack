@@ -35,22 +35,22 @@ const createService = async (req, res) => {
       });
     }
 
-    let image = '';
+    let imageUrl = ''; // ✅ Changed from 'image' to 'imageUrl'
 
-    // ✅ Upload image to Cloudinary (same pattern as userController)
+    // ✅ Upload image to Cloudinary
     if (req.file) {
       const uploadResult = await cloudinary.uploader.upload(req.file.path, {
         resource_type: 'image',
         folder: 'services'
       });
-      image = uploadResult.secure_url;
+      imageUrl = uploadResult.secure_url; // ✅ Changed to imageUrl
     }
 
     const service = new ServiceCategory({
       name,
       description,
       basePrice,
-      image
+      imageUrl // ✅ Changed from 'image' to 'imageUrl'
     });
 
     await service.save();
@@ -112,12 +112,13 @@ const updateService = async (req, res) => {
       basePrice
     };
 
+    // ✅ Upload new image if provided
     if (req.file) {
       const uploadResult = await cloudinary.uploader.upload(req.file.path, {
         resource_type: 'image',
         folder: 'services'
       });
-      updateData.image = uploadResult.secure_url;
+      updateData.imageUrl = uploadResult.secure_url; // ✅ Changed to imageUrl
     }
 
     const updatedService = await ServiceCategory.findByIdAndUpdate(
@@ -162,7 +163,6 @@ const deleteService = async (req, res) => {
       });
     }
 
-    // ❌ No Cloudinary deletion required unless you store public_id
     await ServiceCategory.findByIdAndDelete(req.params.id);
 
     res.json({
@@ -178,8 +178,6 @@ const deleteService = async (req, res) => {
     });
   }
 };
-
-
 
 export {
   getAllServices,
