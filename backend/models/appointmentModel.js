@@ -26,7 +26,7 @@ const appointmentSchema = new mongoose.Schema(
       required: true
     },
 
-    // ✅ SINGLE SOURCE OF TRUTH
+    // ✅ SINGLE SOURCE OF TRUTH for date/time
     slotDateTime: {
       type: Date,
       required: true,
@@ -36,6 +36,11 @@ const appointmentSchema = new mongoose.Schema(
     amount: {
       type: Number,
       required: true
+    },
+
+    service: {
+      type: String,
+      default: "Hair Styling"
     },
 
     payment: {
@@ -48,9 +53,35 @@ const appointmentSchema = new mongoose.Schema(
       default: false
     },
 
+    // Track who cancelled the appointment
+    cancelledBy: {
+      type: String,
+      enum: ['user', 'admin', null],
+      default: null
+    },
+
     isCompleted: {
       type: Boolean,
       default: false
+    },
+
+    rescheduled: {
+      type: Boolean,
+      default: false
+    },
+
+    // Store user data for quick access
+    userData: {
+      name: String,
+      phone: String,
+      image: String
+    },
+
+    // Store doctor/stylist data for quick access
+    docData: {
+      name: String,
+      image: String,
+      speciality: String
     }
   },
   { timestamps: true }
@@ -61,5 +92,10 @@ appointmentSchema.index(
   { doctorId: 1, slotDateTime: 1 },
   { unique: true }
 );
+
+// Index for efficient querying
+appointmentSchema.index({ userId: 1, isCompleted: 1 });
+appointmentSchema.index({ doctorId: 1, isCompleted: 1 });
+appointmentSchema.index({ slotDateTime: 1 });
 
 export default mongoose.model("appointment", appointmentSchema);

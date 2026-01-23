@@ -1,28 +1,5 @@
+C:\Users\ajaik\Desktop\salon-booking-full-stack>node show-structure.js
 📁 .git
-   📄 COMMIT_EDITMSG
-   📄 config
-   📄 description
-   📄 FETCH_HEAD
-   📄 HEAD
-   📁 hooks
-   📄 index
-   📁 info
-      📄 exclude
-   📁 logs
-      📄 HEAD
-      📁 refs
-         📁 heads
-            📄 main
-            📄 Mauli
-         📁 remotes
-   📁 objects
-   📄 ORIG_HEAD
-   📁 refs
-      📁 heads
-         📄 main
-         📄 Mauli
-      📁 remotes
-      📁 tags
 📄 .gitattributes
 📄 .gitignore
 📁 admin
@@ -48,6 +25,7 @@
          📄 AdminContext.jsx
          📄 AppContext.jsx
          📄 DoctorContext.jsx
+         📄 SlotManagementContext.jsx
       📄 index.css
       📄 main.jsx
       📁 pages
@@ -56,8 +34,11 @@
             📄 AllAppointments.jsx
             📄 Dashboard.jsx
             📄 DoctorsList.jsx
+            📄 EditStylist.jsx
             📄 MyProfile.jsx
             📄 ServicesCategory.jsx
+            📄 SlotManagement copy.jsx
+            📄 SlotManagement.jsx
          📁 Doctor
             📄 DoctorAppointments.jsx
             📄 DoctorDashboard.jsx
@@ -74,7 +55,9 @@
       📄 mongodb.js
    📁 controllers
       📄 adminController.js
+      📄 bookingController.js
       📄 doctorController.js
+      📄 serviceCategoryController.js
       📄 userController original.js
       📄 userController.js
    📁 middleware
@@ -84,7 +67,13 @@
       📄 multer.js
    📁 models
       📄 appointmentModel.js
+      📄 BlockedDate.js
+      📄 Booking.js
       📄 doctorModel.js
+      📄 RecurringHoliday.js
+      📄 ServiceCategory.js
+      📄 SlotSettings.js
+      📄 SpecialWorkingDay.js
       📄 userModel.js
    📄 package-lock.json
    📄 package.json
@@ -93,6 +82,9 @@
       📄 doctorRoute.js
       📄 userRoute.js
    📄 server.js
+   📄 show-structure.txt
+   📁 utils
+      📄 slotUtils.js
 📁 frontend
    📄 .env
    📄 .eslintrc.cjs
@@ -102,17 +94,9 @@
    📄 package.json
    📄 postcss.config.js
    📁 public
-      📄 favicon.svg
-      📄 icon-192.png
-      📄 icon-512.png
-      📄 manifest.json
-      📄 service-worker.js
-      📄 vite.svg
-   📄 README.md
    📁 src
       📄 App.jsx
       📁 assets
-         
       📁 components
          📄 Banner.jsx
          📄 Footer.jsx
@@ -129,6 +113,7 @@
       📁 pages
          📄 About.jsx
          📄 Appointment.jsx
+         📄 before dynamic slot Appointment .jsx
          📄 Contact.jsx
          📄 Doctors.jsx
          📄 Home.jsx
@@ -140,3 +125,4 @@
    📄 tailwind.config.js
    📄 vercel.json
    📄 vite.config.js
+
