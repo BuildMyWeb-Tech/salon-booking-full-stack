@@ -2,14 +2,44 @@ import React, { useContext, useState, useEffect } from 'react'
 import { assets } from '../assets/assets'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { AppContext } from '../context/AppContext'
-import { Home, Grid, Calendar,CalendarCheck , User, Scissors, Info, Phone, X, Menu } from 'lucide-react'
+import { 
+  Home, 
+  LayoutGrid, 
+  Calendar, 
+  CalendarCheck, 
+  User, 
+  Scissors, 
+  Info, 
+  Phone, 
+  X, 
+  Menu, 
+  Download,
+  Smartphone,
+  ArrowDown
+} from 'lucide-react'
 
 const Navbar = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [showMenu, setShowMenu] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [installPrompt, setInstallPrompt] = useState(null)
   const { token, setToken, userData } = useContext(AppContext)
+
+  // Check if PWA is already installed
+  const isPWAInstalled =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+
+  // Capture install prompt
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
 
   // Handle scroll event for navbar appearance change
   useEffect(() => {
@@ -33,8 +63,20 @@ const Navbar = () => {
     navigate('/login')
   }
 
-  const isActive = (path) => {
-    return location.pathname === path
+  // Install app function
+  const installApp = async () => {
+    if (!installPrompt) {
+      alert('App installation is not available on this device/browser')
+      return
+    }
+
+    await installPrompt.prompt()
+    const choice = await installPrompt.userChoice
+
+    if (choice.outcome === 'accepted') {
+      localStorage.setItem('app_installed', 'true')
+      setInstallPrompt(null)
+    }
   }
 
   return (
@@ -43,54 +85,56 @@ const Navbar = () => {
       <nav className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${scrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 py-4'}`}>
         <div className='container mx-auto px-4 flex items-center justify-between'>
           {/* Logo */}
-          {/* <img 
-            onClick={() => navigate('/')} 
-            className='w-44 cursor-pointer' 
-            src={assets.logo} 
-            alt="StyleStudio Logo" 
-          /> */}
-
-          {/* Text Logo */}
-    <h1
-      onClick={() => navigate('/')}
-      className='text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent'
-    >
-
-      BuildMyWeb
-    </h1>
+          <h1
+            onClick={() => navigate('/')}
+            className='text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent cursor-pointer'
+          >
+            StyleStudio
+          </h1>
           
           {/* Desktop Navigation */}
           <ul className='hidden md:flex items-center gap-8 font-medium'>
             <NavLink to='/' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
               <li className='py-1 relative group'>
                 HOME
-                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive('/') ? 'w-full' : 'group-hover:w-full'}`}></span>
+                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${location.pathname === '/' ? 'w-full' : 'group-hover:w-full'}`}></span>
               </li>
             </NavLink>
             <NavLink to='/stylists' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
               <li className='py-1 relative group'>
                 STYLISTS
-                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive('/doctors') ? 'w-full' : 'group-hover:w-full'}`}></span>
+                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${location.pathname === '/stylists' ? 'w-full' : 'group-hover:w-full'}`}></span>
               </li>
             </NavLink>
             <NavLink to='/services' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
               <li className='py-1 relative group'>
                 SERVICES
-                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive('/services') ? 'w-full' : 'group-hover:w-full'}`}></span>
+                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${location.pathname === '/services' ? 'w-full' : 'group-hover:w-full'}`}></span>
               </li>
             </NavLink>
             <NavLink to='/about' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
               <li className='py-1 relative group'>
                 ABOUT
-                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive('/about') ? 'w-full' : 'group-hover:w-full'}`}></span>
+                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${location.pathname === '/about' ? 'w-full' : 'group-hover:w-full'}`}></span>
               </li>
             </NavLink>
             <NavLink to='/contact' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
               <li className='py-1 relative group'>
                 CONTACT
-                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive('/contact') ? 'w-full' : 'group-hover:w-full'}`}></span>
+                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${location.pathname === '/contact' ? 'w-full' : 'group-hover:w-full'}`}></span>
               </li>
             </NavLink>
+            
+            {/* Download App NavItem - Added after contact as requested */}
+            {!isPWAInstalled && installPrompt && (
+              <li 
+                onClick={installApp}
+                className="py-1 cursor-pointer text-primary flex items-center gap-1 group"
+              >
+                <span>DOWNLOAD APP</span>
+                <Download size={16} className="group-hover:animate-bounce" />
+              </li>
+            )}
           </ul>
 
           {/* Desktop User Menu/Login */}
@@ -98,9 +142,9 @@ const Navbar = () => {
             {token && userData ? (
               <div className='flex items-center gap-2 cursor-pointer group relative'>
                 <div className='w-10 h-10 rounded-full overflow-hidden border-2 border-primary'>
-                  <img className='w-full h-full object-cover' src={userData.image} alt="" />
+                  <img className='w-full h-full object-cover' src={userData.image || assets.avatar} alt="" />
                 </div>
-                <span className="font-medium text-gray-700 hidden md:block">{userData.name?.split(' ')[0]}</span>
+                <span className="font-medium text-gray-700 hidden lg:block">{userData.name?.split(' ')[0]}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-chevron-down"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 
                 {/* Dropdown menu */}
@@ -131,14 +175,9 @@ const Navbar = () => {
                 Login / Register
               </button>
             )}
-            
-            {/* Mobile menu toggle */}
-            <button onClick={() => setShowMenu(true)} className='md:hidden flex items-center justify-center'>
-              <Menu size={24} className="text-gray-700" />
-            </button>
           </div>
           
-          {/* Mobile menu toggle - outside the hidden section */}
+          {/* Mobile menu toggle */}
           <button onClick={() => setShowMenu(true)} className='md:hidden flex items-center justify-center'>
             <Menu size={24} className="text-gray-700" />
           </button>
@@ -158,7 +197,9 @@ const Navbar = () => {
         <div className='flex flex-col h-full'>
           {/* Header */}
           <div className='flex items-center justify-between p-5 border-b'>
-            <img src={assets.logo} className='w-36' alt="StyleStudio Logo" />
+            <h1 className='text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent'>
+              StyleStudio
+            </h1>
             <button onClick={() => setShowMenu(false)}>
               <X size={24} className="text-gray-700" />
             </button>
@@ -168,7 +209,7 @@ const Navbar = () => {
           {token && userData && (
             <div className='p-5 border-b flex items-center gap-3'>
               <div className='w-12 h-12 rounded-full overflow-hidden border-2 border-primary'>
-                <img className='w-full h-full object-cover' src={userData.image} alt={userData.name} />
+                <img className='w-full h-full object-cover' src={userData.image || assets.avatar} alt={userData.name} />
               </div>
               <div>
                 <p className='font-medium text-gray-800'>{userData.name}</p>
@@ -194,12 +235,12 @@ const Navbar = () => {
                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => setShowMenu(false)}
               >
-                <Grid size={20} />
+                <LayoutGrid size={20} />
                 <span>Services</span>
               </NavLink>
               
               <NavLink 
-                to='/doctors' 
+                to='/stylists' 
                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => setShowMenu(false)}
               >
@@ -214,7 +255,7 @@ const Navbar = () => {
                   onClick={() => setShowMenu(false)}
                 >
                   <Calendar size={20} />
-                  <span>Appointments</span>
+                  <span>My Appointments</span>
                 </NavLink>
               )}
               
@@ -246,6 +287,20 @@ const Navbar = () => {
                   <span>My Profile</span>
                 </NavLink>
               )}
+
+              {/* Download App in Mobile Menu - After My Profile as requested */}
+              {!isPWAInstalled && installPrompt && (
+                <button 
+                  onClick={() => {
+                    installApp();
+                    setShowMenu(false);
+                  }}
+                  className='flex items-center gap-3 p-3 rounded-lg text-primary hover:bg-primary/10 w-full text-left'
+                >
+                  <Smartphone size={20} />
+                  <span>Download App</span>
+                </button>
+              )}
             </ul>
           </div>
           
@@ -254,8 +309,8 @@ const Navbar = () => {
             {token && userData ? (
               <button 
                 onClick={() => {
-                  logout()
-                  setShowMenu(false)
+                  logout();
+                  setShowMenu(false);
                 }}
                 className='w-full py-3 text-center text-red-500 border border-red-500 rounded-lg hover:bg-red-50 transition-colors'
               >
@@ -264,8 +319,8 @@ const Navbar = () => {
             ) : (
               <button 
                 onClick={() => {
-                  navigate('/login')
-                  setShowMenu(false)
+                  navigate('/login');
+                  setShowMenu(false);
                 }}
                 className='w-full py-3 text-center bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors'
               >
@@ -286,7 +341,7 @@ const Navbar = () => {
           </NavLink>
 
           <NavLink to="/services" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
-            <Grid size={20} />
+            <LayoutGrid size={20} />
             <span className="text-xs mt-1">Service</span>
           </NavLink>
 
@@ -297,7 +352,7 @@ const Navbar = () => {
 
           <NavLink to="/my-appointments" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
             <CalendarCheck size={20} />
-            <span className="text-xs mt-1">Appointment</span>
+            <span className="text-xs mt-1">Booking</span>
           </NavLink>
 
           <NavLink to="/my-profile" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
@@ -310,7 +365,7 @@ const Navbar = () => {
       {/* Spacer for fixed navbar */}
       <div className="h-20"></div>
       {/* Spacer for bottom nav on mobile */}
-      <div className=" md:h-0 "></div>
+      <div className="h-16 md:h-0"></div>
     </>
   )
 }

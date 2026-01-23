@@ -61,7 +61,7 @@ const SpecialityMenu = () => {
             {displayData.map((item, index) => (
               <Link
                 key={item._id || index}
-                to="/stylists"
+                to="/services"
                 onClick={() => window.scrollTo(0, 0)}
                 className="group"
               >

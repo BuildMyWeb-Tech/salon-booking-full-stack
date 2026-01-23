@@ -624,14 +624,14 @@ const MyAppointments = () => {
                                                         )}
                                                         
                                                         {/* View Details Button for completed */}
-                                                        {item.isCompleted && (
+                                                        {/* {item.isCompleted && (
                                                             <button
                                                                 className="flex items-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                                                             >
                                                                 <ChevronsRight size={16} />
                                                                 View Details
                                                             </button>
-                                                        )}
+                                                        )} */}
                                                         
                                                         {/* Re-book Button for completed or cancelled */}
                                                         {(item.isCompleted || item.cancelled) && (

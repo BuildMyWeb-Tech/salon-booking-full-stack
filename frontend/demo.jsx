@@ -1,825 +1,644 @@
-// import React, { useContext, useEffect, useState } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import { AppContext } from '../context/AppContext';
-// import axios from 'axios';
-// import { toast } from 'react-toastify';
-// import { assets } from '../assets/assets';
-// import { motion, AnimatePresence } from 'framer-motion';
-// import { 
-//   Calendar, 
-//   Clock, 
-//   MapPin, 
-//   AlertTriangle, 
-//   X, 
-//   ChevronLeft, 
-//   Scissors, 
-//   CreditCard, 
-//   Check,
-//   Sparkles,
-//   CheckCircle,
-//   AlertCircle,
-//   BadgeCheck,
-//   Star,
-//   ChevronsRight,
-//   ChevronsUp
-// } from 'lucide-react';
+// import React, { useContext, useState, useEffect } from 'react'
+// import { assets } from '../assets/assets'
+// import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+// import { AppContext } from '../context/AppContext'
+// import { Home, LayoutGrid, Calendar, CalendarCheck, User, Scissors, Info, Phone, X, Menu, Download } from 'lucide-react'
 
-// const MyAppointments = () => {
-//     const { backendUrl, token, currencySymbol = "₹" } = useContext(AppContext);
-//     const navigate = useNavigate();
+// const Navbar = () => {
+//   const navigate = useNavigate()
+//   const location = useLocation()
+//   const [showMenu, setShowMenu] = useState(false)
+//   const [scrolled, setScrolled] = useState(false)
+//   const [installPrompt, setInstallPrompt] = useState(null)
+//   const { token, setToken, userData } = useContext(AppContext)
 
-//     const [appointments, setAppointments] = useState([]);
-//     const [localAppointments, setLocalAppointments] = useState([]);
-//     const [payment, setPayment] = useState('');
-//     const [paymentMethod, setPaymentMethod] = useState(null);
-//     const [paymentLoading, setPaymentLoading] = useState(false);
-//     const [rescheduleModal, setRescheduleModal] = useState(false);
-//     const [cancelModal, setCancelModal] = useState(false);
-//     const [appointmentToCancel, setAppointmentToCancel] = useState(null);
-//     const [appointmentToReschedule, setAppointmentToReschedule] = useState(null);
-//     const [canReschedule, setCanReschedule] = useState(true);
-//     const [availableSlots, setAvailableSlots] = useState([]);
-//     const [selectedDate, setSelectedDate] = useState('');
-//     const [selectedTime, setSelectedTime] = useState('');
-//     const [isLoading, setIsLoading] = useState(true);
-//     const [activeTab, setActiveTab] = useState('upcoming');
-//     const [isRescheduling, setIsRescheduling] = useState(false);
-//     const [showPaymentModal, setShowPaymentModal] = useState(false);
-//     const [appointmentToPay, setAppointmentToPay] = useState(null);
+//   // Check if PWA is already installed
+//   const isPWAInstalled =
+//     window.matchMedia('(display-mode: standalone)').matches ||
+//     window.navigator.standalone === true
 
-//     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+//   // Capture install prompt
+//   useEffect(() => {
+//     const handler = (e) => {
+//       e.preventDefault()
+//       setInstallPrompt(e)
+//     }
+//     window.addEventListener('beforeinstallprompt', handler)
+//     return () => window.removeEventListener('beforeinstallprompt', handler)
+//   }, [])
 
-//     // Function to format the date eg. ( 20_01_2000 => 20 Jan 2000 )
-//     const slotDateFormat = (slotDate) => {
-//         if (!slotDate || !slotDate.includes('_')) return 'Invalid Date';
-        
-//         const dateArray = slotDate.split('_');
-//         if (dateArray.length !== 3) return 'Invalid Date';
-        
-//         const day = dateArray[0];
-//         const month = Number(dateArray[1]) - 1; // JavaScript months are 0-indexed
-        
-//         // Make sure month is in valid range
-//         if (month < 0 || month > 11) return 'Invalid Date';
-        
-//         const year = dateArray[2];
-        
-//         return `${day} ${months[month]} ${year}`;
-//     };
-
-//     // Helper function to parse date strings in DD_MM_YYYY format
-//     const parseDateString = (dateStr) => {
-//         // Check if date is in DD_MM_YYYY format
-//         if (dateStr && dateStr.includes('_')) {
-//             const [day, month, year] = dateStr.split('_').map(Number);
-//             // Month is 0-indexed in JavaScript Date, so we subtract 1 from month
-//             return new Date(year, month - 1, day);
-//         }
-//         return new Date(dateStr);
-//     };
-
-//     // Getting User Appointments Data Using API
-//     const getUserAppointments = async () => {
-//         setIsLoading(true);
-//         try {
-//             const { data } = await axios.get(backendUrl + '/api/user/appointments', { headers: { token } });
-//             setAppointments(data.appointments.reverse());
-//             setLocalAppointments(data.appointments.reverse());
-//         } catch (error) {
-//             console.log(error);
-//             toast.error(error.message);
-//         } finally {
-//             setIsLoading(false);
-//         }
-//     };
-
-//     // Function to cancel appointment Using API with local state update
-//     const cancelAppointment = async () => {
-//         if (!appointmentToCancel) return;
-        
-//         try {
-//             // Update local state immediately
-//             setLocalAppointments(prevAppointments => 
-//                 prevAppointments.map(app => 
-//                     app._id === appointmentToCancel._id ? 
-//                     { ...app, cancelled: true } : 
-//                     app
-//                 )
-//             );
-            
-//             // Show in cancelled tab
-//             setActiveTab('cancelled');
-            
-//             // API call
-//             const { data } = await axios.post(
-//                 backendUrl + '/api/user/cancel-appointment', 
-//                 { appointmentId: appointmentToCancel._id }, 
-//                 { headers: { token } }
-//             );
-
-//             if (data.success) {
-//                 toast.success(data.message);
-//                 setCancelModal(false);
-//                 setAppointmentToCancel(null);
-//                 // Update server data
-//                 getUserAppointments();
-//             } else {
-//                 toast.error(data.message);
-//                 // Rollback local state if server fails
-//                 setLocalAppointments(prevAppointments => 
-//                     prevAppointments.map(app => 
-//                         app._id === appointmentToCancel._id ? 
-//                         { ...app, cancelled: false } : 
-//                         app
-//                     )
-//                 );
-//             }
-//         } catch (error) {
-//             console.log(error);
-//             toast.error(error.message);
-//             // Rollback local state if API fails
-//             setLocalAppointments(prevAppointments => 
-//                 prevAppointments.map(app => 
-//                     app._id === appointmentToCancel._id ? 
-//                     { ...app, cancelled: false } : 
-//                     app
-//                 )
-//             );
-//         }
-//     };
-
-//     // Simulate completing an appointment (for demo/testing)
-//     const markAppointmentComplete = (appointmentId) => {
-//         // Update local state immediately
-//         setLocalAppointments(prevAppointments => 
-//             prevAppointments.map(app => 
-//                 app._id === appointmentId ? 
-//                 { ...app, isCompleted: true } : 
-//                 app
-//             )
-//         );
-        
-//         // Switch to completed tab to show the newly completed appointment
-//         setActiveTab('completed');
-        
-//         // In a real app, you'd make an API call here
-//         // For demo purposes, we'll just use a toast
-//         toast.success("Appointment marked as completed!");
-//     };
-
-//     // Process payment when user selects a payment method
-//     const processPayment = (method) => {
-//         if (!appointmentToPay) return;
-        
-//         setPaymentMethod(method);
-//         setPaymentLoading(true);
-        
-//         // Update local state immediately
-//         setLocalAppointments(prevAppointments => 
-//             prevAppointments.map(app => 
-//                 app._id === appointmentToPay._id ? 
-//                 { ...app, payment: true } : 
-//                 app
-//             )
-//         );
-        
-//         // Simulated payment process (in a real app, integrate with actual payment gateway)
-//         setTimeout(() => {
-//             setPaymentLoading(false);
-//             toast.success(`Payment successful via ${method}!`);
-//             setShowPaymentModal(false);
-//             setAppointmentToPay(null);
-//             setPaymentMethod(null);
-//             getUserAppointments(); // Refresh from server
-//         }, 1500);
-//     };
-
-//     // Open payment modal for an appointment
-//     const openPaymentModal = (appointment) => {
-//         setAppointmentToPay(appointment);
-//         setShowPaymentModal(true);
-//     };
-
-//     // Function to get available slots for rescheduling
-//     const getAvailableSlots = async (stylistId) => {
-//         setIsRescheduling(true);
-        
-//         try {
-//             // In a real app, fetch actual availability from the server
-//             // This is mocked for demonstration purposes
-            
-//             const demoSlots = [];
-//             const today = new Date();
-            
-//             // Create demo data for next 7 days
-//             for(let i=0; i<7; i++) {
-//                 const currentDate = new Date();
-//                 currentDate.setDate(today.getDate() + i);
-                
-//                 const day = currentDate.getDate();
-//                 const month = currentDate.getMonth() + 1;
-//                 const year = currentDate.getFullYear();
-                
-//                 const formattedDate = `${day}_${month}_${year}`;
-                
-//                 // Create random times
-//                 const times = [];
-//                 const startHour = 9;
-//                 const endHour = 18;
-                
-//                 for(let h = startHour; h <= endHour; h++) {
-//                     if(Math.random() > 0.5) times.push(`${h}:00 AM`);
-//                     if(Math.random() > 0.5) times.push(`${h}:30 AM`);
-//                 }
-                
-//                 demoSlots.push({
-//                     date: formattedDate,
-//                     times: times
-//                 });
-//             }
-            
-//             setAvailableSlots(demoSlots);
-//         } catch (error) {
-//             console.log(error);
-//             toast.error("Failed to fetch available slots");
-//         } finally {
-//             setIsRescheduling(false);
-//         }
-//     };
-
-//     // Check if appointment can be rescheduled (within 3 hours)
-//     const checkRescheduleEligibility = (appointment) => {
-//         if (!appointment || appointment.cancelled || appointment.isCompleted) return false;
-        
-//         // Parse the appointment date and time
-//         try {
-//             const dateArray = appointment.slotDate.split('_');
-//             const timeArray = appointment.slotTime.split(':');
-//             const ampm = appointment.slotTime.includes('AM') ? 'AM' : 'PM';
-            
-//             let hour = parseInt(timeArray[0]);
-//             let minute = 0;
-            
-//             // Handle cases like "10:30 AM"
-//             if (timeArray[1]) {
-//                 // Extract just the minutes, handling " AM" or " PM" suffix
-//                 const minuteString = timeArray[1].replace(/[^\d]/g, '');
-//                 minute = parseInt(minuteString);
-//             }
-            
-//             // Convert to 24-hour format
-//             if (ampm === 'PM' && hour < 12) {
-//                 hour += 12;
-//             } else if (ampm === 'AM' && hour === 12) {
-//                 hour = 0;
-//             }
-            
-//             const appointmentDate = new Date(
-//                 parseInt(dateArray[2]),
-//                 parseInt(dateArray[1]) - 1,
-//                 parseInt(dateArray[0]),
-//                 hour,
-//                 minute
-//             );
-            
-//             // Current time
-//             const now = new Date();
-            
-//             // Time difference in milliseconds
-//             const diffMs = appointmentDate - now;
-//             const diffHours = diffMs / (1000 * 60 * 60);
-            
-//             // Can reschedule if more than 3 hours before appointment
-//             return diffHours > 3;
-//         } catch (error) {
-//             console.error('Error checking reschedule eligibility:', error);
-//             return false;
-//         }
-//     };
-
-//     // Open reschedule modal
-//     const openRescheduleModal = (appointment) => {
-//         const canReschedule = checkRescheduleEligibility(appointment);
-//         setCanReschedule(canReschedule);
-        
-//         setAppointmentToReschedule(appointment);
-//         if (canReschedule) {
-//             getAvailableSlots(appointment.stylistData?._id || appointment.docData?._id);
-//         }
-//         setRescheduleModal(true);
-//     };
-
-//     // Open cancel confirmation modal
-//     const openCancelModal = (appointment) => {
-//         setAppointmentToCancel(appointment);
-//         setCancelModal(true);
-//     };
-
-//     // Reschedule appointment function
-//     const rescheduleAppointment = async () => {
-//         if (!selectedDate || !selectedTime || !appointmentToReschedule) {
-//             toast.error("Please select both date and time");
-//             return;
-//         }
-
-//         setIsRescheduling(true);
-        
-//         try {
-//             // Update local state immediately
-//             const updatedAppointment = {
-//                 ...appointmentToReschedule,
-//                 slotDate: selectedDate,
-//                 slotTime: selectedTime
-//             };
-            
-//             setLocalAppointments(prevAppointments => 
-//                 prevAppointments.map(app => 
-//                     app._id === appointmentToReschedule._id ? 
-//                     updatedAppointment : 
-//                     app
-//                 )
-//             );
-            
-//             // In a real app, make an API call to reschedule
-//             // This is mocked for demonstration purposes
-            
-//             setTimeout(() => {
-//                 toast.success("Appointment rescheduled successfully!");
-//                 setRescheduleModal(false);
-//                 setSelectedDate('');
-//                 setSelectedTime('');
-//                 setAppointmentToReschedule(null);
-//                 setActiveTab('upcoming'); // Switch to upcoming tab
-//                 getUserAppointments(); // Refresh from server
-//             }, 1000);
-//         } catch (error) {
-//             console.log(error);
-//             toast.error("Failed to reschedule appointment");
-            
-//             // Rollback local state if API fails
-//             setLocalAppointments(prevAppointments => [...prevAppointments]);
-//         } finally {
-//             setIsRescheduling(false);
-//         }
-//     };
-
-//     useEffect(() => {
-//         if (token) {
-//             getUserAppointments();
-//         } else {
-//             navigate('/login');
-//         }
-//     }, [token]);
-
-//     useEffect(() => {
-//         // Update local appointments when server data changes
-//         if (appointments.length > 0) {
-//             setLocalAppointments(appointments);
-//         }
-//     }, [appointments]);
-
-//     // Determine which data field to use (supporting both old and new structure)
-//     const getStylistData = (appointment) => {
-//         return appointment.stylistData || appointment.docData;
-//     };
+//   // Handle scroll event for navbar appearance change
+//   useEffect(() => {
+//     const handleScroll = () => {
+//       if (window.scrollY > 50) {
+//         setScrolled(true)
+//       } else {
+//         setScrolled(false)
+//       }
+//     }
     
-//     // Filter appointments based on active tab
-//     const filteredAppointments = localAppointments.filter(appointment => {
-//         if (activeTab === 'upcoming') {
-//             return !appointment.cancelled && !appointment.isCompleted;
-//         } else if (activeTab === 'completed') {
-//             return appointment.isCompleted;
-//         } else if (activeTab === 'cancelled') {
-//             return appointment.cancelled;
-//         }
-//         return true;
-//     });
+//     window.addEventListener('scroll', handleScroll)
+//     return () => {
+//       window.removeEventListener('scroll', handleScroll)
+//     }
+//   }, [])
 
-//     return (
-//         <div className="bg-gray-50 min-h-screen pb-20 pt-6 px-4 sm:px-6 lg:px-8">
-//             <div className="max-w-5xl mx-auto">
-//                 {/* Header with Back Button */}
-//                 <div className="flex items-center justify-between mb-8">
+//   const logout = () => {
+//     localStorage.removeItem('token')
+//     setToken(false)
+//     navigate('/login')
+//   }
+
+//   const isActive = (path) => {
+//     return location.pathname === path
+//   }
+
+//   // Install app function
+//   const installApp = async () => {
+//     if (!installPrompt) {
+//       alert('App installation is not available on this device/browser')
+//       return
+//     }
+
+//     await installPrompt.prompt()
+//     const choice = await installPrompt.userChoice
+
+//     if (choice.outcome === 'accepted') {
+//       localStorage.setItem('app_installed', 'true')
+//     }
+
+//     setInstallPrompt(null)
+//   }
+
+//   return (
+//     <>
+//       {/* Main Navigation */}
+//       <nav className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${scrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 py-4'}`}>
+//         <div className='container mx-auto px-4 flex items-center justify-between'>
+//           {/* Logo */}
+//           <h1
+//             onClick={() => navigate('/')}
+//             className='text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent cursor-pointer'
+//           >
+//             StyleStudio
+//           </h1>
+          
+//           {/* Desktop Navigation */}
+//           <ul className='hidden md:flex items-center gap-8 font-medium'>
+//             <NavLink to='/' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
+//               <li className='py-1 relative group'>
+//                 HOME
+//                 <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive ? 'w-full' : 'group-hover:w-full'}`}></span>
+//               </li>
+//             </NavLink>
+//             <NavLink to='/stylists' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
+//               <li className='py-1 relative group'>
+//                 STYLISTS
+//                 <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive ? 'w-full' : 'group-hover:w-full'}`}></span>
+//               </li>
+//             </NavLink>
+//             <NavLink to='/services' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
+//               <li className='py-1 relative group'>
+//                 SERVICES
+//                 <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive ? 'w-full' : 'group-hover:w-full'}`}></span>
+//               </li>
+//             </NavLink>
+//             <NavLink to='/about' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
+//               <li className='py-1 relative group'>
+//                 ABOUT
+//                 <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive ? 'w-full' : 'group-hover:w-full'}`}></span>
+//               </li>
+//             </NavLink>
+//             <NavLink to='/contact' className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>
+//               <li className='py-1 relative group'>
+//                 CONTACT
+//                 <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 ${isActive ? 'w-full' : 'group-hover:w-full'}`}></span>
+//               </li>
+//             </NavLink>
+//           </ul>
+
+//           {/* Desktop User Menu/Login */}
+//           <div className='hidden md:flex items-center gap-4'>
+//             {/* Download App Button - Desktop */}
+//             {!isPWAInstalled && installPrompt && (
+//               <button 
+//                 onClick={installApp}
+//                 className='flex items-center gap-2 px-4 py-2 border-2 border-primary text-primary rounded-md hover:bg-primary hover:text-white transition-all duration-300 font-medium'
+//               >
+//                 <Download size={18} />
+//                 Download App
+//               </button>
+//             )}
+
+//             {token && userData ? (
+//               <div className='flex items-center gap-2 cursor-pointer group relative'>
+//                 <div className='w-10 h-10 rounded-full overflow-hidden border-2 border-primary'>
+//                   <img className='w-full h-full object-cover' src={userData.image} alt="" />
+//                 </div>
+//                 <span className="font-medium text-gray-700 hidden lg:block">{userData.name?.split(' ')[0]}</span>
+//                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-chevron-down"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                
+//                 {/* Dropdown menu */}
+//                 <div className='absolute top-0 right-0 pt-14 text-base font-medium text-gray-600 z-20 hidden group-hover:block'>
+//                   <div className='min-w-48 bg-white rounded-lg shadow-lg border flex flex-col overflow-hidden'>
+//                     <p className='px-6 py-3 font-semibold text-gray-500 bg-gray-50 border-b'>{userData.name}</p>
+//                     <NavLink to='/my-profile' className='px-6 py-3 hover:bg-gray-50 hover:text-primary transition-colors'>
+//                       My Profile
+//                     </NavLink>
+//                     <NavLink to='/my-appointments' className='px-6 py-3 hover:bg-gray-50 hover:text-primary transition-colors'>
+//                       My Appointments
+//                     </NavLink>
 //                     <button 
-//                         onClick={() => navigate(-1)} 
-//                         className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
+//                       onClick={logout} 
+//                       className='px-6 py-3 text-left hover:bg-gray-50 hover:text-red-500 transition-colors'
 //                     >
-//                         <ChevronLeft size={20} />
-//                         <span className="ml-1">Back</span>
+//                       Logout
 //                     </button>
-//                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
-//                         <Scissors size={24} className="text-primary" />
-//                         My Appointments
-//                     </h1>
-//                     <div className="w-[56px]"></div> {/* Empty div for flex centering */}
+//                   </div>
 //                 </div>
-                
-//                 {/* Tabs */}
-//                 <div className="bg-white rounded-xl shadow-sm mb-6 p-1 border border-gray-200">
-//                     <div className="flex">
-//                         <button
-//                             onClick={() => setActiveTab('upcoming')}
-//                             className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg ${
-//                                 activeTab === 'upcoming'
-//                                     ? 'bg-primary text-white'
-//                                     : 'text-gray-600 hover:bg-gray-100'
-//                             }`}
-//                         >
-//                             Upcoming
-//                         </button>
-//                         <button
-//                             onClick={() => setActiveTab('completed')}
-//                             className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg ${
-//                                 activeTab === 'completed'
-//                                     ? 'bg-primary text-white'
-//                                     : 'text-gray-600 hover:bg-gray-100'
-//                             }`}
-//                         >
-//                             Completed
-//                         </button>
-//                         <button
-//                             onClick={() => setActiveTab('cancelled')}
-//                             className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg ${
-//                                 activeTab === 'cancelled'
-//                                     ? 'bg-primary text-white'
-//                                     : 'text-gray-600 hover:bg-gray-100'
-//                             }`}
-//                         >
-//                             Cancelled
-//                         </button>
-//                     </div>
-//                 </div>
-                
-//                 {isLoading ? (
-//                     <div className="flex justify-center items-center py-20">
-//                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-//                     </div>
-//                 ) : localAppointments.length === 0 ? (
-//                     <div className="text-center py-16 bg-white rounded-xl shadow-sm">
-//                         <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-//                             <Scissors size={32} className="text-gray-400" />
-//                         </div>
-//                         <h3 className="text-xl font-semibold text-gray-800 mb-2">No Appointments Yet</h3>
-//                         <p className="text-gray-500 mb-6 max-w-md mx-auto">
-//                             You haven't booked any styling appointments. Schedule your first session with one of our expert stylists.
-//                         </p>
-//                         <button 
-//                             onClick={() => navigate('/stylists')} 
-//                             className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-sm"
-//                         >
-//                             Browse Stylists
-//                         </button>
-//                     </div>
-//                 ) : filteredAppointments.length === 0 ? (
-//                     <div className="text-center py-12 bg-white rounded-xl shadow-sm">
-//                         <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-//                             {activeTab === 'upcoming' ? (
-//                                 <Calendar size={24} className="text-gray-400" />
-//                             ) : activeTab === 'completed' ? (
-//                                 <CheckCircle size={24} className="text-gray-400" />
-//                             ) : (
-//                                 <X size={24} className="text-gray-400" />
-//                             )}
-//                         </div>
-//                         <h3 className="text-lg font-medium text-gray-800 mb-2">
-//                             No {activeTab} appointments
-//                         </h3>
-//                         <p className="text-gray-500 text-sm mb-4">
-//                             {activeTab === 'upcoming' 
-//                                 ? "You don't have any upcoming appointments scheduled."
-//                                 : activeTab === 'completed'
-//                                 ? "You don't have any completed appointments yet."
-//                                 : "You don't have any cancelled appointments."
-//                             }
-//                         </p>
-//                     </div>
-//                 ) : (
-//                     <div className="space-y-6">
-//                         {filteredAppointments.map((item, index) => {
-//                             const stylistData = getStylistData(item);
-//                             const isRescheduleEligible = checkRescheduleEligibility(item);
-                            
-//                             return (
-//                                 <motion.div 
-//                                     key={index} 
-//                                     className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-all"
-//                                     initial={{ opacity: 0, y: 20 }}
-//                                     animate={{ opacity: 1, y: 0 }}
-//                                     transition={{ duration: 0.3, delay: index * 0.05 }}
-//                                 >
-//                                     <div className="p-4 sm:p-6">
-//                                         <div className="flex flex-col sm:flex-row gap-6">
-//                                             {/* Stylist Image */}
-//                                             <div className="sm:w-1/4 lg:w-1/5">
-//                                                 <div className="relative mx-auto sm:mx-0 w-32 sm:w-full max-w-[160px]">
-//                                                     <img 
-//                                                         className="aspect-square object-cover rounded-xl shadow-sm border border-gray-200" 
-//                                                         src={stylistData.image} 
-//                                                         alt={stylistData.name} 
-//                                                     />
-                                                    
-//                                                     {/* Status Badge */}
-//                                                     <div className="absolute -top-2 -right-2">
-//                                                         {item.cancelled ? (
-//                                                             <div className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
-//                                                                 Cancelled
-//                                                             </div>
-//                                                         ) : item.isCompleted ? (
-//                                                             <div className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
-//                                                                 Completed
-//                                                             </div>
-//                                                         ) : item.payment ? (
-//                                                             <div className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm flex items-center gap-0.5">
-//                                                                 <BadgeCheck size={10} />
-//                                                                 Confirmed
-//                                                             </div>
-//                                                         ) : (
-//                                                             <div className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
-//                                                                 Pending
-//                                                             </div>
-//                                                         )}
-//                                                     </div>
-                                                    
-//                                                     {/* Rating Prompt for completed appointments */}
-//                                                     {item.isCompleted && !item.userRated && (
-//                                                         <div className="absolute -bottom-2 right-0 transform translate-x-1/2">
-//                                                             <button 
-//                                                                 className="bg-white rounded-full p-1 shadow-lg hover:bg-yellow-50 transition-colors group" 
-//                                                                 title="Rate your experience"
-//                                                             >
-//                                                                 <Star size={18} className="text-yellow-400 group-hover:fill-yellow-400" />
-//                                                             </button>
-//                                                         </div>
-//                                                     )}
-//                                                 </div>
-                                                
-//                                                 {/* Stylist Rating */}
-//                                                 <div className="hidden sm:flex items-center justify-center gap-1 mt-2">
-//                                                     <div className="flex">
-//                                                         {[1, 2, 3, 4, 5].map((_, i) => (
-//                                                             <Star 
-//                                                                 key={i}
-//                                                                 size={12} 
-//                                                                 fill={i < (stylistData.rating || 4) ? "#FFC107" : "#E5E7EB"} 
-//                                                                 stroke="none"
-//                                                             />
-//                                                         ))}
-//                                                     </div>
-//                                                     <span className="text-xs text-gray-500">{stylistData.reviewCount || 124}</span>
-//                                                 </div>
-//                                             </div>
-                                            
-//                                             {/* Appointment Details */}
-//                                             <div className="flex-1">
-//                                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
-//                                                     <div>
-//                                                         <h3 className="text-lg font-semibold text-gray-800 mb-1">{stylistData.name}</h3>
-//                                                         <p className="text-primary text-sm font-medium">{stylistData.speciality}</p>
-//                                                     </div>
-                                                    
-//                                                     {/* Mobile rating */}
-//                                                     <div className="flex sm:hidden items-center gap-1">
-//                                                         <div className="flex">
-//                                                             {[1, 2, 3, 4, 5].map((_, i) => (
-//                                                                 <Star 
-//                                                                     key={i}
-//                                                                     size={12} 
-//                                                                     fill={i < (stylistData.rating || 4) ? "#FFC107" : "#E5E7EB"}
-//                                                                     stroke="none"
-//                                                                 />
-//                                                             ))}
-//                                                         </div>
-//                                                         <span className="text-xs text-gray-500">{stylistData.reviewCount || 124}</span>
-//                                                     </div>
-//                                                 </div>
-                                                
-//                                                 {/* Divider */}
-//                                                 <div className="border-b border-gray-100 mb-4"></div>
-                                                
-//                                                 {/* Appointment Info Cards */}
-//                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
-//                                                     <div className="bg-gray-50 p-3 rounded-lg">
-//                                                         <div className="flex items-start gap-2">
-//                                                             <Calendar size={18} className="text-primary mt-0.5" />
-//                                                             <div>
-//                                                                 <p className="text-xs text-gray-500">Date</p>
-//                                                                 <p className="font-medium text-gray-800">{slotDateFormat(item.slotDate)}</p>
-//                                                             </div>
-//                                                         </div>
-//                                                     </div>
-                                                    
-//                                                     <div className="bg-gray-50 p-3 rounded-lg">
-//                                                         <div className="flex items-start gap-2">
-//                                                             <Clock size={18} className="text-primary mt-0.5" />
-//                                                             <div>
-//                                                                 <p className="text-xs text-gray-500">Time</p>
-//                                                                 <p className="font-medium text-gray-800">{item.slotTime}</p>
-//                                                             </div>
-//                                                         </div>
-//                                                     </div>
-                                                    
-//                                                     <div className="bg-gray-50 p-3 rounded-lg">
-//                                                         <div className="flex items-start gap-2">
-//                                                             <Scissors size={18} className="text-primary mt-0.5" />
-//                                                             <div>
-//                                                                 <p className="text-xs text-gray-500">Service</p>
-//                                                                 <p className="font-medium text-gray-800">{item.service || 'Hair Styling'}</p>
-//                                                             </div>
-//                                                         </div>
-//                                                     </div>
-//                                                 </div>
-                                                
-//                                                 {/* Location */}
-//                                                 {stylistData.address && (
-//                                                     <div className="flex items-start gap-2 mb-5 text-sm text-gray-600">
-//                                                         <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
-//                                                         <span>
-//                                                             {stylistData.address.line1 || '123 Salon Street'}, {stylistData.address.line2 || 'Beautify Plaza, Style City'}
-//                                                         </span>
-//                                                     </div>
-//                                                 )}
-                                                
-//                                                 {/* Price and Actions */}
-//                                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
-//                                                     <div className="flex items-center gap-2">
-//                                                         <p className="font-bold text-gray-800">{currencySymbol}{item.amount || (stylistData.price || stylistData.fees || 800)}</p>
-                                                        
-//                                                         {/* Payment Badge */}
-//                                                         {item.payment ? (
-//                                                             <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
-//                                                                 <Check size={12} />
-//                                                                 Paid
-//                                                             </span>
-//                                                         ) : (
-//                                                             !item.cancelled && !item.isCompleted && (
-//                                                                 <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full">
-//                                                                     Payment Pending
-//                                                                 </span>
-//                                                             )
-//                                                         )}
-//                                                     </div>
-                                                    
-//                                                     {/* Action Buttons */}
-//                                                     <div className="flex flex-wrap gap-3">
-//                                                         {/* Payment Buttons */}
-//                                                         {!item.cancelled && !item.payment && !item.isCompleted && (
-//                                                             <button
-//                                                                 onClick={() => openPaymentModal(item)}
-//                                                                 className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm text-sm"
-//                                                             >
-//                                                                 <CreditCard size={16} />
-//                                                                 Pay Now
-//                                                             </button>
-//                                                         )}
-                                                        
-//                                                         {/* Reschedule Button */}
-//                                                         {!item.cancelled && item.payment && !item.isCompleted && isRescheduleEligible && (
-//                                                             <button
-//                                                                 onClick={() => openRescheduleModal(item)}
-//                                                                 className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm"
-//                                                             >
-//                                                                 <Calendar size={16} />
-//                                                                 Reschedule
-//                                                             </button>
-//                                                         )}
-                                                        
-//                                                         {/* Cancel Button */}
-//                                                         {!item.cancelled && !item.isCompleted && (
-//                                                             <button
-//                                                                 onClick={() => openCancelModal(item)}
-//                                                                 className="flex items-center gap-1.5 px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors text-sm"
-//                                                             >
-//                                                                 <X size={16} />
-//                                                                 Cancel
-//                                                             </button>
-//                                                         )}
-                                                        
-//                                                         {/* View Details Button for completed */}
-//                                                         {item.isCompleted && (
-//                                                             <button
-//                                                                 className="flex items-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-//                                                             >
-//                                                                 <ChevronsRight size={16} />
-//                                                                 View Details
-//                                                             </button>
-//                                                         )}
-                                                        
-//                                                         {/* Re-book Button for completed or cancelled */}
-//                                                         {(item.isCompleted || item.cancelled) && (
-//                                                             <button
-//                                                                 onClick={() => navigate(`/appointment/${stylistData._id}`)}
-//                                                                 className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm text-sm"
-//                                                             >
-//                                                                 <Calendar size={16} />
-//                                                                 Book Again
-//                                                             </button>
-//                                                         )}
-                                                        
-//                                                         {/* FOR DEMO ONLY: Complete Button - only show in development */}
-//                                                         {process.env.NODE_ENV !== 'production' && 
-//                                                          !item.isCompleted && 
-//                                                          !item.cancelled && (
-//                                                             <button
-//                                                                 onClick={() => markAppointmentComplete(item._id)}
-//                                                                 className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm"
-//                                                             >
-//                                                                 <CheckCircle size={16} />
-//                                                                 Complete (Demo)
-//                                                             </button>
-//                                                         )}
-//                                                     </div>
-//                                                 </div>
-//                                             </div>
-//                                         </div>
-                                        
-//                                         {/* Upcoming Appointment Reminder */}
-//                                         {!item.cancelled && !item.isCompleted && (
-//                                             <div className="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-center gap-2 text-sm">
-//                                                 <AlertCircle size={16} className="text-blue-500" />
-//                                                 <span className="text-blue-800">
-//                                                     {item.payment 
-//                                                         ? "Your appointment is confirmed. See you soon!" 
-//                                                         : "Please complete payment to confirm your appointment."}
-//                                                 </span>
-//                                             </div>
-//                                         )}
-                                        
-//                                         {/* Cannot Reschedule Warning */}
-//                                         {!item.cancelled && !item.isCompleted && !isRescheduleEligible && item.payment && (
-//                                             <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex items-center gap-2 text-xs">
-//                                                 <AlertTriangle size={14} className="text-yellow-500" />
-//                                                 <span className="text-yellow-800">
-//                                                     Appointments can only be rescheduled at least 3 hours before the scheduled time.
-//                                                 </span>
-//                                             </div>
-//                                         )}
-//                                     </div>
-//                                 </motion.div>
-//                             );
-//                         })}
-//                     </div>
-//                 )}
-                
-//                 {/* Payment Modal */}
-//                 {showPaymentModal && appointmentToPay && (
-//                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-//                         <div className="bg-white rounded-xl shadow-lg max-w-md w-full overflow-hidden">
-//                             {/* Header */}
-//                             <div className="bg-primary/5 p-4 border-b border-gray-200">
-//                                 <div className="flex justify-between items-center">
-//                                     <h3 className="font-semibold text-gray-800 text-lg">Complete Payment</h3>
-//                                     <button 
-//                                         onClick={() => {
-//                                             setShowPaymentModal(false);
-//                                             setAppointmentToPay(null);
-//                                             setPaymentMethod(null);
-//                                         }}
-//                                         className="text-gray-500 hover:text-gray-700"
-//                                     >
-//                                         <X size={20} />
-//                                     </button>
-//                                 </div>
-//                             </div>
-                            
-//                             {/* Content */}
-//                             <div className="p-6">
-//                                 {/* Appointment Summary */}
-//                                 <div className="bg-gray-50 p-4 rounded-lg mb-6">
-//                                     <p className="text-sm text-gray-500 mb-2">Appointment Summary</p>
-//                                     <div className="flex justify-between items-center mb-1">
-//                                         <span className="text-gray-600">Stylist</span>
-//                                         <span className="font-medium">{getStylistData(appointmentToPay).name}</span>
-//                                     </div>
-//                                     <div className="flex justify-between items-center mb-1">
-//                                         <span className="text-gray-600">Service</span>
-//                                         <span className="font-medium">{appointmentToPay.service || 'Hair Styling'}</span>
-//                                     </div>
-//                                     <div className="flex justify-between items-center mb-1">
-//                                         <span className="text-gray-600">Date & Time</span>
-//                                         <span className="font-medium">{slotDateFormat(appointmentToPay.slotDate)} at {appointmentToPay.slotTime}</span>
-//                                     </div>
-//                                     <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
-//                                         <span className="text-gray-600 font-medium">Total Amount</span>
-//                                         <span className="font-bold text-gray-800">{currencySymbol}{appointmentToPay.amount || getStylistData(appointmentToPay).price || 500}</span>
-//                                     </div>
-//                                 </div>
-                                
-//                                 <p className="text-gray-600 mb-4">Please select your payment method:</p>
-                                
-//                                 {/* Payment Methods */}
-//                                 <div className="space-y-3 mb-6">
-//                                     <button
-//                                         onClick={() => processPayment('stripe')}
-//                                         className={`w-full flex items-center justify-between p-3 border rounded-lg transition-all ${
-//                                             paymentMethod === 'stripe' 
-//                                                 ? 'border-primary bg-primary/5' 
-//                                                 : 'border-gray-200 hover:border-primary/50'
-//                                         }`}
-//                                         disabled={paymentLoading}
-//                                     >
-//                                         <div className="flex items-center gap-3">
-//                                             <img src={assets.stripe_logo} alt="Stripe" className="h-8 w-auto" />
-//                                             <span className="text-gray-700">Pay with Stripe</span>
-//                                         </div>
-//                                         {paymentMethod === 'stripe' && !paymentLoading && (
-//                                             <Check size={20} className
+//               </div>
+//             ) : (
+//               <button 
+//                 onClick={() => navigate('/login')} 
+//                 className='bg-primary text-white px-6 py-2 rounded-md hover:bg-primary/90 transition-all duration-300 flex items-center gap-2 font-medium'
+//               >
+//                 <User size={18} />
+//                 Login / Register
+//               </button>
+//             )}
+//           </div>
+          
+//           {/* Mobile menu toggle */}
+//           <button onClick={() => setShowMenu(true)} className='md:hidden flex items-center justify-center'>
+//             <Menu size={24} className="text-gray-700" />
+//           </button>
+//         </div>
+//       </nav>
+
+//       {/* Mobile Menu Overlay */}
+//       {showMenu && (
+//         <div 
+//           className="fixed inset-0 bg-black/50 z-40"
+//           onClick={() => setShowMenu(false)}
+//         ></div>
+//       )}
+
+//       {/* Mobile Side Menu */}
+//       <div className={`fixed top-0 bottom-0 right-0 w-4/5 max-w-sm bg-white z-50 shadow-xl transform transition-transform duration-300 ease-in-out ${showMenu ? 'translate-x-0' : 'translate-x-full'}`}>
+//         <div className='flex flex-col h-full'>
+//           {/* Header */}
+//           <div className='flex items-center justify-between p-5 border-b'>
+//             <h1 className='text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent'>
+//               StyleStudio
+//             </h1>
+//             <button onClick={() => setShowMenu(false)}>
+//               <X size={24} className="text-gray-700" />
+//             </button>
+//           </div>
+          
+//           {/* User Info (if logged in) */}
+//           {token && userData && (
+//             <div className='p-5 border-b flex items-center gap-3'>
+//               <div className='w-12 h-12 rounded-full overflow-hidden border-2 border-primary'>
+//                 <img className='w-full h-full object-cover' src={userData.image} alt={userData.name} />
+//               </div>
+//               <div>
+//                 <p className='font-medium text-gray-800'>{userData.name}</p>
+//                 <p className='text-sm text-gray-500'>{userData.email}</p>
+//               </div>
+//             </div>
+//           )}
+          
+//           {/* Menu Items */}
+//           <div className='flex-1 overflow-y-auto p-5'>
+//             <ul className='space-y-2'>
+//               <NavLink 
+//                 to='/' 
+//                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
+//                 onClick={() => setShowMenu(false)}
+//               >
+//                 <Home size={20} />
+//                 <span>Home</span>
+//               </NavLink>
+              
+//               <NavLink 
+//                 to='/services' 
+//                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
+//                 onClick={() => setShowMenu(false)}
+//               >
+//                 <LayoutGrid size={20} />
+//                 <span>Services</span>
+//               </NavLink>
+              
+//               <NavLink 
+//                 to='/stylists' 
+//                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
+//                 onClick={() => setShowMenu(false)}
+//               >
+//                 <Scissors size={20} />
+//                 <span>Stylists</span>
+//               </NavLink>
+              
+//               {token && userData && (
+//                 <NavLink 
+//                   to='/my-appointments' 
+//                   className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
+//                   onClick={() => setShowMenu(false)}
+//                 >
+//                   <Calendar size={20} />
+//                   <span>My Appointments</span>
+//                 </NavLink>
+//               )}
+              
+//               <NavLink 
+//                 to='/about' 
+//                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
+//                 onClick={() => setShowMenu(false)}
+//               >
+//                 <Info size={20} />
+//                 <span>About Us</span>
+//               </NavLink>
+              
+//               <NavLink 
+//                 to='/contact' 
+//                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
+//                 onClick={() => setShowMenu(false)}
+//               >
+//                 <Phone size={20} />
+//                 <span>Contact</span>
+//               </NavLink>
+              
+//               {token && userData && (
+//                 <NavLink 
+//                   to='/my-profile' 
+//                   className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
+//                   onClick={() => setShowMenu(false)}
+//                 >
+//                   <User size={20} />
+//                   <span>My Profile</span>
+//                 </NavLink>
+//               )}
+
+//               {/* Download App in Mobile Menu */}
+//               {!isPWAInstalled && installPrompt && (
+//                 <button 
+//                   onClick={() => {
+//                     installApp()
+//                     setShowMenu(false)
+//                   }}
+//                   className='flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 w-full'
+//                 >
+//                   <Download size={20} />
+//                   <span>Download App</span>
+//                 </button>
+//               )}
+//             </ul>
+//           </div>
+          
+//           {/* Footer Actions */}
+//           <div className='p-5 border-t'>
+//             {token && userData ? (
+//               <button 
+//                 onClick={() => {
+//                   logout()
+//                   setShowMenu(false)
+//                 }}
+//                 className='w-full py-3 text-center text-red-500 border border-red-500 rounded-lg hover:bg-red-50 transition-colors'
+//               >
+//                 Logout
+//               </button>
+//             ) : (
+//               <button 
+//                 onClick={() => {
+//                   navigate('/login')
+//                   setShowMenu(false)
+//                 }}
+//                 className='w-full py-3 text-center bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors'
+//               >
+//                 Login / Register
+//               </button>
+//             )}
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Bottom Mobile Navigation */}
+//       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-30 px-2 py-2">
+//         <div className="flex justify-around">
+          
+//           <NavLink to="/" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+//             <Home size={20} />
+//             <span className="text-xs mt-1">Home</span>
+//           </NavLink>
+
+//           <NavLink to="/services" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+//             <LayoutGrid size={20} />
+//             <span className="text-xs mt-1">Service</span>
+//           </NavLink>
+
+//           <NavLink to="/stylists" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+//             <Scissors size={20} />
+//             <span className="text-xs mt-1">Stylist</span>
+//           </NavLink>
+
+//           <NavLink to="/my-appointments" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+//             <CalendarCheck size={20} />
+//             <span className="text-xs mt-1">Booking</span>
+//           </NavLink>
+
+//           <NavLink to="/my-profile" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+//             <User size={20} />
+//             <span className="text-xs mt-1">Profile</span>
+//           </NavLink>
+//         </div>
+//       </div>
+      
+//       {/* Spacer for fixed navbar */}
+//       <div className="h-20"></div>
+//       {/* Spacer for bottom nav on mobile */}
+//       <div className="md:h-0"></div>
+//     </>
+//   )
+// }
+
+// export default Navbar
+
+// // App.jsx
+// import React, { useEffect, useState } from 'react'
+// import { Routes, Route, useLocation } from 'react-router-dom'
+
+// import Navbar from './components/Navbar'
+// import Footer from './components/Footer'
+// import ScrollToTop from './components/ScrollToTop'
+
+// import Home from './pages/Home'
+// import Doctors from './pages/Doctors'
+// import Login from './pages/Login'
+// import About from './pages/About'
+// import Contact from './pages/Contact'
+// import Appointment from './pages/Appointment'
+// import MyAppointments from './pages/MyAppointments'
+// import MyProfile from './pages/MyProfile'
+// import Verify from './pages/Verify'
+// import Services from './pages/Services'
+
+// import { ToastContainer } from 'react-toastify'
+// import 'react-toastify/dist/ReactToastify.css'
+
+// // import { X, Download } from 'lucide-react' // ❌ PWA UI icons
+
+// const App = () => {
+//   const location = useLocation()
+
+//   // ❌ PWA install state
+//   // const [installPrompt, setInstallPrompt] = useState(null)
+//   // const [showInstallModal, setShowInstallModal] = useState(false)
+
+//   // let popupTimer = null
+//   // let popupInterval = null
+
+//   /* ================================
+//      ❌ CHECK IF APP IS ALREADY INSTALLED (PWA)
+//   ================================= */
+//   /*
+//   const isPWAInstalled =
+//     window.matchMedia('(display-mode: standalone)').matches ||
+//     window.navigator.standalone === true
+//   */
+
+//   /* ================================
+//      ❌ CAPTURE PWA INSTALL PROMPT
+//   ================================= */
+//   /*
+//   useEffect(() => {
+//     const handler = (e) => {
+//       e.preventDefault()
+//       setInstallPrompt(e)
+//     }
+
+//     window.addEventListener('beforeinstallprompt', handler)
+
+//     return () => window.removeEventListener('beforeinstallprompt', handler)
+//   }, [])
+//   */
+
+//   /* ================================
+//      ❌ PWA POPUP DISPLAY LOGIC
+//   ================================= */
+//   /*
+//   useEffect(() => {
+//     if (location.pathname === '/login') return
+//     if (isPWAInstalled) return
+//     if (localStorage.getItem('app_installed') === 'true') return
+
+//     const laterClicked = localStorage.getItem('install_later')
+
+//     if (!laterClicked) {
+//       popupTimer = setTimeout(() => {
+//         setShowInstallModal(true)
+//       }, 5000)
+//     }
+
+//     if (laterClicked === 'true') {
+//       popupInterval = setInterval(() => {
+//         setShowInstallModal(true)
+//       }, 60000)
+//     }
+
+//     return () => {
+//       clearTimeout(popupTimer)
+//       clearInterval(popupInterval)
+//     }
+//   }, [location])
+//   */
+
+//   /* ================================
+//      ❌ ESC KEY CLOSE (PWA MODAL)
+//   ================================= */
+//   /*
+//   useEffect(() => {
+//     const escHandler = (e) => {
+//       if (e.key === 'Escape') setShowInstallModal(false)
+//     }
+
+//     document.addEventListener('keydown', escHandler)
+//     return () => document.removeEventListener('keydown', escHandler)
+//   }, [])
+//   */
+
+//   /* ================================
+//      ❌ INSTALL APP (PWA)
+//   ================================= */
+//   /*
+//   const installApp = async () => {
+//     if (!installPrompt) return
+
+//     await installPrompt.prompt()
+//     const choice = await installPrompt.userChoice
+
+//     if (choice.outcome === 'accepted') {
+//       localStorage.setItem('app_installed', 'true')
+//     }
+
+//     setShowInstallModal(false)
+//     setInstallPrompt(null)
+//   }
+//   */
+
+//   /* ================================
+//      ❌ MAYBE LATER (PWA)
+//   ================================= */
+//   /*
+//   const handleMaybeLater = () => {
+//     localStorage.setItem('install_later', 'true')
+//     setShowInstallModal(false)
+//   }
+//   */
+
+//   return (
+//     <div className="min-h-screen flex flex-col">
+//       <ToastContainer position="top-center" autoClose={3000} />
+
+//       <Navbar />
+//       <ScrollToTop />
+
+//       {/* ❌ INSTALL MODAL (PWA ONLY – DISABLED) */}
+//       {/*
+//       {showInstallModal && (
+//         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+//           <div className="relative w-[90%] max-w-sm rounded-xl bg-white p-6 text-center shadow-xl animate-fadeIn">
+
+//             <button
+//               onClick={() => setShowInstallModal(false)}
+//               className="absolute top-3 right-3 p-2 rounded-full hover:bg-gray-100"
+//             >
+//               <X size={18} />
+//             </button>
+
+//             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+//               <Download size={26} />
+//             </div>
+
+//             <h2 className="text-xl font-semibold">Install StyleStudio App</h2>
+//             <p className="mt-2 text-sm text-gray-600">
+//               Book appointments faster with our app experience.
+//             </p>
+
+//             <button
+//               onClick={installApp}
+//               className="mt-5 w-full rounded-lg bg-primary py-3 text-white font-medium hover:bg-primary/90"
+//             >
+//               Install App
+//             </button>
+
+//             <button
+//               onClick={handleMaybeLater}
+//               className="mt-3 w-full text-sm text-gray-500 hover:text-gray-700"
+//             >
+//               Maybe later
+//             </button>
+//           </div>
+//         </div>
+//       )}
+//       */}
+
+//       {/* ===== ROUTES ===== */}
+//       <main className="flex-grow">
+//         <Routes>
+//           <Route path="/" element={<Home />} />
+//           <Route path="/stylists" element={<Doctors />} />
+//           <Route path="/services" element={<Services />} />
+//           <Route path="/login" element={<Login />} />
+//           <Route path="/about" element={<About />} />
+//           <Route path="/contact" element={<Contact />} />
+//           <Route path="/appointment/:docId" element={<Appointment />} />
+//           <Route path="/my-appointments" element={<MyAppointments />} />
+//           <Route path="/my-profile" element={<MyProfile />} />
+//           <Route path="/verify" element={<Verify />} />
+//         </Routes>
+//       </main>
+
+//       <Footer />
+//     </div>
+//   )
+// }
+
+// export default App
+// index.css file:
+// @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+// @tailwind base;
+// @tailwind components;
+// @tailwind utilities;
+// * {
+//     font-family: Outfit;
+// }
+
+// .active hr {
+//     @apply block
+// }
+
+// @media (max-width:740px) {
+//     .active p {
+//         @apply text-white bg-primary
+//     }
+// }
+
+// ::-webkit-scrollbar {
+//     @apply hidden
+// }
+
+
+// /* index.css */
+
+// @keyframes fadeIn {
+//     from {
+//         opacity: 0;
+//         transform: scale(0.95);
+//     }
+//     to {
+//         opacity: 1;
+//         transform: scale(1);
+//     }
+// }
+
+// .animate-fadeIn {
+//     animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+// }
+
+// @keyframes slideUp {
+//     from {
+//         opacity: 0;
+//         transform: translateY(20px);
+//     }
+//     to {
+//         opacity: 1;
+//         transform: translateY(0);
+//     }
+// }
+
+// .animate-slideUp {
+//     animation: slideUp 0.4s ease-out;
+// }
+
+// @keyframes pulse {
+//     0% {
+//         box-shadow: 0 0 0 0 rgba(var(--color-primary), 0.5);
+//     }
+//     70% {
+//         box-shadow: 0 0 0 10px rgba(var(--color-primary), 0);
+//     }
+//     100% {
+//         box-shadow: 0 0 0 0 rgba(var(--color-primary), 0);
+//     }
+// }
+
+// .pulse {
+//     animation: pulse 2s infinite;
+// }
+
+// @supports (backdrop-filter: blur(4px)) {
+//     .backdrop-blur-sm {
+//         backdrop-filter: blur(4px);
+//     }
+// }
+// update the above code remove popup PWA and add The PWA  Download the APP in lap view After the contact navlink and in mobile view add after My profile to show Download the APP  and if i click that it will download the PWA app and use lucide react icons.
