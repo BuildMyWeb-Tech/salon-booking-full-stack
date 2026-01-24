@@ -542,45 +542,56 @@ const MyAppointments = () => {
                                                 <div className="border-b border-gray-100 mb-4 mt-2"></div>
                                                 
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
-                                                    {/* Date card */}
-                                                    <div className="bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors group">
-                                                        <div className="flex items-start gap-3">
-                                                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                                                                <CalendarIcon size={18} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-gray-500 uppercase font-medium">Date</p>
-                                                                <p className="font-medium text-gray-800">{slotDateFormat(item.slotDate)}</p>
-                                                            </div>
-                                                        </div>
+
+                                                {/* Date card */}
+                                                <div className="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors group">
+                                                    <div className="flex gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
+                                                        <CalendarIcon size={18} />
                                                     </div>
-                                                    
-                                                    {/* Time card */}
-                                                    <div className="bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors group">
-                                                        <div className="flex items-start gap-3">
-                                                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                                                                <Clock size={18} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-gray-500 uppercase font-medium">Time</p>
-                                                                <p className="font-medium text-gray-800">{item.slotTime}</p>
-                                                            </div>
-                                                        </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500 uppercase font-medium">Date</p>
+                                                        <p className="font-medium text-gray-800">
+                                                        {slotDateFormat(item.slotDate)}
+                                                        </p>
                                                     </div>
-                                                    
-                                                    {/* Service card */}
-                                                    <div className="bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors group">
-                                                        <div className="flex items-start gap-3">
-                                                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                                                                <Scissors size={18} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-gray-500 uppercase font-medium">Service</p>
-                                                                <p className="font-medium text-gray-800 truncate">{item.service || "Hair Styling"}</p>
-                                                            </div>
-                                                        </div>
                                                     </div>
                                                 </div>
+
+                                                {/* Time card */}
+                                                <div className="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors group">
+                                                    <div className="flex gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
+                                                        <Clock size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500 uppercase font-medium">Time</p>
+                                                        <p className="font-medium text-gray-800">
+                                                        {item.slotTime}
+                                                        </p>
+                                                    </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Service card */}
+                                                <div className="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors group">
+                                                    <div className="flex gap-3 items-start">
+                                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
+                                                        <Scissors size={18} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs text-gray-500 uppercase font-medium">Service</p>
+
+                                                        {/* ✅ NO truncate, allow wrapping */}
+                                                        <p className="font-medium text-gray-800 leading-snug break-words">
+                                                        {item.service || "Hair Styling"}
+                                                        </p>
+                                                    </div>
+                                                    </div>
+                                                </div>
+
+                                                </div>
+
                                                 
                                                 {/* Payment and action buttons */}
                                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
