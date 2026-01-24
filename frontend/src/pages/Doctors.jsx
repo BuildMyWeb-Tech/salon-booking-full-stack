@@ -329,13 +329,13 @@ const Stylists = () => {
                         ₹{stylist.price || stylist.fees || null}
                       </span>
                     </div>
-                    {/* Instagram handle
+                    {/* Instagram handle */}
                     {stylist.instagram && (
                       <div className="flex items-center gap-2 text-sm text-gray-600 hover:text-pink-600 transition-colors">
                         <Instagram size={14} className="text-pink-500" />
                         @{stylist.instagram}
                       </div>
-                    )} */}
+                    )}
 
                     {/* Location info */}
                     {stylist.location && (

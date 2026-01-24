@@ -170,7 +170,7 @@ const Sidebar = () => {
                 ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
               }>
                 <CalendarClock className={iconClass} />
-                {!collapsed && <p>My Bookings</p>}
+                {!collapsed && <p>My Appointment </p>}
               </NavLink>
             </li>
 
@@ -367,7 +367,7 @@ const Sidebar = () => {
                     onClick={() => setMobileOpen(false)}
                   >
                     <CalendarClock className={iconClass} />
-                    <p>My Bookings</p>
+                    <p>My Appointments</p>
                   </NavLink>
                 </li>
 
@@ -467,7 +467,7 @@ const Sidebar = () => {
               }
             >
               <Calendar className="w-5 h-5 mb-1" />
-              <span>Bookings</span>
+              <span>My Appointments</span>
             </NavLink>
 
             <NavLink 
@@ -528,7 +528,7 @@ const Sidebar = () => {
               }
             >
               <CalendarClock className="w-5 h-5 mb-1" />
-              <span>Bookings</span>
+              <span>My Appointments</span>
             </NavLink>
 
             <NavLink 

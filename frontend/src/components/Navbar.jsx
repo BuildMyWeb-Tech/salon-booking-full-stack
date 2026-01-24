@@ -9,12 +9,13 @@ import {
   CalendarCheck, 
   User, 
   Scissors, 
-  Info, 
+  FileText , 
   Phone, 
   X, 
   Menu, 
   Download,
   Smartphone,
+  UserCog ,
   ArrowDown
 } from 'lucide-react'
 
@@ -205,7 +206,7 @@ const Navbar = () => {
             </button>
           </div>
           
-          {/* User Info (if logged in) */}
+          {/* User FileText  (if logged in) */}
           {token && userData && (
             <div className='p-5 border-b flex items-center gap-3'>
               <div className='w-12 h-12 rounded-full overflow-hidden border-2 border-primary'>
@@ -235,7 +236,7 @@ const Navbar = () => {
                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => setShowMenu(false)}
               >
-                <LayoutGrid size={20} />
+                <Scissors size={20} />
                 <span>Services</span>
               </NavLink>
               
@@ -244,7 +245,7 @@ const Navbar = () => {
                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => setShowMenu(false)}
               >
-                <Scissors size={20} />
+                <UserCog  size={20} />
                 <span>Stylists</span>
               </NavLink>
               
@@ -264,7 +265,7 @@ const Navbar = () => {
                 className={({isActive}) => `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-100'}`}
                 onClick={() => setShowMenu(false)}
               >
-                <Info size={20} />
+                <FileText  size={20} />
                 <span>About Us</span>
               </NavLink>
               
@@ -341,18 +342,18 @@ const Navbar = () => {
           </NavLink>
 
           <NavLink to="/services" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
-            <LayoutGrid size={20} />
+            <Scissors size={20} />
             <span className="text-xs mt-1">Service</span>
           </NavLink>
 
           <NavLink to="/stylists" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
-            <Scissors size={20} />
+            <UserCog  size={20} />
             <span className="text-xs mt-1">Stylist</span>
           </NavLink>
 
           <NavLink to="/my-appointments" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
             <CalendarCheck size={20} />
-            <span className="text-xs mt-1">Booking</span>
+            <span className="text-xs mt-1">My Appointment </span>
           </NavLink>
 
           <NavLink to="/my-profile" className={({isActive}) => `flex flex-col items-center p-1 ${isActive ? 'text-primary' : 'text-gray-500'}`}>

@@ -110,12 +110,7 @@ const Contact = () => {
                     "Hair Treatment Specialist" , 
                     "Bridal Hairstylist", 
                     "Unisex Hairstylist" , 
-                    // "Haircut & Styling",
-                    // "Color Services",
-                    // "Hair Extensions",
-                    // "Bridal Styling",
-                    // "Hair Treatments",
-                    // "Men's Grooming"
+
                   ].map((service, index) => (
                     <div key={index} className="flex items-center">
                       <Scissors className="text-primary w-4 h-4 mr-3" />
