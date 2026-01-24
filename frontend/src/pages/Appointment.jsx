@@ -6,36 +6,14 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { loadStripe } from '@stripe/stripe-js';
 import { 
-  Phone, 
-  Scissors, 
-  Star, 
-  Clock, 
-  Calendar, 
-  MapPin, 
-  CheckCircle,
-  ChevronLeft, 
-  CreditCard, 
-  Instagram, 
-  Mail,
-  Award,
-  User,
-  X,
-  CheckCircle2,
-  ArrowRight,
-  Shield,
-  AlertTriangle,
-  Plus,
-  Minus,
-  Loader2
+  ChevronLeft, CreditCard, CheckCircle, CheckCircle2, ArrowRight,
+  Shield, AlertTriangle, Loader2, Clock, Calendar, Award, User, Scissors
 } from "lucide-react";
 
 const Appointment = () => {
     const { docId } = useParams();
     const { doctors: stylists, currencySymbol, backendUrl, token, getDoctosData: getStylesData } = useContext(AppContext);
-    const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    // Payment gateway setup
     const stripePromise = loadStripe('pk_test_51NpjZGSJQz3QA6GnHyUmwbQtcYfeTHfQdl0i7YpeCor7Vl6qXn2nKUDRdx6AldHDhxnRUiUJRuAdBECFIwE0QQGy00Ys6rUGi8');
     const razorpayKeyId = 'rzp_test_8NBbBv2vkvuTtj';
 
@@ -46,7 +24,6 @@ const Appointment = () => {
     const [loading, setLoading] = useState(false);
     const [bookingLoading, setBookingLoading] = useState(false);
     const [selectedServices, setSelectedServices] = useState([]);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [paymentLoading, setPaymentLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
@@ -56,6 +33,10 @@ const Appointment = () => {
     const [stylistServices, setStylistServices] = useState([]);
     const [availableDates, setAvailableDates] = useState([]);
     const [dateLoading, setDateLoading] = useState(false);
+    
+    // ✅ NEW: Payment calculation states
+    const [paymentAmount, setPaymentAmount] = useState(0);
+    const [remainingAmount, setRemainingAmount] = useState(0);
 
     const navigate = useNavigate();
 
@@ -69,7 +50,6 @@ const Appointment = () => {
         });
     };
 
-    // Fetch all service categories
     const fetchAllServices = async () => {
         try {
             const { data } = await axios.get(`${backendUrl}/api/user/services`);
@@ -82,10 +62,8 @@ const Appointment = () => {
         }
     };
 
-    // Filter services based on stylist specialty
     const filterStylistServices = () => {
         if (!stylistInfo || !allServices.length) return;
-
         const filtered = allServices.filter(service => 
             stylistInfo.specialty.includes(service.name)
         );
@@ -95,8 +73,23 @@ const Appointment = () => {
     const fetchSlotSettings = async () => {
         try {
             const { data } = await axios.get(backendUrl + '/api/admin/public/slot-settings');
-            if (data) {
+            if (data.success) {
                 setSlotSettings(data);
+            } else {
+                // Fallback to defaults
+                setSlotSettings({
+                    slotStartTime: "09:00",
+                    slotEndTime: "17:00",
+                    slotDuration: 30,
+                    breakTime: false,
+                    daysOpen: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+                    allowRescheduling: true,
+                    rescheduleHoursBefore: 24,
+                    maxAdvanceBookingDays: 30,
+                    minBookingTimeBeforeSlot: 0,
+                    advancePaymentRequired: true,
+                    advancePaymentPercentage: 100
+                });
             }
         } catch (error) {
             console.error("Error fetching slot settings:", error);
@@ -105,21 +98,13 @@ const Appointment = () => {
                 slotEndTime: "17:00",
                 slotDuration: 30,
                 breakTime: false,
-                breakStartTime: "13:00",
-                breakEndTime: "14:00",
-                daysOpen: [
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                    "Sunday"
-                ],
+                daysOpen: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
                 allowRescheduling: true,
                 rescheduleHoursBefore: 24,
                 maxAdvanceBookingDays: 30,
-                minBookingTimeBeforeSlot: 0
+                minBookingTimeBeforeSlot: 0,
+                advancePaymentRequired: true,
+                advancePaymentPercentage: 100
             });
         }
     };
@@ -129,7 +114,6 @@ const Appointment = () => {
         setStylistInfo(stylistInfo);
     };
 
-    // Generate available dates based on slot settings
     const generateAvailableDates = async () => {
         if (!slotSettings) return;
         
@@ -144,25 +128,19 @@ const Appointment = () => {
             
             const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
             
-            // Check if this day is in the daysOpen array
             if (slotSettings.daysOpen && slotSettings.daysOpen.includes(dayName)) {
                 try {
-                    // Fetch slot count for this date
                     const dateStr = date.toISOString().split("T")[0];
                     const { data } = await axios.get(
                         `${backendUrl}/api/user/available-slots`,
                         {
-                            params: {
-                                date: dateStr,
-                                docId
-                            },
+                            params: { date: dateStr, docId },
                             headers: { token }
                         }
                     );
                     
                     const slotCount = data.success ? data.slots.length : 0;
                     
-                    // Only add dates with available slots
                     if (slotCount > 0) {
                         dates.push({
                             date: date,
@@ -191,10 +169,7 @@ const Appointment = () => {
             const { data } = await axios.get(
                 `${backendUrl}/api/user/available-slots`,
                 {
-                    params: {
-                        date: dateStr,
-                        docId
-                    },
+                    params: { date: dateStr, docId },
                     headers: { token }
                 }
             );
@@ -214,7 +189,6 @@ const Appointment = () => {
         }
     };
 
-    // Toggle service selection
     const toggleService = (service) => {
         const isSelected = selectedServices.find(s => s._id === service._id);
         
@@ -225,10 +199,29 @@ const Appointment = () => {
         }
     };
 
-    // Calculate total price
     const getTotalPrice = () => {
         return selectedServices.reduce((total, service) => total + service.basePrice, 0);
     };
+
+    // ✅ Calculate payment amounts based on settings
+    useEffect(() => {
+        if (selectedServices.length > 0 && slotSettings) {
+            const total = getTotalPrice();
+            
+            if (slotSettings.advancePaymentRequired) {
+                const percentage = slotSettings.advancePaymentPercentage || 100;
+                const advanceAmount = Math.round((total * percentage) / 100);
+                setPaymentAmount(advanceAmount);
+                setRemainingAmount(total - advanceAmount);
+            } else {
+                setPaymentAmount(total);
+                setRemainingAmount(0);
+            }
+        } else {
+            setPaymentAmount(0);
+            setRemainingAmount(0);
+        }
+    }, [selectedServices, slotSettings]);
 
     const processPayment = async (method) => {
         setPaymentMethod(method);
@@ -243,11 +236,9 @@ const Appointment = () => {
                     return;
                 }
 
-                const totalAmount = getTotalPrice();
-
                 const options = {
                     key: razorpayKeyId,
-                    amount: totalAmount * 100,
+                    amount: paymentAmount * 100, // ✅ Use calculated payment amount
                     currency: "INR",
                     name: "Salon Stylist",
                     description: `Booking with ${stylistInfo.name}`,
@@ -261,9 +252,6 @@ const Appointment = () => {
                         name: "Customer Name",
                         email: "customer@example.com",
                         contact: "9999999999"
-                    },
-                    notes: {
-                        address: "Salon Address"
                     },
                     theme: {
                         color: "#9333EA"
@@ -279,7 +267,6 @@ const Appointment = () => {
                 rzpay.open();
                 
             } else {
-                // Fallback for other payment methods
                 setTimeout(() => {
                     setPaymentLoading(false);
                     setPaymentSuccess(true);
@@ -319,7 +306,6 @@ const Appointment = () => {
         const slotDate = selectedDate.toISOString().split("T")[0];
 
         try {
-            // Prepare services data
             const servicesData = selectedServices.map(s => ({
                 name: s.name,
                 price: s.basePrice
@@ -347,7 +333,6 @@ const Appointment = () => {
 
                 setTimeout(() => {
                     setBookingLoading(false);
-                    setShowPaymentModal(false);
                     navigate('/my-appointments');
                 }, 1500);
             } else {
@@ -556,6 +541,12 @@ const Appointment = () => {
                                             <div>
                                                 <p className="text-sm text-gray-700 mb-1">{selectedServices.length} service(s) selected</p>
                                                 <p className="text-2xl font-bold text-gray-900">Total: {currencySymbol}{getTotalPrice()}</p>
+                                                {/* ✅ Show payment breakdown */}
+                                                {slotSettings.advancePaymentRequired && slotSettings.advancePaymentPercentage < 100 && (
+                                                    <p className="text-sm text-blue-700 mt-1">
+                                                        Pay {slotSettings.advancePaymentPercentage}% now ({currencySymbol}{paymentAmount})
+                                                    </p>
+                                                )}
                                             </div>
                                             <button 
                                                 onClick={() => setCurrentStep(2)}
@@ -600,7 +591,7 @@ const Appointment = () => {
                             
                                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Date & Time</h2>
                                 
-                                {/* Date Selection - Horizontal Scroll */}
+                                {/* Date Selection */}
                                 <div className="mb-8">
                                     <label className="block text-base font-semibold text-gray-900 mb-4">Select Date</label>
                                     
@@ -677,7 +668,6 @@ const Appointment = () => {
                                         ) : (
                                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                                                 {availableSlots.map((slot, index) => {
-                                                    // Extract only start time from ISO string or display time in 12-hour format with AM/PM
                                                     let displayStartTime = slot.displayTime;
                                                     if (slot.startTime) {
                                                         const startDate = new Date(slot.startTime);
@@ -791,12 +781,46 @@ const Appointment = () => {
                                             </p>
                                         </div>
                                         
-                                        <div className="flex justify-between items-center text-xl pt-2">
-                                            <span className="font-bold text-gray-900">Total Amount</span>
-                                            <span className="font-bold text-blue-600 text-2xl">{currencySymbol}{getTotalPrice()}</span>
+                                        <div className="space-y-3 pt-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-semibold text-gray-700">Total Amount</span>
+                                                <span className="font-bold text-gray-900 text-xl">{currencySymbol}{getTotalPrice()}</span>
+                                            </div>
+                                            
+                                            {/* ✅ Show payment breakdown if partial payment */}
+                                            {slotSettings.advancePaymentRequired && slotSettings.advancePaymentPercentage < 100 && (
+                                                <>
+                                                    <div className="flex justify-between items-center bg-blue-100 px-4 py-3 rounded-lg">
+                                                        <span className="font-semibold text-blue-900">
+                                                            Pay Now ({slotSettings.advancePaymentPercentage}%)
+                                                        </span>
+                                                        <span className="font-bold text-blue-900 text-xl">{currencySymbol}{paymentAmount}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-gray-600">
+                                                        <span className="text-sm">Pay at Salon</span>
+                                                        <span className="font-semibold">{currencySymbol}{remainingAmount}</span>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
+                                
+                                {/* ✅ Payment info notice */}
+                                {slotSettings.advancePaymentRequired && slotSettings.advancePaymentPercentage < 100 && (
+                                    <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                                        <div className="flex items-start gap-3">
+                                            <Shield size={20} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <h4 className="font-semibold text-blue-900 mb-1">Advance Payment Required</h4>
+                                                <p className="text-sm text-blue-800">
+                                                    You'll pay {slotSettings.advancePaymentPercentage}% ({currencySymbol}{paymentAmount}) now to confirm your booking. 
+                                                    The remaining {currencySymbol}{remainingAmount} will be paid at the salon.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 
                                 <div className="space-y-5">
                                     <h3 className="font-bold text-gray-900 text-lg">Select Payment Method</h3>
@@ -860,7 +884,13 @@ const Appointment = () => {
                                         ) : (
                                             <>
                                                 <CreditCard size={24} />
-                                                <span>Pay & Confirm {currencySymbol}{getTotalPrice()}</span>
+                                                <span>
+                                                    Pay & Confirm {currencySymbol}
+                                                    {slotSettings.advancePaymentRequired && slotSettings.advancePaymentPercentage < 100 
+                                                        ? paymentAmount 
+                                                        : getTotalPrice()
+                                                    }
+                                                </span>
                                             </>
                                         )}
                                     </button>
