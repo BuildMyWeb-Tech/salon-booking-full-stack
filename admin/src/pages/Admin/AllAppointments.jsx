@@ -1085,6 +1085,48 @@ const AllAppointments = () => {
                 </>
               )}
             </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                    Phone
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                    Stylist
+                  </th>
+                  {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                    Service
+                  </th> */}
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date & Time
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment
+                  </th> */}
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedAppointments.map((appointment, index) => (
+                  <tr key={index} className="hover:bg-gray-50 transition-colors">
+                    
+                    {/* Customer */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10 relative">
           ))}
         </div>
         
@@ -1162,6 +1204,79 @@ const AllAppointments = () => {
                           </div>
                         </div>
                       </div>
+                    </td>
+
+                    {/* Phone */}
+                    <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                      <div className="text-sm text-gray-900">
+                        {appointment.userData?.phone || "N/A"}
+                      </div>
+                    </td>
+
+                    {/* Stylist */}
+                    <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-8 w-8">
+                          {appointment.docData?.image ? (
+                            <img 
+                              className="h-8 w-8 rounded-full object-cover border border-gray-200" 
+                              src={appointment.docData.image} 
+                              alt={appointment.docData.name}
+                            />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700">
+                              <Scissors size={12} />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">
+                            {appointment.docData?.name || "N/A"}
+                          </div>
+                          <div className="text-sm text-gray-900">
+                        {appointment.service || appointment.docData?.specialty || appointment.docData?.speciality || "N/A"}
+                      </div>
+                        </div>
+                      </div>
+                      
+                    </td>
+                    
+                    {/* Service */}
+                    {/* <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                      <div className="text-sm text-gray-900">
+                        {appointment.service || appointment.docData?.specialty || appointment.docData?.speciality || "N/A"}
+                      </div>
+                    </td> */}
+                    
+                    {/* Date & Time */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {slotDateFormat(appointment.slotDate)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {appointment.slotTime || "N/A"}
+                      </div>
+                    </td>                  
+                    
+                    {/* Status */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusBadge appointment={appointment} />
+                    </td>
+                    
+                    {/* Payment Status */}
+                    {/* <td className="px-6 py-4 whitespace-nowrap">
+                      <PaymentStatusBadge appointment={appointment} />
+                    </td> */}
+                    
+                    {/* Price */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {currency}{appointment.amount || appointment.price || 0}
+                    </td>
+                    
+                    {/* Actions */}
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        {/* Complete/Undo Button */}
                       
                       <div className="flex items-center gap-2">
                         <StatusBadge appointment={appointment} />

@@ -410,7 +410,9 @@ const Appointment = () => {
                                             <Scissors size={14} className="text-primary" />
                                             Specialties
                                         </div>
-                                        <div className="text-sm font-medium text-gray-800 mt-1">{stylistInfo.specialty.length} Services</div>
+                                        <div className="text-sm font-medium text-gray-800 mt-1">{stylistInfo.specialty.length} Specialties</div>
+                                        <p className="text-primary font-medium">{stylistInfo.specialty.join(', ')}</p>
+
                                     </div>
                                 </div>
                             </div>
