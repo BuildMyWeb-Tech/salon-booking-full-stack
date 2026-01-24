@@ -38,14 +38,33 @@ const appointmentSchema = new mongoose.Schema(
       required: true
     },
 
+    // Backward compatibility - combined service names
     service: {
       type: String,
       default: "Hair Styling"
     },
 
+    // ✅ NEW: Array of services with individual prices
+    services: [{
+      name: {
+        type: String,
+        required: true
+      },
+      price: {
+        type: Number,
+        required: true
+      }
+    }],
+
     payment: {
       type: Boolean,
       default: false
+    },
+
+    paymentMethod: {
+      type: String,
+      enum: ['razorpay', 'stripe', 'cash', null],
+      default: null
     },
 
     cancelled: {

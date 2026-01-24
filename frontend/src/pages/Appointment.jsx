@@ -23,7 +23,9 @@ import {
   CheckCircle2,
   ArrowRight,
   Shield,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  Minus
 } from "lucide-react";
 
 const Appointment = () => {
@@ -42,13 +44,15 @@ const Appointment = () => {
     const [selectedSlotISO, setSelectedSlotISO] = useState('');
     const [loading, setLoading] = useState(false);
     const [bookingLoading, setBookingLoading] = useState(false);
-    const [selectedService, setSelectedService] = useState(null);
+    const [selectedServices, setSelectedServices] = useState([]); // Changed to array
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [paymentLoading, setPaymentLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [slotSettings, setSlotSettings] = useState(null);
+    const [allServices, setAllServices] = useState([]); // All available services
+    const [stylistServices, setStylistServices] = useState([]); // Services for this stylist
 
     const navigate = useNavigate();
 
@@ -62,48 +66,27 @@ const Appointment = () => {
         });
     };
 
-    const getServicesBySpeciality = (speciality) => {
-        const baseServices = [
-            { id: 1, name: "Classic Haircut", price: 500 },
-            { id: 2, name: "Styling & Blowout", price: 800 },
-        ];
-        
-        const specialityServices = {
-            "Hair Styling Specialist": [
-                { id: 3, name: "Premium Style Cut", price: 1200 },
-                { id: 4, name: "Hair Texture Service", price: 1800 },
-            ],
-            "Hair Coloring Specialist": [
-                { id: 5, name: "Root Touch-up", price: 1500 },
-                { id: 6, name: "Full Color", price: 2500 },
-                { id: 7, name: "Highlights", price: 3000 },
-            ],
-            "Beard & Grooming Specialist": [
-                { id: 8, name: "Beard Trim & Shape", price: 400 },
-                { id: 9, name: "Luxury Shave", price: 800 },
-                { id: 10, name: "Beard Color", price: 1200 },
-            ],
-            "Hair Treatment Specialist": [
-                { id: 11, name: "Deep Conditioning", price: 1000 },
-                { id: 12, name: "Scalp Treatment", price: 1500 },
-                { id: 13, name: "Keratin Treatment", price: 4000 },
-            ],
-            "Bridal Hairstylist": [
-                { id: 14, name: "Bridal Trial", price: 2000 },
-                { id: 15, name: "Wedding Day Style", price: 5000 },
-                { id: 16, name: "Bridesmaid Style", price: 2500 },
-            ],
-            "Unisex Hairstylist": [
-                { id: 17, name: "Men's Haircut", price: 400 },
-                { id: 18, name: "Women's Haircut", price: 700 },
-                { id: 19, name: "Kids Haircut", price: 300 },
-            ],
-        };
+    // Fetch all service categories
+    const fetchAllServices = async () => {
+        try {
+            const { data } = await axios.get(`${backendUrl}/api/user/services`);
+            if (data.success) {
+                setAllServices(data.services);
+            }
+        } catch (error) {
+            console.error("Error fetching services:", error);
+            toast.error("Failed to load services");
+        }
+    };
 
-        return [
-            ...baseServices,
-            ...(specialityServices[speciality] || [])
-        ];
+    // Filter services based on stylist specialty
+    const filterStylistServices = () => {
+        if (!stylistInfo || !allServices.length) return;
+
+        const filtered = allServices.filter(service => 
+            stylistInfo.specialty.includes(service.name)
+        );
+        setStylistServices(filtered);
     };
 
     const fetchSlotSettings = async () => {
@@ -114,7 +97,6 @@ const Appointment = () => {
             }
         } catch (error) {
             console.error("Error fetching slot settings:", error);
-            // Use default settings if fetch fails
             setSlotSettings({
                 slotStartTime: "09:00",
                 slotEndTime: "17:00",
@@ -147,7 +129,6 @@ const Appointment = () => {
     const fetchSlots = async (dateObj) => {
         try {
             setLoading(true);
-
             const dateStr = dateObj.toISOString().split("T")[0];
 
             const { data } = await axios.get(
@@ -176,26 +157,28 @@ const Appointment = () => {
         }
     };
 
+    // Toggle service selection
+    const toggleService = (service) => {
+        const isSelected = selectedServices.find(s => s._id === service._id);
+        
+        if (isSelected) {
+            setSelectedServices(selectedServices.filter(s => s._id !== service._id));
+        } else {
+            setSelectedServices([...selectedServices, service]);
+        }
+    };
+
+    // Calculate total price
+    const getTotalPrice = () => {
+        return selectedServices.reduce((total, service) => total + service.basePrice, 0);
+    };
+
     const processPayment = async (method) => {
         setPaymentMethod(method);
         setPaymentLoading(true);
         
         try {
-            if (method === 'stripe') {
-                // Stripe payment flow
-                const stripe = await stripePromise;
-                
-                // In a real implementation, you'd create a payment intent on your server
-                // For this demo, we'll simulate a successful payment
-                setTimeout(() => {
-                    setPaymentLoading(false);
-                    setPaymentSuccess(true);
-                    
-                    // After successful payment, book the appointment
-                    completeBooking(method);
-                }, 1500);
-                
-            } else if (method === 'razorpay') {
+            if (method === 'razorpay') {
                 const res = await loadRazorpayScript();
                 if (!res) {
                     toast.error("Razorpay SDK failed to load");
@@ -203,19 +186,18 @@ const Appointment = () => {
                     return;
                 }
 
+                const totalAmount = getTotalPrice();
+
                 const options = {
                     key: razorpayKeyId,
-                    amount: selectedService.price * 100,
+                    amount: totalAmount * 100,
                     currency: "INR",
                     name: "Salon Stylist",
-                    description: `Booking with ${stylistInfo.name} for ${selectedService.name}`,
+                    description: `Booking with ${stylistInfo.name}`,
                     image: assets.logo || "https://example.com/your_logo.png",
                     handler: function (response) {
-                        // Payment successful
                         setPaymentLoading(false);
                         setPaymentSuccess(true);
-                        
-                        // After successful payment, book the appointment
                         completeBooking('razorpay');
                     },
                     prefill: {
@@ -227,7 +209,7 @@ const Appointment = () => {
                         address: "Salon Address"
                     },
                     theme: {
-                        color: "#8B5CF6" // Use your primary color
+                        color: "#8B5CF6"
                     },
                     modal: {
                         ondismiss: function() {
@@ -240,12 +222,10 @@ const Appointment = () => {
                 rzpay.open();
                 
             } else {
-                // Fallback for other payment methods or errors
+                // Fallback for other payment methods
                 setTimeout(() => {
                     setPaymentLoading(false);
                     setPaymentSuccess(true);
-                    
-                    // After successful payment, book the appointment
                     completeBooking(method);
                 }, 1500);
             }
@@ -266,8 +246,8 @@ const Appointment = () => {
             return toast.warning('Please select a time slot');
         }
 
-        if (!selectedService) {
-            return toast.warning('Please select a service');
+        if (selectedServices.length === 0) {
+            return toast.warning('Please select at least one service');
         }
 
         if (!paymentMethod) {
@@ -278,59 +258,55 @@ const Appointment = () => {
     };
 
     const completeBooking = async (paymentMethod) => {
-    setBookingLoading(true);
+        setBookingLoading(true);
+        const slotDate = selectedDate.toISOString().split("T")[0];
 
-    // YYYY-MM-DD
-    const slotDate = selectedDate.toISOString().split("T")[0];
+        try {
+            // Prepare services data
+            const servicesData = selectedServices.map(s => ({
+                name: s.name,
+                price: s.basePrice
+            }));
 
-    try {
-        const { data } = await axios.post(
-            backendUrl + '/api/user/book-appointment',
-            {
-                docId,
-                slotDate,
-                slotTime: selectedSlotISO, // ISO string
-                service: selectedService.name,
-                price: selectedService.price,
-                paymentMethod
-            },
-            { headers: { token } }
-        );
+            const { data } = await axios.post(
+                backendUrl + '/api/user/book-appointment',
+                {
+                    docId,
+                    slotDate,
+                    slotTime: selectedSlotISO,
+                    services: servicesData, // Send array of services
+                    totalAmount: getTotalPrice(),
+                    paymentMethod
+                },
+                { headers: { token } }
+            );
 
-        if (data.success) {
-            toast.success(data.message);
+            if (data.success) {
+                toast.success(data.message);
+                await fetchSlots(selectedDate);
+                setSelectedSlotISO('');
+                setSelectedServices([]);
+                getStylesData();
 
-            // 🔁 1. Refresh available slots immediately
-            await fetchSlots(selectedDate);
-
-            // 🔄 2. Reset selected slot
-            setSelectedSlotISO('');
-
-            // 🔄 3. Refresh stylist data (optional)
-            getStylesData();
-
-            // ⏳ 4. Redirect after short delay
-            setTimeout(() => {
+                setTimeout(() => {
+                    setBookingLoading(false);
+                    setShowPaymentModal(false);
+                    navigate('/my-appointments');
+                }, 1500);
+            } else {
+                toast.error(data.message);
                 setBookingLoading(false);
-                setShowPaymentModal(false);
-                navigate('/my-appointments');
-            }, 1500);
-
-        } else {
-            toast.error(data.message);
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || 'Error booking appointment');
             setBookingLoading(false);
         }
-
-    } catch (error) {
-        console.error(error);
-        toast.error(error.response?.data?.message || 'Error booking appointment');
-        setBookingLoading(false);
-    }
-};
-
+    };
 
     useEffect(() => {
         fetchSlotSettings();
+        fetchAllServices();
     }, []);
 
     useEffect(() => {
@@ -339,6 +315,12 @@ const Appointment = () => {
         }
     }, [stylists, docId]);
 
+    useEffect(() => {
+        if (stylistInfo && allServices.length > 0) {
+            filterStylistServices();
+        }
+    }, [stylistInfo, allServices]);
+
     if (!stylistInfo || !slotSettings) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -346,9 +328,6 @@ const Appointment = () => {
             </div>
         );
     }
-
-    // Get services based on stylist specialty
-    const services = getServicesBySpeciality(stylistInfo.speciality);
 
     return (
         <div className="bg-gray-50 min-h-screen">
@@ -367,7 +346,6 @@ const Appointment = () => {
                     {/* Stylist Profile Section */}
                     <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 sm:p-8">
                         <div className="flex flex-col md:flex-row gap-8">
-                            {/* Profile Image */}
                             <div className="md:w-1/4 lg:w-1/5">
                                 <div className="relative">
                                     <img 
@@ -375,7 +353,6 @@ const Appointment = () => {
                                         alt={stylistInfo.name} 
                                         className="w-full aspect-square object-cover rounded-xl shadow-md border border-white" 
                                     />
-                                    
                                     {stylistInfo.available && (
                                         <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm flex items-center gap-1">
                                             <CheckCircle size={12} />
@@ -383,43 +360,8 @@ const Appointment = () => {
                                         </div>
                                     )}
                                 </div>
-                                
-                                <div className="mt-6 space-y-3">
-                                    {stylistInfo?.phone && (
-                                        <a
-                                            href={`tel:${stylistInfo.phone}`}
-                                            className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors"
-                                        >
-                                            <Phone size={16} className="text-gray-500" />
-                                            <span>{stylistInfo.phone}</span>
-                                        </a>
-                                    )}
-                                    
-                                    {stylistInfo?.email && (
-                                        <a
-                                            href={`mailto:${stylistInfo.email}`}
-                                            className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors"
-                                        >
-                                            <Mail size={16} className="text-gray-500" />
-                                            <span>{stylistInfo.email}</span>
-                                        </a>
-                                    )}
-                                    
-                                    {stylistInfo?.instagram && (
-                                        <a
-                                            href={`https://instagram.com/${stylistInfo.instagram}`}
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-2 text-gray-700 hover:text-pink-600 transition-colors"
-                                        >
-                                            <Instagram size={16} className="text-gray-500" />
-                                            <span>@{stylistInfo.instagram}</span>
-                                        </a>
-                                    )}
-                                </div>
                             </div>
                             
-                            {/* Profile Info */}
                             <div className="md:w-3/4 lg:w-4/5">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                                     <div>
@@ -427,9 +369,8 @@ const Appointment = () => {
                                             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{stylistInfo.name}</h1>
                                             <img className="w-6 h-6" src={assets.verified_icon} alt="Verified" />
                                         </div>
-                                        
                                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-gray-600">
-                                            <p className="text-primary font-medium">{stylistInfo.speciality}</p>
+                                            <p className="text-primary font-medium">{stylistInfo.specialty.join(', ')}</p>
                                             <span className="hidden sm:inline text-gray-300">•</span>
                                             <div className="flex items-center gap-1">
                                                 <Award size={16} className="text-primary/80" />
@@ -439,24 +380,15 @@ const Appointment = () => {
                                     </div>
                                 </div>
                                 
-                                {/* About Section */}
                                 <div className="mt-6">
                                     <div className="flex items-center gap-2 mb-2">
                                         <h3 className="font-semibold text-gray-800">About</h3>
                                         <User size={14} className="text-primary" />
                                     </div>
-                                    <p className="text-gray-600">{stylistInfo.about || "Professional hairstylist with expertise in modern cutting techniques, color services, and personalized styling."}</p>
+                                    <p className="text-gray-600">{stylistInfo.about}</p>
                                 </div>
                                 
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-                                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
-                                        <div className="text-sm text-gray-500 flex items-center gap-2">
-                                            <Scissors size={14} className="text-primary" />
-                                            Starting Price
-                                        </div>
-                                        <div className="text-xl font-bold text-gray-800 mt-1">{currencySymbol}{stylistInfo.price || stylistInfo.fees || 500}</div>
-                                    </div>
-                                    
                                     <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
                                         <div className="text-sm text-gray-500 flex items-center gap-2">
                                             <Award size={14} className="text-primary" />
@@ -470,7 +402,15 @@ const Appointment = () => {
                                             <Clock size={14} className="text-primary" />
                                             Working Hours
                                         </div>
-                                        <div className="text-xl font-bold text-gray-800 mt-1">{slotSettings.slotStartTime} - {slotSettings.slotEndTime}</div>
+                                        <div className="text-xl font-bold text-gray-800 mt-1">{stylistInfo.workingHours || `${slotSettings.slotStartTime} - ${slotSettings.slotEndTime}`}</div>
+                                    </div>
+
+                                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+                                        <div className="text-sm text-gray-500 flex items-center gap-2">
+                                            <Scissors size={14} className="text-primary" />
+                                            Specialties
+                                        </div>
+                                        <div className="text-sm font-medium text-gray-800 mt-1">{stylistInfo.specialty.length} Services</div>
                                     </div>
                                 </div>
                             </div>
@@ -494,7 +434,7 @@ const Appointment = () => {
                                 </div>
                             </div>
                             <div className="hidden sm:flex text-sm text-gray-600 space-x-4">
-                                <span className={currentStep === 1 ? "font-medium text-primary" : ""}>Select Service</span>
+                                <span className={currentStep === 1 ? "font-medium text-primary" : ""}>Select Services</span>
                                 <span className={currentStep === 2 ? "font-medium text-primary" : ""}>Choose Time</span>
                                 <span className={currentStep === 3 ? "font-medium text-primary" : ""}>Payment</span>
                             </div>
@@ -505,46 +445,78 @@ const Appointment = () => {
                     <div className="p-6 sm:p-8">
                         {currentStep === 1 && (
                             <div className="animate-fadeIn">
-                                <h2 className="text-xl font-bold text-gray-800 mb-6">Select Service</h2>
+                                <h2 className="text-xl font-bold text-gray-800 mb-6">Select Services</h2>
                                 
-                                {/* Services Selection */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {services.map((service) => (
-                                        <div 
-                                            key={service.id}
-                                            onClick={() => {
-                                                setSelectedService(service);
-                                                setCurrentStep(2);
-                                            }}
-                                            className={`p-5 rounded-xl cursor-pointer transition-all ${
-                                                selectedService?.id === service.id
-                                                    ? 'border-2 border-primary bg-primary/5 shadow-md'
-                                                    : 'border border-gray-200 hover:border-primary/50 hover:shadow-md'
-                                            }`}
-                                        >
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <h3 className="font-semibold text-gray-800">{service.name}</h3>
+                                {stylistServices.length === 0 ? (
+                                    <p className="text-gray-500">No services available for this stylist</p>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {stylistServices.map((service) => {
+                                            const isSelected = selectedServices.find(s => s._id === service._id);
+                                            return (
+                                                <div 
+                                                    key={service._id}
+                                                    onClick={() => toggleService(service)}
+                                                    className={`p-5 rounded-xl cursor-pointer transition-all ${
+                                                        isSelected
+                                                            ? 'border-2 border-primary bg-primary/5 shadow-md'
+                                                            : 'border border-gray-200 hover:border-primary/50 hover:shadow-md'
+                                                    }`}
+                                                >
+                                                    {service.imageUrl && (
+                                                        <img 
+                                                            src={service.imageUrl} 
+                                                            alt={service.name}
+                                                            className="w-full h-32 object-cover rounded-lg mb-3"
+                                                        />
+                                                    )}
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <h3 className="font-semibold text-gray-800">{service.name}</h3>
+                                                            <p className="text-xs text-gray-500 mt-1">{service.description}</p>
+                                                        </div>
+                                                        {isSelected && (
+                                                            <CheckCircle2 size={20} className="text-primary flex-shrink-0" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex justify-between items-center mt-4 pt-2 border-t border-gray-100">
+                                                        <span className="font-bold text-gray-800 text-lg">{currencySymbol}{service.basePrice}</span>
+                                                        <button className={`text-xs px-3 py-1 rounded font-medium ${
+                                                            isSelected 
+                                                                ? 'bg-primary text-white' 
+                                                                : 'bg-primary/10 text-primary'
+                                                        }`}>
+                                                            {isSelected ? 'Selected' : 'Select'}
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                {selectedService?.id === service.id && (
-                                                    <CheckCircle2 size={20} className="text-primary" />
-                                                )}
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {selectedServices.length > 0 && (
+                                    <div className="mt-8 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <p className="text-sm text-gray-600">{selectedServices.length} service(s) selected</p>
+                                                <p className="text-lg font-bold text-gray-800">Total: {currencySymbol}{getTotalPrice()}</p>
                                             </div>
-                                            <div className="flex justify-between items-center mt-4 pt-2 border-t border-gray-100">
-                                                <span className="font-bold text-gray-800 text-lg">{currencySymbol}{service.price}</span>
-                                                <button className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-medium">
-                                                    Select
-                                                </button>
-                                            </div>
+                                            <button 
+                                                onClick={() => setCurrentStep(2)}
+                                                className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-all"
+                                            >
+                                                <span>Continue</span>
+                                                <ArrowRight size={18} />
+                                            </button>
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                         
                         {currentStep === 2 && (
                             <div className="animate-fadeIn">
-                                {/* Back button */}
                                 <div className="mb-6">
                                     <button 
                                         onClick={() => setCurrentStep(1)} 
@@ -555,22 +527,26 @@ const Appointment = () => {
                                     </button>
                                 </div>
                                 
-                                {/* Selected service summary */}
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <h3 className="text-lg font-semibold text-gray-800">{selectedService?.name}</h3>
+                                    <h3 className="font-semibold text-gray-800 mb-2">Selected Services</h3>
+                                    <div className="space-y-2">
+                                        {selectedServices.map(service => (
+                                            <div key={service._id} className="flex justify-between items-center">
+                                                <span className="text-gray-700">{service.name}</span>
+                                                <span className="font-medium text-primary">{currencySymbol}{service.basePrice}</span>
+                                            </div>
+                                        ))}
+                                        <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
+                                            <span className="font-semibold text-gray-800">Total</span>
+                                            <span className="text-lg font-bold text-primary">{currencySymbol}{getTotalPrice()}</span>
                                         </div>
-                                        <div className="text-lg font-bold text-primary">{currencySymbol}{selectedService?.price}</div>
                                     </div>
                                 </div>
                             
                                 <h2 className="text-xl font-bold text-gray-800 mb-6">Select Date & Time</h2>
                                 
-                                {/* Date Selection */}
                                 <div className="mb-8">
                                     <label className="block text-sm font-medium text-gray-700 mb-3">Select Date</label>
-                                    
                                     <input
                                         type="date"
                                         className="w-full sm:w-auto border rounded-lg px-4 py-2 focus:border-primary focus:ring-1 focus:ring-primary"
@@ -585,7 +561,6 @@ const Appointment = () => {
                                     />
                                 </div>
                                 
-                                {/* Time Selection */}
                                 {selectedDate && (
                                     <div className="mb-8">
                                         <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -622,7 +597,6 @@ const Appointment = () => {
                                     </div>
                                 )}
                                 
-                                {/* Action Button */}
                                 <div className="mt-8 flex justify-end">
                                     <button 
                                         onClick={() => {
@@ -648,7 +622,6 @@ const Appointment = () => {
                         
                         {currentStep === 3 && (
                             <div className="animate-fadeIn max-w-2xl mx-auto">
-                                {/* Back button */}
                                 <div className="mb-6">
                                     <button 
                                         onClick={() => setCurrentStep(2)} 
@@ -678,12 +651,19 @@ const Appointment = () => {
                                             </div>
                                         </div>
                                         
-                                        <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-200">
-                                            <div>
-                                                <span className="text-gray-600 text-sm">Service</span>
-                                                <p className="font-medium text-gray-800">{selectedService?.name}</p>
+                                        <div className="pb-3 border-b border-gray-200">
+                                            <span className="text-gray-600 text-sm">Services</span>
+                                            <div className="space-y-2 mt-2">
+                                                {selectedServices.map(service => (
+                                                    <div key={service._id} className="flex justify-between items-center">
+                                                        <p className="font-medium text-gray-800">{service.name}</p>
+                                                        <p className="text-sm text-gray-600">{currencySymbol}{service.basePrice}</p>
+                                                    </div>
+                                                ))}
                                             </div>
-                                            
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-200">
                                             <div>
                                                 <span className="text-gray-600 text-sm">Date & Time</span>
                                                 <p className="font-medium text-gray-800">
@@ -704,7 +684,7 @@ const Appointment = () => {
                                         
                                         <div className="flex justify-between items-center text-lg">
                                             <span className="font-medium text-gray-800">Total Amount</span>
-                                            <span className="font-bold text-gray-900">{currencySymbol}{selectedService?.price}</span>
+                                            <span className="font-bold text-gray-900">{currencySymbol}{getTotalPrice()}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -771,7 +751,7 @@ const Appointment = () => {
                                         ) : (
                                             <>
                                                 <CreditCard size={20} />
-                                                <span>Pay & Confirm {currencySymbol}{selectedService?.price}</span>
+                                                <span>Pay & Confirm {currencySymbol}{getTotalPrice()}</span>
                                             </>
                                         )}
                                     </button>
