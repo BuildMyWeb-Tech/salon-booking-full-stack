@@ -7,7 +7,13 @@ import {
   Palette,
   Sparkles,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Star,
+  Award,
+  Users,
+  TrendingUp,
+  Zap,
+  CheckCircle2
 } from 'lucide-react'
 
 const Banner = () => {
@@ -31,33 +37,60 @@ const Banner = () => {
 
   const FastBookingCard = ({ className = '' }) => (
     <motion.div
-      className={`bg-white rounded-2xl p-6 shadow-2xl w-[280px] ${className}`}
+      className={`bg-white rounded-2xl p-6 shadow-2xl w-[280px] border-2 border-purple-100 ${className}`}
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      whileHover={{ scale: 1.02, boxShadow: '0 25px 50px -12px rgba(139, 92, 246, 0.25)' }}
     >
-      <div className='flex items-center gap-3 mb-4'>
-        <div className='w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary'>
-          <Clock size={22} />
-        </div>
+      <div className='flex items-center gap-3 mb-5'>
+        <motion.div 
+          className='w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center text-white shadow-lg'
+          animate={{ rotate: [0, 5, -5, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Zap size={22} fill="currentColor" />
+        </motion.div>
         <div>
-          <p className='font-semibold text-gray-800'>Fast Booking</p>
-          <p className='text-gray-500 text-sm'>Book in seconds</p>
+          <p className='font-bold text-gray-900 text-base'>Fast Booking</p>
+          <p className='text-gray-600 text-sm flex items-center gap-1'>
+            <CheckCircle2 size={14} className="text-green-500" />
+            Book in seconds
+          </p>
         </div>
       </div>
 
-      <div className='flex justify-between items-center gap-3 text-center'>
+      <div className='flex justify-between items-start gap-3 text-center relative'>
+        {/* Progress Line */}
+        <div className='absolute top-5 left-5 right-5 h-0.5 bg-gray-200'>
+          <motion.div
+            className='h-full bg-gradient-to-r from-primary to-purple-600'
+            initial={{ width: '0%' }}
+            animate={{ 
+              width: activeStep === 1 ? '0%' : activeStep === 2 ? '50%' : '100%' 
+            }}
+            transition={{ duration: 0.5 }}
+          />
+        </div>
+
         {[1, 2, 3].map(step => (
-          <div key={step} className='flex flex-col items-center'>
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-500 ${
+          <div key={step} className='flex flex-col items-center relative z-10'>
+            <motion.div
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-500 ${
                 activeStep === step
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-400'
+                  ? 'bg-gradient-to-br from-primary to-purple-600 text-white shadow-lg scale-110'
+                  : activeStep > step
+                  ? 'bg-gradient-to-br from-green-400 to-green-500 text-white'
+                  : 'bg-white border-2 border-gray-300 text-gray-400'
               }`}
+              animate={activeStep === step ? { scale: [1, 1.1, 1] } : {}}
+              transition={{ duration: 0.5 }}
             >
-              {step}
-            </div>
-            <span className='text-xs text-gray-500 mt-1 whitespace-nowrap'>
+              {activeStep > step ? <CheckCircle2 size={18} /> : step}
+            </motion.div>
+            <span className={`text-xs mt-2 whitespace-nowrap font-medium transition-colors ${
+              activeStep >= step ? 'text-gray-900' : 'text-gray-500'
+            }`}>
               {step === 1 && 'Choose Stylist'}
               {step === 2 && 'Pick Time'}
               {step === 3 && 'Confirm'}
@@ -69,73 +102,179 @@ const Banner = () => {
   )
 
   return (
-    <section className='w-full bg-gray-50'>
+    <section className='w-full bg-gradient-to-b from-purple-50 via-pink-50 to-white py-12 sm:py-16'>
       <div className='container mx-auto px-4'>
         <motion.div
-          className='bg-gradient-to-r from-primary via-purple-600 to-indigo-600 rounded-2xl overflow-hidden shadow-2xl'
+          className='bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-3xl overflow-hidden shadow-2xl relative'
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
         >
-          <div className='flex flex-col md:flex-row'>
+          {/* Animated Background Pattern */}
+          <div className='absolute inset-0 opacity-10'>
+            <div className='absolute top-0 left-0 w-72 h-72 bg-white rounded-full blur-3xl'></div>
+            <div className='absolute bottom-0 right-0 w-96 h-96 bg-pink-300 rounded-full blur-3xl'></div>
+          </div>
+
+          <div className='flex flex-col md:flex-row relative z-10'>
 
             {/* LEFT CONTENT */}
             <div className='w-full md:w-3/5 p-8 sm:p-10 lg:p-16'>
               <div className='max-w-xl'>
 
-                <div className='inline-block mb-4 bg-white/20 backdrop-blur px-4 py-1 rounded-full'>
-                  <span className='text-white text-sm font-medium'>
+                <motion.div 
+                  className='inline-flex items-center gap-2 mb-5 bg-white/20 backdrop-blur-md px-5 py-2 rounded-full border border-white/30 shadow-lg'
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Star size={16} className="text-yellow-300" fill="currentColor" />
+                  <span className='text-white text-sm font-semibold'>
                     Premium Salon Experience
                   </span>
-                </div>
+                  <Award size={16} className="text-yellow-300" />
+                </motion.div>
 
-                <h2 className='text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight'>
+                <motion.h2 
+                  className='text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-white mb-5 leading-tight'
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
                   Elevate Your Look <br />
-                  With Expert Salon Care
-                </h2>
+                  <span className='bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 text-transparent bg-clip-text'>
+                    With Expert Salon Care
+                  </span>
+                </motion.h2>
 
-                <p className='text-white/90 text-sm sm:text-base mb-6'>
+                <motion.p 
+                  className='text-white/95 text-sm sm:text-base lg:text-lg mb-7 leading-relaxed'
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
                   From precision cuts to complete makeovers, our professional stylists
-                  deliver personalized services designed for you.
-                </p>
+                  deliver personalized services designed to bring out your best self.
+                </motion.p>
 
-                <div className='flex flex-wrap gap-2 mb-8'>
+                {/* Stats */}
+                <motion.div 
+                  className='grid grid-cols-3 gap-4 mb-7 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20'
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <div className='text-center'>
+                    <div className='flex items-center justify-center mb-1'>
+                      <Users size={20} className="text-yellow-300" />
+                    </div>
+                    <p className='text-2xl font-bold text-white'>5000+</p>
+                    <p className='text-white/80 text-xs'>Happy Clients</p>
+                  </div>
+                  <div className='text-center border-x border-white/20'>
+                    <div className='flex items-center justify-center mb-1'>
+                      <Award size={20} className="text-yellow-300" />
+                    </div>
+                    <p className='text-2xl font-bold text-white'>50+</p>
+                    <p className='text-white/80 text-xs'>Expert Stylists</p>
+                  </div>
+                  <div className='text-center'>
+                    <div className='flex items-center justify-center mb-1'>
+                      <Star size={20} className="text-yellow-300" fill="currentColor" />
+                    </div>
+                    <p className='text-2xl font-bold text-white'>4.9</p>
+                    <p className='text-white/80 text-xs'>Rating</p>
+                  </div>
+                </motion.div>
+
+                <motion.div 
+                  className='flex flex-wrap gap-2 mb-8'
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                >
                   {services.map((service, index) => (
-                    <span
+                    <motion.span
                       key={index}
-                      className='flex items-center gap-2 px-3 py-1 bg-white/10 text-white text-sm rounded-full'
+                      className='flex items-center gap-2 px-4 py-2 bg-white/15 backdrop-blur-md text-white text-sm rounded-full border border-white/20 font-medium hover:bg-white/25 transition-all cursor-pointer'
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.6 + index * 0.1 }}
                     >
                       {service.icon}
                       {service.name}
-                    </span>
+                    </motion.span>
                   ))}
-                </div>
+                </motion.div>
 
-                <div className='flex flex-col sm:flex-row gap-4'>
-                  <button
+                <motion.div 
+                  className='flex flex-col sm:flex-row gap-4'
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                >
+                  <motion.button
                     onClick={() => navigate('/stylists')}
-                    className='bg-white text-primary px-8 py-3 rounded-full font-medium flex items-center justify-center gap-2'
+                    className='bg-white text-primary px-8 py-4 rounded-full font-bold flex items-center justify-center gap-2 shadow-2xl hover:shadow-3xl transition-all text-base group'
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     Book Appointment
-                    <ArrowRight size={18} />
-                  </button>
+                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  </motion.button>
 
-                  <button
+                  <motion.button
                     onClick={() => navigate('/login')}
-                    className='border-2 border-white text-white px-8 py-3 rounded-full font-medium'
+                    className='border-2 border-white text-white px-8 py-4 rounded-full font-bold hover:bg-white hover:text-primary transition-all text-base backdrop-blur-sm'
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     Create Account
-                  </button>
-                </div>
+                  </motion.button>
+                </motion.div>
+
+                {/* Trust Badge */}
+                {/* <motion.div 
+                  className='mt-8 flex items-center gap-3 text-white/90 text-sm'
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8 }}
+                >
+                  <div className='flex -space-x-2'>
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className='w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 border-2 border-white flex items-center justify-center text-white text-xs font-bold'>
+                        {String.fromCharCode(64 + i)}
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <p className='font-semibold'>Join 5000+ satisfied customers</p>
+                    <p className='text-white/70 text-xs'>Trusted by beauty enthusiasts</p>
+                  </div>
+                </motion.div> */}
               </div>
             </div>
 
             {/* RIGHT IMAGE — ONLY TAB & LAP */}
             <div className='hidden md:block md:w-2/5 relative'>
-              <img
-                src={assets.hair_styling || assets.hero_img}
-                alt='Salon'
-                className='w-full h-full object-contain'
-              />
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4, duration: 0.8 }}
+                className='h-full flex items-center justify-center p-8'
+              >
+                <div className='relative'>
+                  {/* Glow Effect */}
+                  <div className='absolute inset-0 bg-gradient-to-br from-pink-400 to-purple-400 rounded-3xl blur-3xl opacity-30'></div>
+                  
+                  <img
+                    src={assets.hair_styling || assets.hero_img}
+                    alt='Salon'
+                    className='relative w-full h-full object-contain drop-shadow-2xl'
+                  />
+                </div>
+              </motion.div>
 
               {/* FAST BOOKING — DESKTOP */}
               <div className='absolute bottom-8 left-[-60px]'>
@@ -149,6 +288,53 @@ const Banner = () => {
             <FastBookingCard />
           </div>
 
+          {/* Decorative Elements */}
+          <motion.div 
+            className='absolute top-10 right-10 w-20 h-20 hidden lg:block'
+            animate={{ rotate: 360 }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          >
+            <Sparkles className="text-yellow-300 opacity-30" size={80} />
+          </motion.div>
+
+          <motion.div 
+            className='absolute bottom-10 left-10 w-16 h-16 hidden lg:block'
+            animate={{ rotate: -360 }}
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          >
+            <Scissors className="text-pink-300 opacity-30" size={64} />
+          </motion.div>
+
+        </motion.div>
+
+        {/* Features Section Below Banner */}
+        <motion.div 
+          className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8'
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9 }}
+        >
+          {[
+            { icon: <Clock size={24} />, title: 'Quick Booking', desc: 'Book in under 60 seconds' },
+            { icon: <Award size={24} />, title: 'Certified Stylists', desc: 'All licensed professionals' },
+            { icon: <Star size={24} />, title: 'Top Rated', desc: '4.9/5 customer rating' },
+            { icon: <TrendingUp size={24} />, title: 'Latest Trends', desc: 'Modern styling techniques' }
+          ].map((feature, idx) => (
+            <motion.div
+              key={idx}
+              className='bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all border border-purple-100'
+              whileHover={{ y: -5, scale: 1.02 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1 + idx * 0.1 }}
+            >
+              <div className='w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg'>
+                {feature.icon}
+              </div>
+              <h3 className='font-bold text-gray-900 mb-2'>{feature.title}</h3>
+              <p className='text-gray-600 text-sm'>{feature.desc}</p>
+            </motion.div>
+          ))}
         </motion.div>
       </div>
     </section>
