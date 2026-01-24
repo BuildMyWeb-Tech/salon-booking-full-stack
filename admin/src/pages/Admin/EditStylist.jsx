@@ -37,50 +37,57 @@ const EditStylist = () => {
     const [loadingCategories, setLoadingCategories] = useState(true);
 
     // Load stylist data
-    useEffect(() => {
-        const fetchStylistData = async () => {
-            try {
-                setLoading(true);
-                const stylist = await getDoctorById(id);
+useEffect(() => {
+    const fetchStylistData = async () => {
+        try {
+            setLoading(true);
+            const stylist = await getDoctorById(id);
+            
+            console.log('Loaded stylist data:', stylist); // Debug log
+            
+            if (stylist) {
+                // Set form fields - with explicit phone handling
+                setName(stylist.name || '');
+                setEmail(stylist.email || '');
                 
-                if (stylist) {
-                    // Set form fields
-                    setName(stylist.name || '');
-                    setEmail(stylist.email || '');
-                    setPhone(stylist.phone || '');
-                    setExperience(stylist.experience || '1 Year');
-                    setPrice(stylist.price?.toString() || '');
-                    setAbout(stylist.about || '');
-                    
-                    // Handle specialty as array or string
-                    if (Array.isArray(stylist.specialty)) {
-                        setSpecialty(stylist.specialty);
-                    } else if (stylist.specialty) {
-                        setSpecialty([stylist.specialty]);
-                    }
-                    
-                    setCertification(stylist.certification || '');
-                    setInstagram(stylist.instagram || '');
-                    setWorkingHours(stylist.workingHours || '');
-                    setImagePreview(stylist.image || '');
-                } else {
-                    toast.error('Could not find stylist data');
-                    navigate('/stylist-list');
+                // ✅ FIXED: Explicitly handle phone field
+                const phoneValue = stylist.phone || stylist.phoneNumber || '';
+                console.log('Phone value being set:', phoneValue); // Debug log
+                setPhone(phoneValue);
+                
+                setExperience(stylist.experience || '1 Year');
+                setPrice(stylist.price?.toString() || '');
+                setAbout(stylist.about || '');
+                
+                // Handle specialty as array or string
+                if (Array.isArray(stylist.specialty)) {
+                    setSpecialty(stylist.specialty);
+                } else if (stylist.specialty) {
+                    setSpecialty([stylist.specialty]);
                 }
-            } catch (error) {
-                console.error('Error loading stylist:', error);
-                toast.error('Failed to load stylist data');
+                
+                setCertification(stylist.certification || '');
+                setInstagram(stylist.instagram || '');
+                setWorkingHours(stylist.workingHours || '');
+                setImagePreview(stylist.image || '');
+            } else {
+                toast.error('Could not find stylist data');
                 navigate('/stylist-list');
-            } finally {
-                setLoading(false);
             }
-        };
-
-        fetchServiceCategories();
-        if (id) {
-            fetchStylistData();
+        } catch (error) {
+            console.error('Error loading stylist:', error);
+            toast.error('Failed to load stylist data');
+            navigate('/stylist-list');
+        } finally {
+            setLoading(false);
         }
-    }, [id]);
+    };
+
+    fetchServiceCategories();
+    if (id) {
+        fetchStylistData();
+    }
+}, [id, getDoctorById, navigate]);
 
     // Fetch service categories
     const fetchServiceCategories = async () => {

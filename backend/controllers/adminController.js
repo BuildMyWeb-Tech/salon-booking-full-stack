@@ -337,9 +337,17 @@ export const getDoctorById = async (req, res) => {
             });
         }
 
+        // ✅ Explicitly ensure phone is included in response
+        const stylistData = {
+            ...stylist.toObject(),
+            phone: stylist.phone || '', // Ensure phone is always present
+        };
+
+        console.log('Fetched stylist data:', stylistData); // Debug log
+
         return res.status(200).json({
             success: true,
-            stylist
+            stylist: stylistData
         });
     } catch (error) {
         console.error("Get stylist error:", error);
