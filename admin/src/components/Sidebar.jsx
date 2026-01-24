@@ -13,7 +13,21 @@ import {
   Cog,
   MenuIcon,
   X,
-  Scissors,LayoutGrid ,CalendarClock, CreditCard, Users 
+  Scissors,
+  LayoutGrid,
+  CalendarClock,
+  CreditCard,
+  Users,
+  LayoutDashboard,
+  Palette,
+  User,
+  Settings,
+  ClipboardList,
+  ImagePlus,
+  BookOpen,
+  DollarSign,
+  BarChart3,
+  Store
 } from "lucide-react";
 
 const iconClass = "min-w-[23px] w-[23px] h-[23px]";
@@ -49,7 +63,9 @@ const Sidebar = () => {
               <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
                 StyleStudio
               </h2>
-              <p className="text-xs text-gray-400">Stylist Admin</p>
+              <p className="text-xs text-gray-400">
+                {aToken ? 'Admin Portal' : dToken ? 'Stylist Portal' : 'Dashboard'}
+              </p>
             </div>
           ) : (
             <div className="w-full flex justify-center">
@@ -66,9 +82,9 @@ const Sidebar = () => {
           </button>
         </div>
 
-        {/* Desktop Menu */}
+        {/* ADMIN MENU - DESKTOP */}
         {aToken && (
-          <ul className="text-[#515151] mt-5 flex flex-col gap-1">
+          <ul className="text-[#515151] mt-5 flex flex-col gap-1 flex-grow overflow-y-auto">
             
             {/* Dashboard */}
             <li>
@@ -76,7 +92,7 @@ const Sidebar = () => {
                 `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
                  ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
               }>
-                <Home className={iconClass} />
+                <LayoutDashboard className={iconClass} />
                 {!collapsed && <p>Dashboard</p>}
               </NavLink>
             </li>
@@ -98,7 +114,7 @@ const Sidebar = () => {
                 `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
                 ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
               }>
-                <Scissors   className={iconClass} />
+                <Scissors className={iconClass} />
                 {!collapsed && <p>Stylists</p>}
               </NavLink>
             </li>
@@ -124,10 +140,9 @@ const Sidebar = () => {
                 }
               >
                 <LayoutGrid className={iconClass} />
-                {!collapsed && <p>Services Category</p>}
+                {!collapsed && <p>Services</p>}
               </NavLink>
             </li>
-
 
             {/* Slot Management */}
             <li>
@@ -141,14 +156,14 @@ const Sidebar = () => {
                 }
               >
                 <CalendarClock className={iconClass} />
-                {!collapsed && <p>Slot Management</p>}
+                {!collapsed && <p>Slots</p>}
               </NavLink>
             </li>
 
             {/* Payments */}
             <li>
               <NavLink
-                to="/payments"
+                to="/backup_AllAppoinment"
                 className={({ isActive }) =>
                   `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
                   ${isActive
@@ -161,10 +176,10 @@ const Sidebar = () => {
               </NavLink>
             </li>
 
-            {/* Customerss */}
+            {/* Customers */}
             <li>
               <NavLink
-                to="/Customers"
+                to="/customers"
                 className={({ isActive }) =>
                   `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
                   ${isActive
@@ -177,20 +192,126 @@ const Sidebar = () => {
               </NavLink>
             </li>
 
-
-            {/* Settings */}
+            {/* Reports */}
             <li>
-              <NavLink to="/my-profile" className={({ isActive }) =>
-                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
-                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-              }>
-                <Cog className={iconClass} />
-                {!collapsed && <p>Settings</p>}
+              <NavLink
+                to="/reports"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                  ${isActive
+                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                    : 'hover:bg-gray-50'}`
+                }
+              >
+                <BarChart3 className={iconClass} />
+                {!collapsed && <p>Reports</p>}
               </NavLink>
             </li>
 
+            {/* Settings */}
+            <li>
+              <NavLink to="/admin-settings" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <Settings className={iconClass} />
+                {!collapsed && <p>Settings</p>}
+              </NavLink>
+            </li>
           </ul>
         )}
+
+        {/* STYLIST MENU - DESKTOP */}
+        {dToken && (
+          <ul className="text-[#515151] mt-5 flex flex-col gap-1 flex-grow overflow-y-auto">
+            <li>
+              <NavLink to="/stylist-dashboard" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <LayoutDashboard className={iconClass} />
+                {!collapsed && <p>Dashboard</p>}
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink to="/stylist-appointments" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <CalendarClock className={iconClass} />
+                {!collapsed && <p>My Bookings</p>}
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink to="/stylist-services" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <Scissors className={iconClass} />
+                {!collapsed && <p>My Services</p>}
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink to="/stylist-portfolio" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <Palette className={iconClass} />
+                {!collapsed && <p>Portfolio</p>}
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink to="/stylist-clients" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <Users className={iconClass} />
+                {!collapsed && <p>My Clients</p>}
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink to="/stylist-earnings" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <DollarSign className={iconClass} />
+                {!collapsed && <p>Earnings</p>}
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink to="/stylist-profile" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <User className={iconClass} />
+                {!collapsed && <p>Profile</p>}
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink to="/stylist-settings" className={({ isActive }) =>
+                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
+                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+              }>
+                <Settings className={iconClass} />
+                {!collapsed && <p>Settings</p>}
+              </NavLink>
+            </li>
+          </ul>
+        )}
+
+        {/* Version display at bottom */}
+        {/* {!collapsed && (
+          <div className="mt-auto mb-4 px-6 text-xs text-gray-400">
+            v1.2.0
+          </div>
+        )} */}
       </div>
 
       {/* MOBILE SIDEBAR OVERLAY */}
@@ -200,17 +321,19 @@ const Sidebar = () => {
       >
         {/* MOBILE SIDEBAR PANEL */}
         <div 
-          className={`absolute top-0 left-0 h-screen w-64 bg-white shadow-lg transform transition-transform duration-300 
+          className={`absolute top-0 left-0 h-screen w-72 bg-white shadow-lg transform transition-transform duration-300 
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
           onClick={e => e.stopPropagation()}
         >
           {/* Mobile Header */}
-          <div className="py-5 px-6 border-b flex justify-between items-center">
+          <div className="py-5 px-6 border-b flex justify-between items-center bg-gradient-to-r from-primary/5 to-blue-50">
             <div>
               <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
                 StyleStudio
               </h2>
-              <p className="text-xs text-gray-400">Stylist Admin</p>
+              <p className="text-xs text-gray-500">
+                {aToken ? 'Admin Portal' : dToken ? 'Stylist Portal' : 'Dashboard'}
+              </p>
             </div>
 
             {/* ALWAYS show X when mobileOpen */}
@@ -224,243 +347,396 @@ const Sidebar = () => {
             )}
           </div>
 
-          {/* Mobile Menu */}
-          <ul className="text-[#515151] mt-5 flex flex-col gap-1">
+          {/* Mobile Menu - ADMIN */}
+          {aToken && (
+            <div className="overflow-y-auto h-[calc(100vh-80px)]">
+              <ul className="text-[#515151] py-2 flex flex-col">
+                <li>
+                  <NavLink 
+                    to="/" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <LayoutDashboard className={iconClass} />
+                    <p>Dashboard</p>
+                  </NavLink>
+                </li>
 
-            <li>
-              <NavLink 
-                to="/" 
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5
-                   ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-                }
-                onClick={() => setMobileOpen(false)}
-              >
-                <Home className={iconClass} />
-                <p>Dashboard</p>
-              </NavLink>
-            </li>
+                <li>
+                  <NavLink 
+                    to="/all-appointments" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Calendar className={iconClass} />
+                    <p>Appointments</p>
+                  </NavLink>
+                </li>
 
-            <li>
-              <NavLink 
-                to="/all-appointments" 
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5
-                   ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-                }
-                onClick={() => setMobileOpen(false)}
-              >
-                <Calendar className={iconClass} />
-                <p>Appointments</p>
-              </NavLink>
-            </li>
+                <li>
+                  <NavLink 
+                    to="/stylist-list" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Scissors className={iconClass} />
+                    <p>Stylists</p>
+                  </NavLink>
+                </li>
 
-            <li>
-              <NavLink 
-                to="/stylist-list" 
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5
-                   ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-                }
-                onClick={() => setMobileOpen(false)}
-              >
-                <Scissors  className={iconClass} />
-                <p>Stylists</p>
-              </NavLink>
-            </li>
+                <li>
+                  <NavLink 
+                    to="/add-stylist" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <UserPlus2 className={iconClass} />
+                    <p>Add Stylist</p>
+                  </NavLink>
+                </li>
 
-            <li>
-              <NavLink 
-                to="/add-stylist" 
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5
-                   ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-                }
-                onClick={() => setMobileOpen(false)}
-              >
-                <UserPlus2 className={iconClass} />
-                <p>Add Stylist</p>
-              </NavLink>
-            </li>
+                <li>
+                  <NavLink
+                    to="/services-category"
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <LayoutGrid className={iconClass} />
+                    <p>Services</p>
+                  </NavLink>
+                </li>
 
-            <li>
-              <NavLink
-                to="/services-category"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5
-                  ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-                }
-                onClick={() => setMobileOpen(false)}
-              >
-                <LayoutGrid className={iconClass} />
-                <p>Services Category</p>
-              </NavLink>
-            </li>
+                <li>
+                  <NavLink
+                    to="/slot-management"
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive
+                        ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                        : 'hover:bg-gray-50'}`
+                    }
+                  >
+                    <CalendarClock className={iconClass} />
+                    <p>Slot Management</p>
+                  </NavLink>
+                </li>
 
+                <li>
+                  <NavLink
+                    to="/payments"
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive
+                        ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                        : 'hover:bg-gray-50'}`
+                    }
+                  >
+                    <CreditCard className={iconClass} />
+                    <p>Payments</p>
+                  </NavLink>
+                </li>
 
-            {/* Slot Management */}
-            <li>
-              <NavLink
-                to="/slot-management"
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5
-                  ${isActive
-                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
-                    : 'hover:bg-gray-50'}`
-                }
-              >
-                <CalendarClock className={iconClass} />
-                <p>Slot Management</p>
-              </NavLink>
-            </li>
+                <li>
+                  <NavLink
+                    to="/customers"
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive
+                        ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                        : 'hover:bg-gray-50'}`
+                    }
+                  >
+                    <Users className={iconClass} />
+                    <p>Customers</p>
+                  </NavLink>
+                </li>
 
-            {/* Payments */}
-            <li>
-              <NavLink
-                to="/payments"
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5
-                  ${isActive
-                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
-                    : 'hover:bg-gray-50'}`
-                }
-              >
-                <CreditCard className={iconClass} />
-                <p>Payments</p>
-              </NavLink>
-            </li>
+                <li>
+                  <NavLink
+                    to="/reports"
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive
+                        ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
+                        : 'hover:bg-gray-50'}`
+                    }
+                  >
+                    <BarChart3 className={iconClass} />
+                    <p>Reports</p>
+                  </NavLink>
+                </li>
 
-            {/* Customerss */}
-            <li>
-              <NavLink
-                to="/Customers"
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5
-                  ${isActive
-                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
-                    : 'hover:bg-gray-50'}`
-                }
-              >
-                <Users className={iconClass} />
-                <p>Customers</p>
-              </NavLink>
-            </li>
+                <li>
+                  <NavLink 
+                    to="/admin-settings" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Settings className={iconClass} />
+                    <p>Settings</p>
+                  </NavLink>
+                </li>
+              </ul>
+            </div>
+          )}
 
+          {/* Mobile Menu - STYLIST */}
+          {dToken && (
+            <div className="overflow-y-auto h-[calc(100vh-80px)]">
+              <ul className="text-[#515151] py-2 flex flex-col">
+                <li>
+                  <NavLink 
+                    to="/stylist-dashboard" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <LayoutDashboard className={iconClass} />
+                    <p>Dashboard</p>
+                  </NavLink>
+                </li>
 
-            <li>
-              <NavLink 
-                to="/my-profile" 
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5
-                   ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-                }
-                onClick={() => setMobileOpen(false)}
-              >
-                <Cog className={iconClass} />
-                <p>Settings</p>
-              </NavLink>
-            </li>
+                <li>
+                  <NavLink 
+                    to="/stylist-appointments" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <CalendarClock className={iconClass} />
+                    <p>My Bookings</p>
+                  </NavLink>
+                </li>
 
-          </ul>
+                <li>
+                  <NavLink 
+                    to="/stylist-services" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Scissors className={iconClass} />
+                    <p>My Services</p>
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink 
+                    to="/stylist-portfolio" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Palette className={iconClass} />
+                    <p>Portfolio</p>
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink 
+                    to="/stylist-clients" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Users className={iconClass} />
+                    <p>My Clients</p>
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink 
+                    to="/stylist-earnings" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <DollarSign className={iconClass} />
+                    <p>Earnings</p>
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink 
+                    to="/stylist-profile" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <User className={iconClass} />
+                    <p>Profile</p>
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink 
+                    to="/stylist-settings" 
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 py-3.5 px-5
+                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Settings className={iconClass} />
+                    <p>Settings</p>
+                  </NavLink>
+                </li>
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAV */}
-      {!mobileOpen && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-xl py-2 z-30">
+      {/* MOBILE BOTTOM NAV - ADMIN */}
+      {!mobileOpen && aToken && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-xl py-1 z-30">
           <div className="flex justify-around">
             <NavLink 
               to="/" 
               className={({ isActive }) => 
-                `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
+                `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
               }
             >
-              <Home className="w-6 h-6" />
+              <LayoutDashboard className="w-5 h-5 mb-1" />
               <span>Dashboard</span>
             </NavLink>
 
             <NavLink 
               to="/all-appointments" 
               className={({ isActive }) => 
-                `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
+                `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
               }
             >
-              <Calendar className="w-6 h-6" />
-              <span>Appointments</span>
+              <Calendar className="w-5 h-5 mb-1" />
+              <span>Bookings</span>
             </NavLink>
 
             <NavLink 
               to="/stylist-list" 
               className={({ isActive }) => 
-                `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
+                `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
               }
             >
-              <Scissors   className="w-6 h-6" />
+              <Scissors className="w-5 h-5 mb-1" />
               <span>Stylists</span>
             </NavLink>
 
-            {/* <NavLink 
-              to="/add-stylist" 
-              className={({ isActive }) => 
-                `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
-              }
-            >
-              <UserPlus2 className="w-6 h-6" />
-              <span>Add Stylist</span>
-            </NavLink> */}
-
-            {/* Slot Management */}
             <NavLink
-              to="/slot-management"
+              to="/services-category"
               className={({ isActive }) =>
-                `flex flex-col items-center text-xs ${
+                `flex flex-col items-center text-xs p-2 ${
                   isActive ? 'text-primary' : 'text-gray-500'
                 }`
               }
             >
-              <CalendarClock className="w-6 h-6" />
-              <span>Slots</span>
+              <LayoutGrid className="w-5 h-5 mb-1" />
+              <span>Services</span>
             </NavLink>
 
-            {/* Payments */}
             <NavLink
               to="/payments"
               className={({ isActive }) =>
-                `flex flex-col items-center text-xs ${
+                `flex flex-col items-center text-xs p-2 ${
                   isActive ? 'text-primary' : 'text-gray-500'
                 }`
               }
             >
-              <CreditCard className="w-6 h-6" />
+              <CreditCard className="w-5 h-5 mb-1" />
               <span>Payments</span>
             </NavLink>
+          </div>
+        </div>
+      )}
 
-            {/* Customers */}
-            {/* <NavLink
-              to="/Customers"
-              className={({ isActive }) =>
-                `flex flex-col items-center text-xs ${
-                  isActive ? 'text-primary' : 'text-gray-500'
-                }`
+      {/* MOBILE BOTTOM NAV - STYLIST */}
+      {!mobileOpen && dToken && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-xl py-1 z-30">
+          <div className="flex justify-around">
+            <NavLink 
+              to="/stylist-dashboard" 
+              className={({ isActive }) => 
+                `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
               }
             >
-              <Users className="w-6 h-6" />
-              <span>Customerss</span>
+              <LayoutDashboard className="w-5 h-5 mb-1" />
+              <span>Dashboard</span>
             </NavLink>
 
-
             <NavLink 
-              to="/my-profile" 
+              to="/stylist-appointments" 
               className={({ isActive }) => 
-                `flex flex-col items-center text-xs ${isActive ? 'text-primary' : 'text-gray-500'}`
+                `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
               }
             >
-              <Cog className="w-6 h-6" />
-              <span>Settings</span>
-            </NavLink> */}
+              <CalendarClock className="w-5 h-5 mb-1" />
+              <span>Bookings</span>
+            </NavLink>
+
+            <NavLink 
+              to="/stylist-services" 
+              className={({ isActive }) => 
+                `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
+              }
+            >
+              <Scissors className="w-5 h-5 mb-1" />
+              <span>Services</span>
+            </NavLink>
+
+            <NavLink 
+              to="/stylist-portfolio" 
+              className={({ isActive }) => 
+                `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
+              }
+            >
+              <Palette className="w-5 h-5 mb-1" />
+              <span>Portfolio</span>
+            </NavLink>
+
+            <NavLink 
+              to="/stylist-profile" 
+              className={({ isActive }) => 
+                `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
+              }
+            >
+              <User className="w-5 h-5 mb-1" />
+              <span>Profile</span>
+            </NavLink>
           </div>
         </div>
       )}

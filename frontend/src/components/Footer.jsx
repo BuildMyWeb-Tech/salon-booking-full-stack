@@ -159,7 +159,7 @@ const Footer = () => {
       {/* COPYRIGHT */}
       <div className="py-6 pb-24 sm:pb-6 border-t text-center sm:flex sm:justify-between sm:items-center">
         <p className="text-sm text-gray-600">
-          © 2024 StyleStudio. All Rights Reserved.
+          © 2026 StyleStudio. All Rights Reserved.
         </p>
 
         <p className="text-sm text-gray-600 mt-3 sm:mt-0">

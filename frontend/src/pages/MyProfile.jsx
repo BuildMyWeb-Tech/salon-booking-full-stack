@@ -6,6 +6,9 @@ import { Camera, Pencil, User, Phone, MapPin, Calendar, Clock, X } from 'lucide-
 import { assets } from '../assets/assets'
 import { motion } from 'framer-motion' // Add this package for animations
 
+import { useNavigate } from 'react-router-dom';
+
+
 const MyProfile = () => {
   const [isEdit, setIsEdit] = useState(false)
   const [image, setImage] = useState(false)
@@ -18,13 +21,27 @@ const MyProfile = () => {
   })
   const [newPreferredStyle, setNewPreferredStyle] = useState('')
 
+
+
+  const navigate = useNavigate();
+  
   const {
     token,
     backendUrl,
     userData,
     setUserData,
     loadUserProfileData
-  } = useContext(AppContext)
+  } = useContext(AppContext);
+
+  // Redirect & load profile
+  useEffect(() => {
+    if (!token) {
+      navigate('/login');
+    } else {
+      loadUserProfileData();
+    }
+  }, [token]);
+
 
   // Load hair preferences from userData if available
   useEffect(() => {
@@ -32,6 +49,8 @@ const MyProfile = () => {
       setHairPreferences(userData.hairPreferences)
     }
   }, [userData])
+
+  
 
   const updateUserProfileData = async () => {
     try {

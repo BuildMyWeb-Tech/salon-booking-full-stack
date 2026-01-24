@@ -99,7 +99,7 @@ const AdminLogin = () => {
               Login
             </button>
             
-            {/* <div className='text-center mt-3'>
+            <div className='text-center mt-3'>
               {state === 'Admin' ? (
                 <p className='text-sm text-[#5E5E5E]'>
                   Stylist login? <span onClick={() => setState('Stylist')} className='text-primary underline cursor-pointer'>Click here</span>
@@ -109,7 +109,7 @@ const AdminLogin = () => {
                   Admin login? <span onClick={() => setState('Admin')} className='text-primary underline cursor-pointer'>Click here</span>
                 </p>
               )}
-            </div> */}
+            </div>
           </form>
         </div>
       </div>
