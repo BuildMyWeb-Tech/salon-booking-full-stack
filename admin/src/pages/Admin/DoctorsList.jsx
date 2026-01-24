@@ -279,7 +279,7 @@ const StylistsList = () => {
                       </h3>
 
                       <p className="text-primary text-sm font-medium">
-                        {stylist.specialty || stylist.speciality}
+                        {stylist.specialty.join(', ') || stylist.speciality.join(', ')}
                       </p>
                     </div>
 

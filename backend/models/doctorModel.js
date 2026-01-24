@@ -16,6 +16,11 @@ specialty: {
     available: { type: Boolean, default: true },
 
     price: { type: Number, required: true },
+    phone: { 
+        type: String, 
+        required: true,
+        default: '' 
+    },
 
     instagram: { type: String, default: "" },
     workingHours: { type: String, default: "10AM-7PM" },
