@@ -144,7 +144,7 @@ const Navbar = () => {
           </div> */}
           
           {/* Theme Switcher */}
-          <button 
+          {/* <button 
             onClick={toggleDarkMode}
             className={`flex items-center justify-center w-9 h-9 rounded-full ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'} transition-colors`}
             aria-label="Toggle dark mode"
@@ -154,7 +154,7 @@ const Navbar = () => {
             ) : (
               <Moon size={18} className="text-gray-600" />
             )}
-          </button>
+          </button> */}
           
           {/* User Profile */}
           <div className={`hidden sm:flex items-center gap-2 pl-4 border-l ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
