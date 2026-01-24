@@ -154,17 +154,17 @@ const Dashboard = () => {
 
 
       {/* Recent Appointments Table */}
-      <div className='mt-8 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden'>
+       {/* <div className='mt-8 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden'>
         <div className='flex items-center justify-between px-6 py-4 border-b'>
           <h2 className='font-semibold text-gray-800 flex items-center gap-2'>
             <Calendar className="h-5 w-5 text-primary" />
-            Recent Bookings
+            Recent Appointments
           </h2>
           
-          {/* <button className="flex items-center gap-1.5 text-sm text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+          <button className="flex items-center gap-1.5 text-sm text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
             <span>View All</span>
             <ArrowUpRight className="h-4 w-4" />
-          </button> */}
+          </button>
 
           <Link
             to="/all-appointments"
@@ -182,7 +182,7 @@ const Dashboard = () => {
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stylist</th>
-                  {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th> */}
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
@@ -223,11 +223,11 @@ const Dashboard = () => {
                         </div>
                       </div>
                     </td>
-                    {/* <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800">
                         {item.serviceType || "Haircut & Styling"}
                       </span>
-                    </td> */}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-500">
                         <Clock className="h-4 w-4 mr-1.5 text-gray-400" />
@@ -261,9 +261,9 @@ const Dashboard = () => {
                           Cancel
                         </button>
                       )}
-                      {/* <button className="text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-50 ml-1">
+                      <button className="text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-50 ml-1">
                         <MoreHorizontal className="h-4 w-4" />
-                      </button> */}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -279,7 +279,7 @@ const Dashboard = () => {
             </div>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* Quick Stats - This section is hidden as requested */}
       {/* <div className='mt-8 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hidden'>

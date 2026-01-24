@@ -1,3 +1,4 @@
+// backend/models/appointmentModel.js
 import mongoose from "mongoose";
 
 const appointmentSchema = new mongoose.Schema(
@@ -14,19 +15,16 @@ const appointmentSchema = new mongoose.Schema(
       required: true
     },
 
-    // YYYY-MM-DD (for UI grouping)
     slotDate: {
       type: String,
       required: true
     },
 
-    // "09:30 AM" (display only)
     slotTime: {
       type: String,
       required: true
     },
 
-    // ✅ SINGLE SOURCE OF TRUTH for date/time
     slotDateTime: {
       type: Date,
       required: true,
@@ -38,13 +36,25 @@ const appointmentSchema = new mongoose.Schema(
       required: true
     },
 
+    // ✅ NEW: Track partial payment
+    paidAmount: {
+      type: Number,
+      default: 0
+    },
+
+    // ✅ NEW: Payment percentage used
+    paymentPercentage: {
+      type: Number,
+      default: 100
+    },
+
     // Backward compatibility - combined service names
     service: {
       type: String,
       default: "Hair Styling"
     },
 
-    // ✅ NEW: Array of services with individual prices
+    // Array of services with individual prices
     services: [{
       name: {
         type: String,
@@ -72,7 +82,6 @@ const appointmentSchema = new mongoose.Schema(
       default: false
     },
 
-    // Track who cancelled the appointment
     cancelledBy: {
       type: String,
       enum: ['user', 'admin', null],
@@ -89,30 +98,30 @@ const appointmentSchema = new mongoose.Schema(
       default: false
     },
 
-    // Store user data for quick access
     userData: {
       name: String,
       phone: String,
+      email: String,
       image: String
     },
 
-    // Store doctor/stylist data for quick access
     docData: {
       name: String,
       image: String,
-      speciality: String
+      speciality: String,
+      price: Number
     }
   },
   { timestamps: true }
 );
 
-// 🚫 Prevent double booking (atomic)
+// Prevent double booking
 appointmentSchema.index(
   { doctorId: 1, slotDateTime: 1 },
   { unique: true }
 );
 
-// Index for efficient querying
+// Indexes for efficient querying
 appointmentSchema.index({ userId: 1, isCompleted: 1 });
 appointmentSchema.index({ doctorId: 1, isCompleted: 1 });
 appointmentSchema.index({ slotDateTime: 1 });
