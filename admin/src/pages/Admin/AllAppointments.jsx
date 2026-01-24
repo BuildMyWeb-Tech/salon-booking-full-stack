@@ -633,18 +633,18 @@ const parseDateString = (dateStr) => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                     Stylist
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                  {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                     Service
-                  </th>
+                  </th> */}
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date & Time
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Payment
-                  </th>
+                  </th> */}
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Price
                   </th>
@@ -716,16 +716,20 @@ const parseDateString = (dateStr) => {
                           <div className="text-sm font-medium text-gray-900">
                             {appointment.docData?.name || "N/A"}
                           </div>
+                          <div className="text-sm text-gray-900">
+                        {appointment.service || appointment.docData?.specialty || appointment.docData?.speciality || "N/A"}
+                      </div>
                         </div>
                       </div>
+                      
                     </td>
                     
                     {/* Service */}
-                    <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                    {/* <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                       <div className="text-sm text-gray-900">
                         {appointment.service || appointment.docData?.specialty || appointment.docData?.speciality || "N/A"}
                       </div>
-                    </td>
+                    </td> */}
                     
                     {/* Date & Time */}
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -743,9 +747,9 @@ const parseDateString = (dateStr) => {
                     </td>
                     
                     {/* Payment Status */}
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    {/* <td className="px-6 py-4 whitespace-nowrap">
                       <PaymentStatusBadge appointment={appointment} />
-                    </td>
+                    </td> */}
                     
                     {/* Price */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
