@@ -365,7 +365,7 @@ const Navbar = () => {
       {/* Spacer for fixed navbar */}
       <div className="h-20"></div>
       {/* Spacer for bottom nav on mobile */}
-      <div className="h-16 md:h-0"></div>
+      <div className=" md:h-0"></div>
     </>
   )
 }

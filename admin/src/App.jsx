@@ -38,10 +38,11 @@ const App = () => {
             <Route path="/edit-stylist/:id" element={<EditStylist />} />
             <Route path='/services-category' element={<ServiceCategory />} />
             <Route path='/stylist-list' element={<DoctorsList />} />
-            <Route path='/doctor-dashboard' element={<DoctorDashboard />} />
-            <Route path='/doctor-appointments' element={<DoctorAppointments />} />
-            <Route path='/doctor-profile' element={<DoctorProfile />} />
+            <Route path='/stylist-dashboard' element={<DoctorDashboard />} />
+            <Route path='/stylist-appointments' element={<DoctorAppointments />} />
+            {/* <Route path='/stylist-settings' element={<DoctorProfile />} /> */}
             <Route path="/my-profile" element={<MyProfile />} />
+            
           </Routes>
         </div>
       </div>
