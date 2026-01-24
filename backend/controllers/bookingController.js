@@ -70,15 +70,19 @@ export const getAvailableSlots = async (req, res) => {
 };
 
 /**
- * Book a new appointment
+ * Book a new appointment with multiple services
  */
 export const bookAppointment = async (req, res) => {
   try {
-    const { userId, docId, slotDate, slotTime, service, price, paymentMethod } = req.body;
+    const { userId, docId, slotDate, slotTime, services, totalAmount, paymentMethod } = req.body;
     
     // Basic validation
     if (!userId || !docId || !slotDate || !slotTime) {
       return res.json({ success: false, message: "Missing booking data" });
+    }
+
+    if (!services || !Array.isArray(services) || services.length === 0) {
+      return res.json({ success: false, message: "Please select at least one service" });
     }
     
     // slotTime MUST be ISO from frontend
@@ -91,6 +95,8 @@ export const bookAppointment = async (req, res) => {
     console.log("BOOK SLOT:", slotDate, slotDateTime.toISOString());
     console.log("USER ID:", userId);
     console.log("DOCTOR ID:", docId);
+    console.log("SERVICES:", services);
+    console.log("TOTAL AMOUNT:", totalAmount);
     
     // Fetch doctor and user for complete data
     const doctor = await doctorModel.findById(docId);
@@ -128,20 +134,28 @@ export const bookAppointment = async (req, res) => {
     doctor.slots_booked.set(slotKey, bookedSlots);
     await doctor.save();
     
-    // Create appointment with complete data
+    // Format display time
+    const displayTime = slotDateTime.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+
+    // Create service names string for backward compatibility
+    const serviceNames = services.map(s => s.name).join(', ');
+    
+    // Create appointment with complete data including multiple services
     const appointment = new appointmentModel({
       userId,
       doctorId: docId,
       slotDate,
-      slotTime: slotDateTime.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      }),
+      slotTime: displayTime,
       slotDateTime,
-      amount: price || doctor.price,
-      service: service || doctor.speciality,
+      amount: totalAmount,
+      service: serviceNames, // Combined service names for display
+      services: services, // Array of service objects
       payment: true,
+      paymentMethod: paymentMethod || 'razorpay',
       userData: {
         name: user.name,
         phone: user.phone,
@@ -150,7 +164,7 @@ export const bookAppointment = async (req, res) => {
       docData: {
         name: doctor.name,
         image: doctor.image,
-        speciality: doctor.speciality
+        speciality: doctor.specialty.join(', ')
       }
     });
     
@@ -167,22 +181,6 @@ export const bookAppointment = async (req, res) => {
     
     // Duplicate booking protection
     if (error.code === 11000) {
-      // Roll back the slot booking on the doctor
-      try {
-        const doctor = await doctorModel.findById(docId);
-        if (doctor) {
-          const slotKey = slotDate;
-          if (doctor.slots_booked instanceof Map) {
-            const bookedSlots = doctor.slots_booked.get(slotKey) || [];
-            const filtered = bookedSlots.filter(s => s !== slotDateTime.toISOString());
-            doctor.slots_booked.set(slotKey, filtered);
-            await doctor.save();
-          }
-        }
-      } catch (rollbackError) {
-        console.error("Rollback error:", rollbackError);
-      }
-      
       return res.json({
         success: false,
         message: "Slot already booked"
