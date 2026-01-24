@@ -119,17 +119,6 @@ const Sidebar = () => {
               </NavLink>
             </li>
 
-            {/* Add Stylist */}
-            <li>
-              <NavLink to="/add-stylist" className={({ isActive }) =>
-                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
-                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-              }>
-                <UserPlus2 className={iconClass} />
-                {!collapsed && <p>Add Stylist</p>}
-              </NavLink>
-            </li>
-
             {/* Services Category */}
             <li>
               <NavLink
@@ -157,65 +146,6 @@ const Sidebar = () => {
               >
                 <CalendarClock className={iconClass} />
                 {!collapsed && <p>Slots</p>}
-              </NavLink>
-            </li>
-
-            {/* Payments */}
-            <li>
-              <NavLink
-                to="/backup_AllAppoinment"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
-                  ${isActive
-                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
-                    : 'hover:bg-gray-50'}`
-                }
-              >
-                <CreditCard className={iconClass} />
-                {!collapsed && <p>Payments</p>}
-              </NavLink>
-            </li>
-
-            {/* Customers */}
-            <li>
-              <NavLink
-                to="/customers"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
-                  ${isActive
-                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
-                    : 'hover:bg-gray-50'}`
-                }
-              >
-                <Users className={iconClass} />
-                {!collapsed && <p>Customers</p>}
-              </NavLink>
-            </li>
-
-            {/* Reports */}
-            <li>
-              <NavLink
-                to="/reports"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
-                  ${isActive
-                    ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
-                    : 'hover:bg-gray-50'}`
-                }
-              >
-                <BarChart3 className={iconClass} />
-                {!collapsed && <p>Reports</p>}
-              </NavLink>
-            </li>
-
-            {/* Settings */}
-            <li>
-              <NavLink to="/admin-settings" className={({ isActive }) =>
-                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
-                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-              }>
-                <Settings className={iconClass} />
-                {!collapsed && <p>Settings</p>}
               </NavLink>
             </li>
           </ul>
@@ -293,25 +223,8 @@ const Sidebar = () => {
                 {!collapsed && <p>Profile</p>}
               </NavLink>
             </li>
-
-            <li>
-              <NavLink to="/stylist-settings" className={({ isActive }) =>
-                `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
-                ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-              }>
-                <Settings className={iconClass} />
-                {!collapsed && <p>Settings</p>}
-              </NavLink>
-            </li>
           </ul>
         )}
-
-        {/* Version display at bottom */}
-        {/* {!collapsed && (
-          <div className="mt-auto mb-4 px-6 text-xs text-gray-400">
-            v1.2.0
-          </div>
-        )} */}
       </div>
 
       {/* MOBILE SIDEBAR OVERLAY */}
@@ -394,20 +307,6 @@ const Sidebar = () => {
                 </li>
 
                 <li>
-                  <NavLink 
-                    to="/add-stylist" 
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 py-3.5 px-5
-                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-                    }
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <UserPlus2 className={iconClass} />
-                    <p>Add Stylist</p>
-                  </NavLink>
-                </li>
-
-                <li>
                   <NavLink
                     to="/services-category"
                     className={({ isActive }) =>
@@ -434,68 +333,6 @@ const Sidebar = () => {
                   >
                     <CalendarClock className={iconClass} />
                     <p>Slot Management</p>
-                  </NavLink>
-                </li>
-
-                <li>
-                  <NavLink
-                    to="/payments"
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 py-3.5 px-5
-                      ${isActive
-                        ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
-                        : 'hover:bg-gray-50'}`
-                    }
-                  >
-                    <CreditCard className={iconClass} />
-                    <p>Payments</p>
-                  </NavLink>
-                </li>
-
-                <li>
-                  <NavLink
-                    to="/customers"
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 py-3.5 px-5
-                      ${isActive
-                        ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
-                        : 'hover:bg-gray-50'}`
-                    }
-                  >
-                    <Users className={iconClass} />
-                    <p>Customers</p>
-                  </NavLink>
-                </li>
-
-                <li>
-                  <NavLink
-                    to="/reports"
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 py-3.5 px-5
-                      ${isActive
-                        ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary'
-                        : 'hover:bg-gray-50'}`
-                    }
-                  >
-                    <BarChart3 className={iconClass} />
-                    <p>Reports</p>
-                  </NavLink>
-                </li>
-
-                <li>
-                  <NavLink 
-                    to="/admin-settings" 
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 py-3.5 px-5
-                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-                    }
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <Settings className={iconClass} />
-                    <p>Settings</p>
                   </NavLink>
                 </li>
               </ul>
@@ -603,20 +440,6 @@ const Sidebar = () => {
                     <p>Profile</p>
                   </NavLink>
                 </li>
-
-                <li>
-                  <NavLink 
-                    to="/stylist-settings" 
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 py-3.5 px-5
-                      ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
-                    }
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <Settings className={iconClass} />
-                    <p>Settings</p>
-                  </NavLink>
-                </li>
               </ul>
             </div>
           )}
@@ -670,15 +493,15 @@ const Sidebar = () => {
             </NavLink>
 
             <NavLink
-              to="/payments"
+              to="/slot-management"
               className={({ isActive }) =>
                 `flex flex-col items-center text-xs p-2 ${
                   isActive ? 'text-primary' : 'text-gray-500'
                 }`
               }
             >
-              <CreditCard className="w-5 h-5 mb-1" />
-              <span>Payments</span>
+              <CalendarClock className="w-5 h-5 mb-1" />
+              <span>Slots</span>
             </NavLink>
           </div>
         </div>

@@ -21,8 +21,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  CalendarRange,
-  Plus
+  RefreshCcw
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -56,10 +55,12 @@ const AllAppointments = () => {
   
   // Calendar modal state
   const [showCalendarModal, setShowCalendarModal] = useState(false)
-  const [calendarView, setCalendarView] = useState('left') // 'left' or 'right' month
-  const [selectedQuickFilter, setSelectedQuickFilter] = useState('last7')
+  const [selectedQuickFilter, setSelectedQuickFilter] = useState(null)
+  const [tempStartDate, setTempStartDate] = useState('')
+  const [tempEndDate, setTempEndDate] = useState('')
   
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  const fullMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
   
   useEffect(() => {
     const fetchData = async () => {
@@ -128,10 +129,37 @@ const AllAppointments = () => {
         return;
     }
     
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    setTempStartDate(start.toISOString().split('T')[0]);
+    setTempEndDate(end.toISOString().split('T')[0]);
     setSelectedQuickFilter(filter);
+  }
+  
+  // Apply calendar selection
+  const applyCalendarFilter = () => {
+    setStartDate(tempStartDate);
+    setEndDate(tempEndDate);
     setShowCalendarModal(false);
+  }
+  
+  // Cancel calendar selection
+  const cancelCalendarFilter = () => {
+    setTempStartDate(startDate);
+    setTempEndDate(endDate);
+    setShowCalendarModal(false);
+  }
+  
+  // Clear calendar dates
+  const clearCalendarDates = () => {
+    setTempStartDate('');
+    setTempEndDate('');
+    setSelectedQuickFilter(null);
+  }
+  
+  // Open calendar modal
+  const openCalendarModal = () => {
+    setTempStartDate(startDate);
+    setTempEndDate(endDate);
+    setShowCalendarModal(true);
   }
   
   // Calendar component
@@ -169,8 +197,9 @@ const AllAppointments = () => {
         });
       }
       
-      // Next month days
-      const remainingDays = 42 - days.length;
+      // Next month days to fill grid
+      const totalCells = Math.ceil(days.length / 7) * 7;
+      const remainingDays = totalCells - days.length;
       for (let i = 1; i <= remainingDays; i++) {
         days.push({
           day: i,
@@ -193,9 +222,9 @@ const AllAppointments = () => {
     };
     
     const isDateInRange = (date) => {
-      if (!startDate || !endDate) return false;
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      if (!tempStartDate || !tempEndDate) return false;
+      const start = new Date(tempStartDate);
+      const end = new Date(tempEndDate);
       start.setHours(0, 0, 0, 0);
       end.setHours(0, 0, 0, 0);
       date.setHours(0, 0, 0, 0);
@@ -203,8 +232,8 @@ const AllAppointments = () => {
     };
     
     const isDateSelected = (date) => {
-      const start = startDate ? new Date(startDate) : null;
-      const end = endDate ? new Date(endDate) : null;
+      const start = tempStartDate ? new Date(tempStartDate) : null;
+      const end = tempEndDate ? new Date(tempEndDate) : null;
       if (start) start.setHours(0, 0, 0, 0);
       if (end) end.setHours(0, 0, 0, 0);
       date.setHours(0, 0, 0, 0);
@@ -215,17 +244,17 @@ const AllAppointments = () => {
     const handleDateClick = (date) => {
       const dateStr = date.toISOString().split('T')[0];
       
-      if (!startDate || (startDate && endDate)) {
-        setStartDate(dateStr);
-        setEndDate('');
+      if (!tempStartDate || (tempStartDate && tempEndDate)) {
+        setTempStartDate(dateStr);
+        setTempEndDate('');
         setSelectedQuickFilter(null);
       } else {
-        const start = new Date(startDate);
+        const start = new Date(tempStartDate);
         if (date < start) {
-          setStartDate(dateStr);
-          setEndDate(startDate);
+          setTempStartDate(dateStr);
+          setTempEndDate(tempStartDate);
         } else {
-          setEndDate(dateStr);
+          setTempEndDate(dateStr);
         }
         setSelectedQuickFilter('custom');
       }
@@ -233,17 +262,17 @@ const AllAppointments = () => {
     
     const renderCalendar = (monthDate) => {
       const days = getDaysInMonth(monthDate);
-      const monthName = months[monthDate.getMonth()];
+      const monthName = fullMonths[monthDate.getMonth()];
       const year = monthDate.getFullYear();
       
       return (
-        <div className="flex-1 min-w-0">
-          <div className="text-center font-semibold text-gray-700 mb-3 text-sm">
+        <div className="flex-1">
+          <div className="text-center font-bold text-gray-800 mb-4 text-base">
             {monthName} {year}
           </div>
           <div className="grid grid-cols-7 gap-1">
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-              <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+              <div key={day} className="text-center text-xs font-semibold text-gray-600 py-2">
                 {day}
               </div>
             ))}
@@ -258,11 +287,11 @@ const AllAppointments = () => {
                   onClick={() => dayObj.isCurrentMonth && handleDateClick(dayObj.date)}
                   disabled={!dayObj.isCurrentMonth}
                   className={`
-                    aspect-square p-1 text-xs rounded-md transition-all
-                    ${!dayObj.isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}
-                    ${isSelected ? 'bg-indigo-600 text-white font-semibold hover:bg-indigo-700' : ''}
-                    ${isInRange && !isSelected ? 'bg-indigo-100 text-indigo-900' : ''}
-                    ${isToday && !isSelected ? 'border-2 border-indigo-600' : ''}
+                    aspect-square p-1 text-sm rounded-md transition-all font-medium
+                    ${!dayObj.isCurrentMonth ? 'text-gray-300 cursor-not-allowed' : 'text-gray-800 hover:bg-blue-50'}
+                    ${isSelected ? 'bg-blue-600 text-white font-bold hover:bg-blue-700' : ''}
+                    ${isInRange && !isSelected ? 'bg-blue-100 text-blue-900' : ''}
+                    ${isToday && !isSelected && !isInRange ? 'border-2 border-blue-600 font-bold' : ''}
                   `}
                 >
                   {dayObj.day}
@@ -274,135 +303,150 @@ const AllAppointments = () => {
       );
     };
     
+    const formatDateRange = () => {
+      if (!tempStartDate || !tempEndDate) return 'Select date range';
+      const start = new Date(tempStartDate);
+      const end = new Date(tempEndDate);
+      return `${start.getMonth() + 1}/${start.getDate()}/${start.getFullYear()} to ${end.getMonth() + 1}/${end.getDate()}/${end.getFullYear()}`;
+    };
+    
     return (
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-5 z-50 w-full max-w-[680px]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        onClick={() => setShowCalendarModal(false)}
       >
-        {/* Quick Filters */}
-        <div className="mb-4 pb-4 border-b">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <button
-              onClick={() => applyQuickFilter('today')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                selectedQuickFilter === 'today' 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Today
-            </button>
-            <button
-              onClick={() => applyQuickFilter('yesterday')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                selectedQuickFilter === 'yesterday' 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Yesterday
-            </button>
-            <button
-              onClick={() => applyQuickFilter('last7')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                selectedQuickFilter === 'last7' 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Last 7 Days
-            </button>
-            <button
-              onClick={() => applyQuickFilter('last30')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                selectedQuickFilter === 'last30' 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Last 30 Days
-            </button>
-            <button
-              onClick={() => applyQuickFilter('thisYear')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                selectedQuickFilter === 'thisYear' 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              This Year
-            </button>
-            <button
-              onClick={() => applyQuickFilter('lastYear')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                selectedQuickFilter === 'lastYear' 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Last Year
-            </button>
-          </div>
-        </div>
-        
-        {/* Calendar Navigation */}
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => navigateMonth('prev')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          
-          <div className="text-sm text-gray-600 font-medium">
-            {startDate && endDate ? `${startDate} - ${endDate}` : 'Select date range'}
+        <motion.div 
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 sm:p-6 w-full max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Quick Filters */}
+          <div className="mb-5 pb-5 border-b">
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Quick Filters</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <button
+                onClick={() => applyQuickFilter('today')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  selectedQuickFilter === 'today' 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => applyQuickFilter('yesterday')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  selectedQuickFilter === 'yesterday' 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Yesterday
+              </button>
+              <button
+                onClick={() => applyQuickFilter('last7')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  selectedQuickFilter === 'last7' 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Last 7 Days
+              </button>
+              <button
+                onClick={() => applyQuickFilter('last30')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  selectedQuickFilter === 'last30' 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Last 30 Days
+              </button>
+              <button
+                onClick={() => applyQuickFilter('thisYear')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  selectedQuickFilter === 'thisYear' 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                This Year
+              </button>
+              <button
+                onClick={() => applyQuickFilter('lastYear')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  selectedQuickFilter === 'lastYear' 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Last Year
+              </button>
+            </div>
           </div>
           
-          <button
-            onClick={() => navigateMonth('next')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
-        
-        {/* Dual Calendar */}
-        <div className="flex gap-4 mb-4">
-          {renderCalendar(leftMonth)}
-          <div className="hidden sm:block">
-            {renderCalendar(rightMonth)}
-          </div>
-        </div>
-        
-        {/* Actions */}
-        <div className="flex justify-between items-center pt-4 border-t">
-          <button
-            onClick={() => {
-              setStartDate('');
-              setEndDate('');
-              setSelectedQuickFilter(null);
-            }}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            Clear
-          </button>
-          <div className="flex gap-2">
+          {/* Calendar Navigation */}
+          <div className="flex items-center justify-between mb-5">
             <button
-              onClick={() => setShowCalendarModal(false)}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              onClick={() => navigateMonth('prev')}
+              className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+              title="Previous month"
             >
-              Cancel
+              <ChevronLeft size={20} />
             </button>
+            
+            <div className="text-sm sm:text-base text-gray-700 font-medium text-center">
+              {formatDateRange()}
+            </div>
+            
             <button
-              onClick={() => setShowCalendarModal(false)}
-              className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              onClick={() => navigateMonth('next')}
+              className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+              title="Next month"
             >
-              Apply
+              <ChevronRight size={20} />
             </button>
           </div>
-        </div>
+          
+          {/* Dual Calendar - Full Width */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {renderCalendar(leftMonth)}
+            <div className="hidden md:block">
+              {renderCalendar(rightMonth)}
+            </div>
+          </div>
+          
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-5 border-t">
+            <button
+              onClick={clearCalendarDates}
+              className="w-full sm:w-auto px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors font-medium"
+            >
+              Clear Selection
+            </button>
+            <div className="flex gap-3 w-full sm:w-auto">
+              <button
+                onClick={cancelCalendarFilter}
+                className="flex-1 sm:flex-none px-5 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={applyCalendarFilter}
+                className="flex-1 sm:flex-none px-5 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-md"
+              >
+                Apply Filter
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </motion.div>
     );
   };
@@ -588,62 +632,47 @@ const AllAppointments = () => {
     
     if (appointment.cancelled) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 rounded-full text-xs font-semibold border border-red-200">
-          <XCircle size={14} />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 text-red-600 rounded-full text-xs font-semibold">
+          <XCircle size={12} />
           Cancelled
         </span>
       )
     } else if (appointment.isCompleted) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-semibold border border-green-200">
-          <CheckCircle size={14} />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-600 rounded-full text-xs font-semibold">
+          <CheckCircle size={12} />
           Completed
         </span>
       )
     } else if (isPastAndUnhandled) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-xs font-semibold border border-amber-200">
-          <AlertCircle size={14} />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-semibold">
+          <AlertCircle size={12} />
           Overdue
         </span>
       )
     } else {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const apptDate = parseDateString(appointment.slotDate);
-      apptDate.setHours(0, 0, 0, 0);
-      
-      if (apptDate.getTime() === today.getTime()) {
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold border border-blue-200">
-            <Calendar size={14} />
-            Today
-          </span>
-        )
-      } else {
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold border border-purple-200">
-            <Calendar size={14} />
-            Scheduled
-          </span>
-        )
-      }
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-600 rounded-full text-xs font-semibold">
+          <Calendar size={12} />
+          Upcoming
+        </span>
+      )
     }
   }
   
   const PaymentStatusBadge = ({ appointment }) => {
     if (appointment.payment) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold border border-emerald-200">
-          <CheckCircle size={14} />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-600 rounded-full text-xs font-semibold">
+          <DollarSign size={12} />
           Paid
         </span>
       )
     } else {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full text-xs font-semibold border border-orange-200">
-          <AlertTriangle size={14} />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 text-gray-600 rounded-full text-xs font-semibold">
+          <AlertTriangle size={12} />
           Unpaid
         </span>
       )
@@ -659,17 +688,26 @@ const AllAppointments = () => {
   };
 
   return (
-    <div className='w-full max-w-[1400px] mx-auto p-3 sm:p-6'>
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+    <div className='w-full max-w-[1600px] mx-auto p-3 sm:p-4 md:p-6'>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {/* Header */}
-        <div className="p-4 sm:p-6 lg:p-8 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+        <div className="p-4 sm:p-5 md:p-6 border-b border-gray-200 bg-white">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Appointment</h1>
-              <p className="text-sm sm:text-base text-gray-600">Manage all customer styling appointments</p>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-1">Salon Appointments</h1>
+              <p className="text-xs sm:text-sm text-gray-600">Manage all customer styling appointments</p>
             </div>
             
-            <div className="flex flex-wrap gap-2 sm:gap-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={manualRefresh}
+                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-md text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <RefreshCcw size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Refresh Data</span>
+                <span className="sm:hidden">Refresh</span>
+              </button>
+              
               <button
                 onClick={() => {
                   if (!sortedAppointments || sortedAppointments.length === 0) {
@@ -698,230 +736,312 @@ const AllAppointments = () => {
                   XLSX.utils.book_append_sheet(workbook, worksheet, 'Appointments')
                   XLSX.writeFile(workbook, 'Salon_Appointments.xlsx')
                 }}
-                className="px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md transition-all flex items-center gap-2 shadow-sm"
+                className="px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
               >
-                <Download size={18} />
-                <span className="hidden sm:inline">Export</span>
-              </button>
-              
-              <button
-                className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 hover:shadow-lg transition-all flex items-center gap-2 shadow-md"
-              >
-                <Plus size={18} />
-                <span className="hidden sm:inline">New Appointment</span>
+                <Download size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Export Excel</span>
+                <span className="sm:hidden">Export</span>
               </button>
             </div>
           </div>
         </div>
         
-        {/* Filters */}
-        <div className="p-4 sm:p-6 bg-gray-50 border-b border-gray-200">
-          {/* Search Bar */}
-          <div className="mb-4">
-            <div className="relative">
-              <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search" 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 pr-10 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full shadow-sm"
-              />
-              {searchTerm && (
+        {/* Filters Bar */}
+        <div className="p-3 sm:p-4 md:p-5 bg-gray-50 border-b border-gray-200">
+          <div className="flex flex-col gap-3">
+            {/* Status Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs sm:text-sm font-medium text-gray-600 mr-1">Status:</span>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 <button 
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setFilterStatus('all')}
+                  className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                    filterStatus === 'all' 
+                      ? 'bg-blue-600 text-white shadow-md' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  }`}
                 >
-                  <XCircle size={20} />
+                  All
                 </button>
-              )}
-            </div>
-          </div>
-          
-          {/* Date Range and Filters Row */}
-          <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
-            {/* Calendar Date Picker */}
-            <div className="relative flex-1 w-full lg:max-w-xs">
-              <button
-                onClick={() => setShowCalendarModal(!showCalendarModal)}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
-              >
-                <CalendarRange size={18} className="text-gray-500" />
-                <span className="flex-1 text-left">
-                  {startDate && endDate 
-                    ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
-                    : selectedQuickFilter 
-                      ? selectedQuickFilter.charAt(0).toUpperCase() + selectedQuickFilter.slice(1).replace(/([A-Z])/g, ' $1')
-                      : 'Select Date Range'
-                  }
-                </span>
-                <ChevronRight size={18} className="text-gray-400" />
-              </button>
-              
-              <AnimatePresence>
-                {showCalendarModal && <CalendarModal />}
-              </AnimatePresence>
+                <button 
+                  onClick={() => setFilterStatus('upcoming')}
+                  className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                    filterStatus === 'upcoming' 
+                      ? 'bg-blue-600 text-white shadow-md' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  Upcoming
+                </button>
+                <button 
+                  onClick={() => setFilterStatus('completed')}
+                  className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                    filterStatus === 'completed' 
+                      ? 'bg-blue-600 text-white shadow-md' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  Completed
+                </button>
+                <button 
+                  onClick={() => setFilterStatus('cancelled')}
+                  className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                    filterStatus === 'cancelled' 
+                      ? 'bg-blue-600 text-white shadow-md' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  Cancelled
+                </button>
+              </div>
             </div>
             
-            {/* Filters Button */}
-            <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-              <button
-                onClick={() => setFilterStatus(filterStatus === 'all' ? 'upcoming' : 'all')}
-                className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 shadow-sm ${
-                  filterStatus !== 'all' 
-                    ? 'bg-indigo-600 text-white' 
-                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <Filter size={18} />
-                Filters
-              </button>
+            {/* Search and Payment Filter Row */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              {/* Search Bar */}
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Search by customer, stylist, service or phone..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 pr-9 py-2 border border-gray-300 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                />
+                {searchTerm && (
+                  <button 
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <XCircle size={16} />
+                  </button>
+                )}
+              </div>
               
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm"
-              >
-                <option value="date-desc">Sort By : Recent</option>
-                <option value="date-asc">Sort By : Oldest</option>
-                <option value="price-desc">Sort By : Price ↓</option>
-                <option value="price-asc">Sort By : Price ↑</option>
-              </select>
-              
-              {(startDate || endDate || searchTerm || filterStatus !== 'all' || filterPayment !== 'all') && (
+              {/* Payment Filter and Date Range */}
+              <div className="flex flex-wrap gap-2">
+                {/* Payment Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs sm:text-sm font-medium text-gray-600">Payment:</span>
+                  <button 
+                    onClick={() => setFilterPayment('all')}
+                    className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                      filterPayment === 'all' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button 
+                    onClick={() => setFilterPayment('paid')}
+                    className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                      filterPayment === 'paid' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                  >
+                    Paid
+                  </button>
+                  <button 
+                    onClick={() => setFilterPayment('unpaid')}
+                    className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                      filterPayment === 'unpaid' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                  >
+                    Unpaid
+                  </button>
+                </div>
+                
+                {/* Calendar Date Range Picker */}
                 <button
-                  onClick={clearFilters}
-                  className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 transition-all flex items-center gap-2 shadow-sm"
+                  onClick={openCalendarModal}
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2"
                 >
-                  <XCircle size={18} />
-                  Clear
+                  <Calendar size={16} />
+                  <span className="hidden sm:inline">
+                    {startDate && endDate 
+                      ? `${new Date(startDate).getMonth() + 1}/${new Date(startDate).getDate()}/${new Date(startDate).getFullYear().toString().slice(-2)} - ${new Date(endDate).getMonth() + 1}/${new Date(endDate).getDate()}/${new Date(endDate).getFullYear().toString().slice(-2)}`
+                      : 'Date Range'
+                    }
+                  </span>
+                  <span className="sm:hidden">Date</span>
                 </button>
-              )}
+                
+                {/* Sort Dropdown */}
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="date-desc">Newest First</option>
+                  <option value="date-asc">Oldest First</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="price-asc">Price: Low to High</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
         
-        {/* Table Container */}
+        {/* Table Container - Full scroll on all devices */}
         <div className="overflow-x-auto">
           {appointmentsLoading ? (
-            <div className="py-20 flex flex-col items-center justify-center text-gray-500">
-              <div className="animate-spin h-16 w-16 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+            <div className="py-16 flex flex-col items-center justify-center text-gray-500">
+              <div className="animate-spin h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full"></div>
               <p className="mt-4 font-medium">Loading appointments...</p>
             </div>
           ) : paginatedAppointments.length === 0 ? (
-            <div className="py-20 flex flex-col items-center justify-center text-gray-500">
-              <Calendar size={64} className="text-gray-300 mb-4" />
-              <p className="text-lg font-medium">No appointments found</p>
+            <div className="py-16 flex flex-col items-center justify-center text-gray-500">
+              <Calendar size={48} className="text-gray-300 mb-4" />
+              <p className="font-medium">No appointments found</p>
               <p className="text-sm mt-2">Try changing your filters or search term</p>
             </div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
-                    Date & Time
+                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Customer
                   </th>
-                  <th scope="col" className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider hidden md:table-cell">
+                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Phone
+                  </th>
+                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                     Stylist
                   </th>
-                  <th scope="col" className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider hidden lg:table-cell">
-                    Service Type
+                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Service
                   </th>
-                  <th scope="col" className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Date & Time
+                  </th>
+                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                     Status
                   </th>
-                  <th scope="col" className="px-4 sm:px-6 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">
+                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Payment
+                  </th>
+                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Price
+                  </th>
+                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                     Actions
                   </th>
                 </tr>
               </thead>
               
-              <tbody className="bg-white divide-y divide-gray-100">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedAppointments.map((appointment, index) => (
-                  <tr key={index} className="hover:bg-indigo-50/30 transition-colors">
-                    {/* Date & Time */}
-                    <td className="px-4 sm:px-6 py-5">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0">
-                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center border border-indigo-200">
-                            <Calendar size={24} className="text-indigo-600" />
-                          </div>
+                  <tr key={index} className="hover:bg-gray-50 transition-colors">
+                    {/* Customer */}
+                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9">
+                          {appointment.userData?.image ? (
+                            <img 
+                              className="h-8 w-8 sm:h-9 sm:w-9 rounded-full object-cover" 
+                              src={appointment.userData.image} 
+                              alt={appointment.userData.name}
+                            />
+                          ) : (
+                            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-xs sm:text-sm">
+                              {appointment.userData?.name?.charAt(0) || '?'}
+                            </div>
+                          )}
                         </div>
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">
-                            {slotDateFormat(appointment.slotDate)}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {appointment.slotTime || "N/A"}
+                        <div className="ml-3">
+                          <div className="text-xs sm:text-sm font-medium text-gray-900">
+                            {appointment.userData?.name || "N/A"}
                           </div>
                         </div>
                       </div>
                     </td>
 
+                    {/* Phone */}
+                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
+                      <div className="text-xs sm:text-sm text-gray-900">
+                        {appointment.userData?.phone || "N/A"}
+                      </div>
+                    </td>
+
                     {/* Stylist */}
-                    <td className="px-4 sm:px-6 py-5 hidden md:table-cell">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-shrink-0 h-10 w-10">
+                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8">
                           {appointment.docData?.image ? (
                             <img 
-                              className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-md" 
+                              className="h-7 w-7 sm:h-8 sm:w-8 rounded-full object-cover" 
                               src={appointment.docData.image} 
                               alt={appointment.docData.name}
                             />
                           ) : (
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center border border-purple-200">
-                              <Scissors size={18} className="text-purple-600" />
+                            <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                              <Scissors size={12} className="sm:w-3.5 sm:h-3.5" />
                             </div>
                           )}
                         </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="ml-3">
+                          <div className="text-xs sm:text-sm font-medium text-gray-900">
                             {appointment.docData?.name || "N/A"}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {appointment.userData?.name || "N/A"}
                           </div>
                         </div>
                       </div>
                     </td>
                     
                     {/* Service */}
-                    <td className="px-4 sm:px-6 py-5 hidden lg:table-cell">
-                      <div className="text-sm font-medium text-gray-900">
+                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
+                      <div className="text-xs sm:text-sm text-gray-900">
                         {appointment.service || appointment.docData?.specialty || appointment.docData?.speciality || "N/A"}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {currency}{appointment.amount || appointment.price || 0}
                       </div>
                     </td>
                     
-                    {/* Status */}
-                    <td className="px-4 sm:px-6 py-5">
-                      <div className="flex flex-col gap-2">
-                        <StatusBadge appointment={appointment} />
-                        <PaymentStatusBadge appointment={appointment} />
+                    {/* Date & Time */}
+                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
+                      <div className="text-xs sm:text-sm font-medium text-gray-900">
+                        {slotDateFormat(appointment.slotDate)}
                       </div>
+                      <div className="text-xs text-gray-500">
+                        {appointment.slotTime || "N/A"}
+                      </div>
+                    </td>                  
+                    
+                    {/* Status */}
+                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
+                      <StatusBadge appointment={appointment} />
+                    </td>
+                    
+                    {/* Payment Status */}
+                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
+                      <PaymentStatusBadge appointment={appointment} />
+                    </td>
+                    
+                    {/* Price */}
+                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-semibold text-gray-900">
+                      {currency}{appointment.amount || appointment.price || 0}
                     </td>
                     
                     {/* Actions */}
-                    <td className="px-4 sm:px-6 py-5 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
                         {!appointment.cancelled && (
                           appointment.isCompleted ? (
                             <button 
                               onClick={() => handleUndoCompleted(appointment._id)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                              className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-all"
                               title="Undo completion"
                             >
-                              <RotateCcw size={20} />
+                              <RotateCcw size={16} className="sm:w-[18px] sm:h-[18px]" />
                             </button>
                           ) : (
                             <button 
                               onClick={() => handleMarkCompleted(appointment._id)}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                              className="p-1.5 sm:p-2 text-green-600 hover:bg-green-50 rounded-md transition-all"
                               title="Mark as completed"
                             >
-                              <CheckCircle size={20} />
+                              <CheckCircle size={16} className="sm:w-[18px] sm:h-[18px]" />
                             </button>
                           )
                         )}
@@ -929,10 +1049,10 @@ const AllAppointments = () => {
                         {!appointment.cancelled && (
                           <button 
                             onClick={() => handleDeleteConfirmation(appointment)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-md transition-all"
                             title="Cancel appointment"
                           >
-                            <Trash2 size={20} />
+                            <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
                           </button>
                         )}
                       </div>
@@ -944,51 +1064,74 @@ const AllAppointments = () => {
           )}
         </div>
         
-        {/* Pagination Footer */}
+        {/* Footer - Stats and Pagination */}
         {paginatedAppointments.length > 0 && (
-          <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200">
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="px-3 sm:px-4 md:px-6 py-3 bg-white border-t border-gray-200">
+            {/* Stats Bar */}
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 items-start sm:items-center justify-between mb-3 pb-3 border-b border-gray-200">
+              <div className="text-xs sm:text-sm text-gray-600">
+                Showing {startIndex + 1} to {Math.min(endIndex, sortedAppointments.length)} of {sortedAppointments.length} total
+              </div>
+              
+              <div className="flex flex-wrap gap-2 sm:gap-3 text-[10px] sm:text-xs">
+                <span className="text-gray-600">
+                  Upcoming: <span className="font-semibold text-purple-600">{localAppointments.filter(a => !a.isCompleted && !a.cancelled && !isAppointmentTimePast(a)).length}</span>
+                </span>
+                <span className="text-gray-600">
+                  Overdue: <span className="font-semibold text-amber-600">{localAppointments.filter(a => !a.isCompleted && !a.cancelled && isAppointmentTimePast(a)).length}</span>
+                </span>
+                <span className="text-gray-600">
+                  Completed: <span className="font-semibold text-green-600">{localAppointments.filter(a => a.isCompleted).length}</span>
+                </span>
+                <span className="text-gray-600">
+                  Cancelled: <span className="font-semibold text-red-600">{localAppointments.filter(a => a.cancelled).length}</span>
+                </span>
+              </div>
+            </div>
+            
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
               {/* Rows per page */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600 font-medium">Row Per Page</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm text-gray-600">Rows</span>
                 <select
                   value={rowsPerPage}
                   onChange={(e) => {
                     setRowsPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm"
+                  className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value={5}>5</option>
                   <option value={10}>10</option>
                   <option value={20}>20</option>
                   <option value={50}>50</option>
                 </select>
-                <span className="text-sm text-gray-600">Entries</span>
               </div>
               
-              {/* Pagination Controls */}
-              <div className="flex items-center gap-2">
+              {/* Page Navigation */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="p-1 sm:p-1.5 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  title="First page"
                 >
-                  <ChevronsLeft size={20} />
+                  <ChevronsLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
                 
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="p-1 sm:p-1.5 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  title="Previous page"
                 >
-                  <ChevronLeft size={20} />
+                  <ChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
                 
                 <div className="flex items-center gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
                     .filter(page => {
-                      // Show first page, last page, current page, and pages around current
                       return page === 1 || 
                              page === totalPages || 
                              Math.abs(page - currentPage) <= 1;
@@ -996,14 +1139,14 @@ const AllAppointments = () => {
                     .map((page, idx, arr) => (
                       <React.Fragment key={page}>
                         {idx > 0 && arr[idx - 1] !== page - 1 && (
-                          <span className="px-2 text-gray-400">...</span>
+                          <span className="px-1 sm:px-2 text-gray-400 text-xs sm:text-sm">...</span>
                         )}
                         <button
                           onClick={() => setCurrentPage(page)}
-                          className={`min-w-[40px] h-10 rounded-lg font-medium text-sm transition-all ${
+                          className={`min-w-[28px] sm:min-w-[36px] h-7 sm:h-9 rounded-md font-medium text-xs sm:text-sm transition-all ${
                             currentPage === page
-                              ? 'bg-indigo-600 text-white shadow-md'
-                              : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                              ? 'bg-blue-600 text-white shadow-md'
+                              : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                           }`}
                         >
                           {page}
@@ -1015,17 +1158,19 @@ const AllAppointments = () => {
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="p-1 sm:p-1.5 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  title="Next page"
                 >
-                  <ChevronRight size={20} />
+                  <ChevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
                 
                 <button
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="p-1 sm:p-1.5 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  title="Last page"
                 >
-                  <ChevronsRight size={20} />
+                  <ChevronsRight size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
               </div>
             </div>
@@ -1036,19 +1181,19 @@ const AllAppointments = () => {
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {showDeleteModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
+              className="bg-white rounded-lg max-w-md w-full p-5 sm:p-6 shadow-xl"
             >
-              <div className="mb-6 text-center">
-                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-                  <AlertTriangle size={32} className="text-red-600" />
+              <div className="mb-5 sm:mb-6 text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-red-100 mb-4">
+                  <AlertTriangle size={24} className="sm:w-7 sm:h-7 text-red-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Cancel Appointment</h3>
-                <p className="text-gray-600">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">Cancel Appointment</h3>
+                <p className="text-xs sm:text-sm text-gray-600">
                   Are you sure you want to cancel the appointment for <span className="font-semibold text-gray-900">{appointmentToDelete?.userData?.name}</span> on <span className="font-semibold text-gray-900">{slotDateFormat(appointmentToDelete?.slotDate)} at {appointmentToDelete?.slotTime}</span>?
                 </p>
               </div>
@@ -1056,22 +1201,25 @@ const AllAppointments = () => {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 px-5 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all font-medium flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 sm:py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-all font-medium text-xs sm:text-sm"
                 >
-                  <X size={18} />
-                  <span>Keep It</span>
+                  No, Keep It
                 </button>
                 <button
                   onClick={handleDeleteConfirmed}
-                  className="flex-1 px-5 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all font-medium flex items-center justify-center gap-2 shadow-lg"
+                  className="flex-1 px-4 py-2 sm:py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-all font-medium text-xs sm:text-sm shadow-md"
                 >
-                  <Check size={18} />
-                  <span>Yes, Cancel</span>
+                  Yes, Cancel
                 </button>
               </div>
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+      
+      {/* Calendar Modal */}
+      <AnimatePresence>
+        {showCalendarModal && <CalendarModal />}
       </AnimatePresence>
     </div>
   );
