@@ -297,7 +297,7 @@ const Stylists = () => {
                       </h3>
                       <p className="text-white/90 text-sm flex items-center gap-1.5 mb-2">
                         <Scissors size={14} />
-                        {stylist.speciality}
+                        {stylist.specialty.join(', ')}
                       </p>
                       
                       {/* Star rating */}
@@ -326,9 +326,16 @@ const Stylists = () => {
                         <span className="font-medium">{stylist.experience || '5 Years'}</span>
                       </span>
                       <span className="font-bold text-primary text-base">
-                        ₹{stylist.price || stylist.fees || 500}
+                        ₹{stylist.price || stylist.fees || null}
                       </span>
                     </div>
+                    {/* Instagram handle
+                    {stylist.instagram && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600 hover:text-pink-600 transition-colors">
+                        <Instagram size={14} className="text-pink-500" />
+                        @{stylist.instagram}
+                      </div>
+                    )} */}
 
                     {/* Location info */}
                     {stylist.location && (
@@ -338,20 +345,14 @@ const Stylists = () => {
                       </div>
                     )}
 
-                                        {/* Instagram handle */}
-                    {stylist.instagram && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 hover:text-pink-600 transition-colors">
-                        <Instagram size={14} className="text-pink-500" />
-                        @{stylist.instagram}
-                      </div>
-                    )}
+                    
 
                     {/* Next available slot */}
                     <div className="flex items-center gap-2 text-sm bg-gray-50 p-2.5 rounded-lg">
                       <Clock3 size={14} className="text-primary" />
                       <span className="text-gray-700">
                         {stylist.available ? 
-                          "Next Available: Today 2:00 PM" : 
+                          "Currently Available" : 
                           "Currently Not Available"}
                       </span>
                     </div>
@@ -471,7 +472,7 @@ const Stylists = () => {
                         {stylist.available ? (
                           <>
                             <Clock3 size={14} className="text-green-500" />
-                            <span>Next Available: Today 2:00 PM</span>
+                            <span> Currently Available</span>
                           </>
                         ) : (
                           <>
