@@ -25,7 +25,8 @@ import {
   Shield,
   AlertTriangle,
   Plus,
-  Minus
+  Minus,
+  Loader2
 } from "lucide-react";
 
 const Appointment = () => {
@@ -44,15 +45,17 @@ const Appointment = () => {
     const [selectedSlotISO, setSelectedSlotISO] = useState('');
     const [loading, setLoading] = useState(false);
     const [bookingLoading, setBookingLoading] = useState(false);
-    const [selectedServices, setSelectedServices] = useState([]); // Changed to array
+    const [selectedServices, setSelectedServices] = useState([]);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [paymentLoading, setPaymentLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [slotSettings, setSlotSettings] = useState(null);
-    const [allServices, setAllServices] = useState([]); // All available services
-    const [stylistServices, setStylistServices] = useState([]); // Services for this stylist
+    const [allServices, setAllServices] = useState([]);
+    const [stylistServices, setStylistServices] = useState([]);
+    const [availableDates, setAvailableDates] = useState([]);
+    const [dateLoading, setDateLoading] = useState(false);
 
     const navigate = useNavigate();
 
@@ -115,7 +118,7 @@ const Appointment = () => {
                 ],
                 allowRescheduling: true,
                 rescheduleHoursBefore: 24,
-                maxAdvanceBookingDays: 3,
+                maxAdvanceBookingDays: 30,
                 minBookingTimeBeforeSlot: 0
             });
         }
@@ -124,6 +127,60 @@ const Appointment = () => {
     const fetchStylistInfo = async () => {
         const stylistInfo = stylists.find((stylist) => stylist._id === docId);
         setStylistInfo(stylistInfo);
+    };
+
+    // Generate available dates based on slot settings
+    const generateAvailableDates = async () => {
+        if (!slotSettings) return;
+        
+        setDateLoading(true);
+        const dates = [];
+        const today = new Date();
+        const maxDays = slotSettings.maxAdvanceBookingDays || 30;
+        
+        for (let i = 0; i < maxDays && dates.length < 30; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+            
+            // Check if this day is in the daysOpen array
+            if (slotSettings.daysOpen && slotSettings.daysOpen.includes(dayName)) {
+                try {
+                    // Fetch slot count for this date
+                    const dateStr = date.toISOString().split("T")[0];
+                    const { data } = await axios.get(
+                        `${backendUrl}/api/user/available-slots`,
+                        {
+                            params: {
+                                date: dateStr,
+                                docId
+                            },
+                            headers: { token }
+                        }
+                    );
+                    
+                    const slotCount = data.success ? data.slots.length : 0;
+                    
+                    // Only add dates with available slots
+                    if (slotCount > 0) {
+                        dates.push({
+                            date: date,
+                            dayName: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+                            dayNumber: date.getDate(),
+                            month: date.toLocaleDateString('en-US', { month: 'short' }),
+                            isToday: i === 0,
+                            slotCount: slotCount
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error fetching slots for date:", date, error);
+                }
+            }
+        }
+        
+        setAvailableDates(dates);
+        setDateLoading(false);
     };
 
     const fetchSlots = async (dateObj) => {
@@ -209,7 +266,7 @@ const Appointment = () => {
                         address: "Salon Address"
                     },
                     theme: {
-                        color: "#8B5CF6"
+                        color: "#9333EA"
                     },
                     modal: {
                         ondismiss: function() {
@@ -274,7 +331,7 @@ const Appointment = () => {
                     docId,
                     slotDate,
                     slotTime: selectedSlotISO,
-                    services: servicesData, // Send array of services
+                    services: servicesData,
                     totalAmount: getTotalPrice(),
                     paymentMethod
                 },
@@ -321,10 +378,16 @@ const Appointment = () => {
         }
     }, [stylistInfo, allServices]);
 
+    useEffect(() => {
+        if (slotSettings && docId) {
+            generateAvailableDates();
+        }
+    }, [slotSettings, docId]);
+
     if (!stylistInfo || !slotSettings) {
         return (
             <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
             </div>
         );
     }
@@ -344,18 +407,18 @@ const Appointment = () => {
                 
                 <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                     {/* Stylist Profile Section */}
-                    <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 sm:p-8">
+                    <div className="bg-gradient-to-r from-blue-50 to-pink-50 p-6 sm:p-8">
                         <div className="flex flex-col md:flex-row gap-8">
                             <div className="md:w-1/4 lg:w-1/5">
                                 <div className="relative">
                                     <img 
                                         src={stylistInfo.image} 
                                         alt={stylistInfo.name} 
-                                        className="w-full aspect-square object-cover rounded-xl shadow-md border border-white" 
+                                        className="w-full aspect-square object-cover rounded-2xl shadow-lg border-4 border-white" 
                                     />
                                     {stylistInfo.available && (
-                                        <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm flex items-center gap-1">
-                                            <CheckCircle size={12} />
+                                        <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1.5">
+                                            <CheckCircle size={14} />
                                             Available 
                                         </div>
                                     )}
@@ -366,53 +429,50 @@ const Appointment = () => {
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{stylistInfo.name}</h1>
+                                            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">{stylistInfo.name}</h1>
                                             <img className="w-6 h-6" src={assets.verified_icon} alt="Verified" />
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-gray-600">
-                                            <p className="text-primary font-medium">{stylistInfo.specialty.join(', ')}</p>
-                                            <span className="hidden sm:inline text-gray-300">•</span>
-                                            <div className="flex items-center gap-1">
-                                                <Award size={16} className="text-primary/80" />
-                                                <span>{stylistInfo.experience}</span>
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-gray-600">
+                                            <p className="text-blue-600 font-semibold text-lg">{stylistInfo.specialty.join(' • ')}</p>
+                                            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg shadow-sm">
+                                                <Award size={16} className="text-blue-600" />
+                                                <span className="font-medium">{stylistInfo.experience}</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <div className="mt-6">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <h3 className="font-semibold text-gray-800">About</h3>
-                                        <User size={14} className="text-primary" />
+                                <div className="mt-6 bg-white/80 backdrop-blur-sm rounded-xl p-5 shadow-sm">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <User size={18} className="text-blue-600" />
+                                        <h3 className="font-semibold text-gray-900">About</h3>
                                     </div>
-                                    <p className="text-gray-600">{stylistInfo.about}</p>
+                                    <p className="text-gray-700 leading-relaxed">{stylistInfo.about}</p>
                                 </div>
                                 
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-                                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
-                                        <div className="text-sm text-gray-500 flex items-center gap-2">
-                                            <Award size={14} className="text-primary" />
+                                    <div className="bg-white p-5 rounded-xl shadow-md hover:shadow-lg transition-all border border-blue-100">
+                                        <div className="text-sm text-gray-600 flex items-center gap-2 mb-2">
+                                            <Award size={16} className="text-blue-600" />
                                             Experience
                                         </div>
-                                        <div className="text-xl font-bold text-gray-800 mt-1">{stylistInfo.experience}</div>
+                                        <div className="text-2xl font-bold text-gray-900">{stylistInfo.experience}</div>
                                     </div>
                                     
-                                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
-                                        <div className="text-sm text-gray-500 flex items-center gap-2">
-                                            <Clock size={14} className="text-primary" />
+                                    <div className="bg-white p-5 rounded-xl shadow-md hover:shadow-lg transition-all border border-blue-100">
+                                        <div className="text-sm text-gray-600 flex items-center gap-2 mb-2">
+                                            <Clock size={16} className="text-blue-600" />
                                             Working Hours
                                         </div>
-                                        <div className="text-xl font-bold text-gray-800 mt-1">{stylistInfo.workingHours || `${slotSettings.slotStartTime} - ${slotSettings.slotEndTime}`}</div>
+                                        <div className="text-lg font-bold text-gray-900">{stylistInfo.workingHours || `${slotSettings.slotStartTime} - ${slotSettings.slotEndTime}`}</div>
                                     </div>
 
-                                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
-                                        <div className="text-sm text-gray-500 flex items-center gap-2">
-                                            <Scissors size={14} className="text-primary" />
+                                    <div className="bg-white p-5 rounded-xl shadow-md hover:shadow-lg transition-all border border-blue-100">
+                                        <div className="text-sm text-gray-600 flex items-center gap-2 mb-2">
+                                            <Scissors size={16} className="text-blue-600" />
                                             Specialties
                                         </div>
-                                        <div className="text-sm font-medium text-gray-800 mt-1">{stylistInfo.specialty.length} Specialties</div>
-                                        <p className="text-primary font-medium">{stylistInfo.specialty.join(', ')}</p>
-
+                                        <div className="text-lg font-bold text-gray-900">{stylistInfo.specialty.length} Services</div>
                                     </div>
                                 </div>
                             </div>
@@ -420,26 +480,26 @@ const Appointment = () => {
                     </div>
                     
                     {/* Booking Steps Indicator */}
-                    <div className="px-6 sm:px-8 py-4 border-b border-gray-200 bg-white">
+                    <div className="px-6 sm:px-8 py-6 border-b border-gray-200 bg-white">
                         <div className="flex items-center justify-between max-w-3xl mx-auto">
-                            <div className="flex items-center">
-                                <div className={`w-8 h-8 rounded-full ${currentStep >= 1 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'} flex items-center justify-center font-medium`}>
-                                    1
+                            <div className="flex items-center flex-1">
+                                <div className={`w-10 h-10 rounded-full ${currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'} flex items-center justify-center font-semibold shadow-sm transition-all`}>
+                                    {currentStep > 1 ? <CheckCircle2 size={20} /> : '1'}
                                 </div>
-                                <div className={`h-1 w-12 sm:w-20 ${currentStep >= 2 ? 'bg-primary' : 'bg-gray-200'}`}></div>
-                                <div className={`w-8 h-8 rounded-full ${currentStep >= 2 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'} flex items-center justify-center font-medium`}>
-                                    2
+                                <div className={`h-1 flex-1 mx-2 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'} transition-all`}></div>
+                                <div className={`w-10 h-10 rounded-full ${currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'} flex items-center justify-center font-semibold shadow-sm transition-all`}>
+                                    {currentStep > 2 ? <CheckCircle2 size={20} /> : '2'}
                                 </div>
-                                <div className={`h-1 w-12 sm:w-20 ${currentStep >= 3 ? 'bg-primary' : 'bg-gray-200'}`}></div>
-                                <div className={`w-8 h-8 rounded-full ${currentStep >= 3 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'} flex items-center justify-center font-medium`}>
-                                    3
+                                <div className={`h-1 flex-1 mx-2 ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-200'} transition-all`}></div>
+                                <div className={`w-10 h-10 rounded-full ${currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'} flex items-center justify-center font-semibold shadow-sm transition-all`}>
+                                    {currentStep > 3 ? <CheckCircle2 size={20} /> : '3'}
                                 </div>
                             </div>
-                            <div className="hidden sm:flex text-sm text-gray-600 space-x-4">
-                                <span className={currentStep === 1 ? "font-medium text-primary" : ""}>Select Services</span>
-                                <span className={currentStep === 2 ? "font-medium text-primary" : ""}>Choose Time</span>
-                                <span className={currentStep === 3 ? "font-medium text-primary" : ""}>Payment</span>
-                            </div>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600 mt-3 max-w-3xl mx-auto px-2">
+                            <span className={currentStep === 1 ? "font-semibold text-blue-600" : ""}>Select Services</span>
+                            <span className={currentStep === 2 ? "font-semibold text-blue-600" : ""}>Choose Time</span>
+                            <span className={currentStep === 3 ? "font-semibold text-blue-600" : ""}>Payment</span>
                         </div>
                     </div>
                     
@@ -447,46 +507,39 @@ const Appointment = () => {
                     <div className="p-6 sm:p-8">
                         {currentStep === 1 && (
                             <div className="animate-fadeIn">
-                                <h2 className="text-xl font-bold text-gray-800 mb-6">Select Services</h2>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Services</h2>
                                 
                                 {stylistServices.length === 0 ? (
                                     <p className="text-gray-500">No services available for this stylist</p>
                                 ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                         {stylistServices.map((service) => {
                                             const isSelected = selectedServices.find(s => s._id === service._id);
                                             return (
                                                 <div 
                                                     key={service._id}
                                                     onClick={() => toggleService(service)}
-                                                    className={`p-5 rounded-xl cursor-pointer transition-all ${
+                                                    className={`p-6 rounded-2xl cursor-pointer transition-all transform hover:scale-105 ${
                                                         isSelected
-                                                            ? 'border-2 border-primary bg-primary/5 shadow-md'
-                                                            : 'border border-gray-200 hover:border-primary/50 hover:shadow-md'
+                                                            ? 'border-2 border-blue-600 bg-blue-50 shadow-xl'
+                                                            : 'border-2 border-gray-200 hover:border-blue-300 hover:shadow-lg bg-white'
                                                     }`}
                                                 >
-                                                    {/* {service.imageUrl && (
-                                                        <img 
-                                                            src={service.imageUrl} 
-                                                            alt={service.name}
-                                                            className="w-full h-32 object-cover rounded-lg mb-3"
-                                                        />
-                                                    )} */}
-                                                    <div className="flex justify-between items-start">
+                                                    <div className="flex justify-between items-start mb-4">
                                                         <div>
-                                                            <h3 className="font-semibold text-gray-800">{service.name}</h3>
-                                                            <p className="text-xs text-gray-500 mt-1">{service.description}</p>
+                                                            <h3 className="font-bold text-gray-900 text-lg mb-1">{service.name}</h3>
+                                                            <p className="text-sm text-gray-600 leading-relaxed">{service.description}</p>
                                                         </div>
                                                         {isSelected && (
-                                                            <CheckCircle2 size={20} className="text-primary flex-shrink-0" />
+                                                            <CheckCircle2 size={24} className="text-blue-600 flex-shrink-0" />
                                                         )}
                                                     </div>
-                                                    <div className="flex justify-between items-center mt-4 pt-2 border-t border-gray-100">
-                                                        <span className="font-bold text-gray-800 text-lg">{currencySymbol}{service.basePrice}</span>
-                                                        <button className={`text-xs px-3 py-1 rounded font-medium ${
+                                                    <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                                                        <span className="font-bold text-gray-900 text-xl">{currencySymbol}{service.basePrice}</span>
+                                                        <button className={`text-sm px-4 py-2 rounded-lg font-semibold transition-all ${
                                                             isSelected 
-                                                                ? 'bg-primary text-white' 
-                                                                : 'bg-primary/10 text-primary'
+                                                                ? 'bg-blue-600 text-white shadow-md' 
+                                                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                                                         }`}>
                                                             {isSelected ? 'Selected' : 'Select'}
                                                         </button>
@@ -498,18 +551,18 @@ const Appointment = () => {
                                 )}
 
                                 {selectedServices.length > 0 && (
-                                    <div className="mt-8 bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                        <div className="flex justify-between items-center">
+                                    <div className="mt-8 bg-gradient-to-r from-blue-50 to-pink-50 p-6 rounded-2xl border-2 border-blue-200 shadow-lg">
+                                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                                             <div>
-                                                <p className="text-sm text-gray-600">{selectedServices.length} service(s) selected</p>
-                                                <p className="text-lg font-bold text-gray-800">Total: {currencySymbol}{getTotalPrice()}</p>
+                                                <p className="text-sm text-gray-700 mb-1">{selectedServices.length} service(s) selected</p>
+                                                <p className="text-2xl font-bold text-gray-900">Total: {currencySymbol}{getTotalPrice()}</p>
                                             </div>
                                             <button 
                                                 onClick={() => setCurrentStep(2)}
-                                                className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-all"
+                                                className="flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                                             >
                                                 <span>Continue</span>
-                                                <ArrowRight size={18} />
+                                                <ArrowRight size={20} />
                                             </button>
                                         </div>
                                     </div>
@@ -522,78 +575,133 @@ const Appointment = () => {
                                 <div className="mb-6">
                                     <button 
                                         onClick={() => setCurrentStep(1)} 
-                                        className="flex items-center text-gray-600 hover:text-primary transition-colors"
+                                        className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
                                     >
-                                        <ChevronLeft size={18} />
-                                        <span className="text-sm">Back to Services</span>
+                                        <ChevronLeft size={20} />
+                                        <span>Back to Services</span>
                                     </button>
                                 </div>
                                 
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
-                                    <h3 className="font-semibold text-gray-800 mb-2">Selected Services</h3>
-                                    <div className="space-y-2">
+                                <div className="bg-gradient-to-r from-blue-50 to-pink-50 p-6 rounded-2xl border border-blue-200 mb-8 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 mb-4 text-lg">Selected Services</h3>
+                                    <div className="space-y-3">
                                         {selectedServices.map(service => (
-                                            <div key={service._id} className="flex justify-between items-center">
-                                                <span className="text-gray-700">{service.name}</span>
-                                                <span className="font-medium text-primary">{currencySymbol}{service.basePrice}</span>
+                                            <div key={service._id} className="flex justify-between items-center bg-white p-3 rounded-lg">
+                                                <span className="text-gray-800 font-medium">{service.name}</span>
+                                                <span className="font-bold text-blue-600">{currencySymbol}{service.basePrice}</span>
                                             </div>
                                         ))}
-                                        <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
-                                            <span className="font-semibold text-gray-800">Total</span>
-                                            <span className="text-lg font-bold text-primary">{currencySymbol}{getTotalPrice()}</span>
+                                        <div className="pt-3 border-t-2 border-blue-200 flex justify-between items-center">
+                                            <span className="font-bold text-gray-900 text-lg">Total</span>
+                                            <span className="text-2xl font-bold text-blue-600">{currencySymbol}{getTotalPrice()}</span>
                                         </div>
                                     </div>
                                 </div>
                             
-                                <h2 className="text-xl font-bold text-gray-800 mb-6">Select Date & Time</h2>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Date & Time</h2>
                                 
+                                {/* Date Selection - Horizontal Scroll */}
                                 <div className="mb-8">
-                                    <label className="block text-sm font-medium text-gray-700 mb-3">Select Date</label>
-                                    <input
-                                        type="date"
-                                        className="w-full sm:w-auto border rounded-lg px-4 py-2 focus:border-primary focus:ring-1 focus:ring-primary"
-                                        onChange={(e) => {
-                                            if (e.target.value) {
-                                                const date = new Date(e.target.value);
-                                                setSelectedDate(date);
-                                                setSelectedSlotISO('');
-                                                fetchSlots(date);
-                                            }
-                                        }}
-                                    />
+                                    <label className="block text-base font-semibold text-gray-900 mb-4">Select Date</label>
+                                    
+                                    {dateLoading ? (
+                                        <div className="flex justify-center py-12">
+                                            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                                        </div>
+                                    ) : availableDates.length === 0 ? (
+                                        <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-200">
+                                            <Calendar size={48} className="mx-auto text-gray-400 mb-3" />
+                                            <p className="text-gray-600 font-medium">No available dates at the moment</p>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+                                            {availableDates.map((dateInfo, index) => (
+                                                <div
+                                                    key={index}
+                                                    onClick={() => {
+                                                        setSelectedDate(dateInfo.date);
+                                                        setSelectedSlotISO('');
+                                                        fetchSlots(dateInfo.date);
+                                                    }}
+                                                    className={`flex-shrink-0 w-28 p-4 rounded-2xl cursor-pointer transition-all border-2 ${
+                                                        selectedDate?.toDateString() === dateInfo.date.toDateString()
+                                                            ? 'bg-blue-600 text-white border-blue-600 shadow-xl scale-105'
+                                                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:shadow-lg'
+                                                    }`}
+                                                >
+                                                    <div className="text-center">
+                                                        <div className={`text-xs font-semibold mb-1 ${
+                                                            selectedDate?.toDateString() === dateInfo.date.toDateString() ? 'text-blue-200' : 'text-gray-500'
+                                                        }`}>
+                                                            {dateInfo.isToday ? 'TODAY' : dateInfo.dayName}
+                                                        </div>
+                                                        <div className="text-3xl font-bold mb-1">
+                                                            {dateInfo.dayNumber}
+                                                        </div>
+                                                        <div className={`text-xs mb-2 ${
+                                                            selectedDate?.toDateString() === dateInfo.date.toDateString() ? 'text-blue-200' : 'text-gray-600'
+                                                        }`}>
+                                                            {dateInfo.month}
+                                                        </div>
+                                                        <div className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                                                            selectedDate?.toDateString() === dateInfo.date.toDateString()
+                                                                ? 'bg-blue-500 text-white'
+                                                                : 'bg-green-100 text-green-700'
+                                                        }`}>
+                                                            {dateInfo.slotCount} slots
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 
+                                {/* Time Selection */}
                                 {selectedDate && (
                                     <div className="mb-8">
-                                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                                            Available Times for {selectedDate.toLocaleDateString('en-US', { 
-                                                weekday: 'long', 
-                                                month: 'long', 
-                                                day: 'numeric' 
-                                            })}
+                                        <label className="block text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                            <Clock size={20} className="text-blue-600" />
+                                            Select Time
                                         </label>
                                         
                                         {loading ? (
-                                            <div className="flex justify-center py-6">
-                                                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                                            <div className="flex justify-center py-12">
+                                                <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                                             </div>
                                         ) : availableSlots.length === 0 ? (
-                                            <p className="text-gray-500">No slots available for this date</p>
+                                            <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-200">
+                                                <Calendar size={48} className="mx-auto text-gray-400 mb-3" />
+                                                <p className="text-gray-600 font-medium">No slots available for this date</p>
+                                            </div>
                                         ) : (
                                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                                {availableSlots.map((slot, index) => (
-                                                    <div
-                                                        key={index}
-                                                        onClick={() => setSelectedSlotISO(slot.startTime)}
-                                                        className={`py-3 px-4 text-center rounded-lg cursor-pointer transition-all ${
-                                                            slot.startTime === selectedSlotISO 
-                                                                ? 'bg-primary text-white shadow-md' 
-                                                                : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-100'
-                                                        }`}
-                                                    >
-                                                        {slot.displayTime}
-                                                    </div>
-                                                ))}
+                                                {availableSlots.map((slot, index) => {
+                                                    // Extract only start time from ISO string or display time in 12-hour format with AM/PM
+                                                    let displayStartTime = slot.displayTime;
+                                                    if (slot.startTime) {
+                                                        const startDate = new Date(slot.startTime);
+                                                        displayStartTime = startDate.toLocaleTimeString('en-US', {
+                                                            hour: 'numeric',
+                                                            minute: '2-digit',
+                                                            hour12: true
+                                                        });
+                                                    }
+                                                    
+                                                    return (
+                                                        <div
+                                                            key={index}
+                                                            onClick={() => setSelectedSlotISO(slot.startTime)}
+                                                            className={`py-4 px-4 text-center rounded-xl cursor-pointer transition-all font-semibold border-2 ${
+                                                                slot.startTime === selectedSlotISO 
+                                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-lg scale-105' 
+                                                                    : 'bg-white hover:bg-blue-50 text-gray-700 border-gray-200 hover:border-blue-300 hover:shadow-md'
+                                                            }`}
+                                                        >
+                                                            {displayStartTime}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
@@ -609,14 +717,14 @@ const Appointment = () => {
                                             }
                                         }}
                                         disabled={!selectedSlotISO}
-                                        className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                                        className={`flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all shadow-lg ${
                                             !selectedSlotISO
                                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                                                : 'bg-primary text-white hover:bg-primary/90 hover:shadow-lg'
+                                                : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-xl transform hover:scale-105'
                                         }`}
                                     >
                                         <span>Continue to Payment</span>
-                                        <ArrowRight size={18} />
+                                        <ArrowRight size={20} />
                                     </button>
                                 </div>
                             </div>
@@ -627,104 +735,103 @@ const Appointment = () => {
                                 <div className="mb-6">
                                     <button 
                                         onClick={() => setCurrentStep(2)} 
-                                        className="flex items-center text-gray-600 hover:text-primary transition-colors"
+                                        className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
                                     >
-                                        <ChevronLeft size={18} />
-                                        <span className="text-sm">Back to Schedule</span>
+                                        <ChevronLeft size={20} />
+                                        <span>Back to Schedule</span>
                                     </button>
                                 </div>
                                 
-                                <h2 className="text-xl font-bold text-gray-800 mb-6">Review and Pay</h2>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Review and Pay</h2>
                                 
-                                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-8">
-                                    <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                        <CheckCircle2 size={18} className="text-primary" />
+                                <div className="bg-gradient-to-r from-blue-50 to-pink-50 p-8 rounded-2xl border-2 border-blue-200 mb-8 shadow-lg">
+                                    <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2 text-lg">
+                                        <CheckCircle2 size={22} className="text-blue-600" />
                                         Appointment Summary
                                     </h3>
                                     
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-start pb-3 border-b border-gray-200">
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-start pb-5 border-b-2 border-blue-200">
                                             <div>
-                                                <span className="text-gray-600 text-sm">Stylist</span>
-                                                <p className="font-medium text-gray-800">{stylistInfo.name}</p>
+                                                <span className="text-gray-600 text-sm font-medium">Stylist</span>
+                                                <p className="font-bold text-gray-900 text-lg">{stylistInfo.name}</p>
                                             </div>
-                                            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-sm">
+                                            <div className="w-16 h-16 rounded-full overflow-hidden border-3 border-white shadow-lg">
                                                 <img src={stylistInfo.image} alt={stylistInfo.name} className="w-full h-full object-cover" />
                                             </div>
                                         </div>
                                         
-                                        <div className="pb-3 border-b border-gray-200">
-                                            <span className="text-gray-600 text-sm">Services</span>
-                                            <div className="space-y-2 mt-2">
+                                        <div className="pb-5 border-b-2 border-blue-200">
+                                            <span className="text-gray-600 text-sm font-medium">Services</span>
+                                            <div className="space-y-3 mt-3">
                                                 {selectedServices.map(service => (
-                                                    <div key={service._id} className="flex justify-between items-center">
-                                                        <p className="font-medium text-gray-800">{service.name}</p>
-                                                        <p className="text-sm text-gray-600">{currencySymbol}{service.basePrice}</p>
+                                                    <div key={service._id} className="flex justify-between items-center bg-white p-3 rounded-lg">
+                                                        <p className="font-semibold text-gray-900">{service.name}</p>
+                                                        <p className="font-bold text-blue-600">{currencySymbol}{service.basePrice}</p>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
                                         
-                                        <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-200">
-                                            <div>
-                                                <span className="text-gray-600 text-sm">Date & Time</span>
-                                                <p className="font-medium text-gray-800">
-                                                    {selectedDate.toLocaleDateString('en-US', { 
-                                                        weekday: 'short', 
-                                                        month: 'short', 
-                                                        day: 'numeric' 
-                                                    })}
-                                                </p>
-                                                <p className="text-sm text-gray-500">
-                                                    {selectedSlotISO ? new Date(selectedSlotISO).toLocaleTimeString('en-US', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    }) : selectedSlotISO}
-                                                </p>
-                                            </div>
+                                        <div className="pb-5 border-b-2 border-blue-200">
+                                            <span className="text-gray-600 text-sm font-medium">Date & Time</span>
+                                            <p className="font-bold text-gray-900 text-lg mt-1">
+                                                {selectedDate?.toLocaleDateString('en-US', { 
+                                                    weekday: 'long', 
+                                                    month: 'long', 
+                                                    day: 'numeric',
+                                                    year: 'numeric'
+                                                })}
+                                            </p>
+                                            <p className="text-blue-600 font-semibold mt-1">
+                                                {selectedSlotISO ? new Date(selectedSlotISO).toLocaleTimeString('en-US', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                }) : ''}
+                                            </p>
                                         </div>
                                         
-                                        <div className="flex justify-between items-center text-lg">
-                                            <span className="font-medium text-gray-800">Total Amount</span>
-                                            <span className="font-bold text-gray-900">{currencySymbol}{getTotalPrice()}</span>
+                                        <div className="flex justify-between items-center text-xl pt-2">
+                                            <span className="font-bold text-gray-900">Total Amount</span>
+                                            <span className="font-bold text-blue-600 text-2xl">{currencySymbol}{getTotalPrice()}</span>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <div className="space-y-4">
-                                    <h3 className="font-medium text-gray-800">Select Payment Method</h3>
+                                <div className="space-y-5">
+                                    <h3 className="font-bold text-gray-900 text-lg">Select Payment Method</h3>
                                     
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <button
                                             onClick={() => setPaymentMethod('stripe')}
-                                            className={`flex items-center justify-between p-4 border rounded-xl transition-all ${
+                                            className={`flex items-center justify-between p-5 border-2 rounded-2xl transition-all ${
                                                 paymentMethod === 'stripe'
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'border-gray-200 hover:border-primary/30 hover:bg-gray-50'
+                                                    ? 'border-blue-600 bg-blue-50 shadow-lg'
+                                                    : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                                             }`}
                                             disabled={paymentLoading}
                                         >
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-4">
                                                 <img src={assets.stripe_logo} alt="Stripe" className="h-8 w-auto" />
-                                                <span className="font-medium text-gray-800">Pay with Stripe</span>
+                                                <span className="font-semibold text-gray-900">Pay with Stripe</span>
                                             </div>
-                                            {paymentMethod === 'stripe' && !paymentLoading && <CheckCircle2 size={20} className="text-primary" />}
+                                            {paymentMethod === 'stripe' && !paymentLoading && <CheckCircle2 size={24} className="text-blue-600" />}
                                         </button>
                                         
                                         <button
                                             onClick={() => setPaymentMethod('razorpay')}
-                                            className={`flex items-center justify-between p-4 border rounded-xl transition-all ${
+                                            className={`flex items-center justify-between p-5 border-2 rounded-2xl transition-all ${
                                                 paymentMethod === 'razorpay'
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'border-gray-200 hover:border-primary/30 hover:bg-gray-50'
+                                                    ? 'border-blue-600 bg-blue-50 shadow-lg'
+                                                    : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                                             }`}
                                             disabled={paymentLoading}
                                         >
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-4">
                                                 <img src={assets.razorpay_logo} alt="Razorpay" className="h-8 w-auto" />
-                                                <span className="font-medium text-gray-800">Pay with Razorpay</span>
+                                                <span className="font-semibold text-gray-900">Pay with Razorpay</span>
                                             </div>
-                                            {paymentMethod === 'razorpay' && !paymentLoading && <CheckCircle2 size={20} className="text-primary" />}
+                                            {paymentMethod === 'razorpay' && !paymentLoading && <CheckCircle2 size={24} className="text-blue-600" />}
                                         </button>
                                     </div>
                                 </div>
@@ -733,33 +840,33 @@ const Appointment = () => {
                                     <button 
                                         onClick={initiateBooking}
                                         disabled={paymentLoading || bookingLoading}
-                                        className="w-full py-4 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors shadow-sm hover:shadow flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                        className="w-full py-5 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 disabled:bg-gray-400 disabled:cursor-not-allowed transform hover:scale-105"
                                     >
                                         {paymentLoading ? (
                                             <>
-                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                <Loader2 className="w-5 h-5 animate-spin" />
                                                 <span>Processing Payment...</span>
                                             </>
                                         ) : bookingLoading ? (
                                             <>
-                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                <Loader2 className="w-5 h-5 animate-spin" />
                                                 <span>Confirming Booking...</span>
                                             </>
                                         ) : paymentSuccess ? (
                                             <>
-                                                <CheckCircle2 size={20} />
+                                                <CheckCircle2 size={24} />
                                                 <span>Payment Successful!</span>
                                             </>
                                         ) : (
                                             <>
-                                                <CreditCard size={20} />
+                                                <CreditCard size={24} />
                                                 <span>Pay & Confirm {currencySymbol}{getTotalPrice()}</span>
                                             </>
                                         )}
                                     </button>
                                     
-                                    <p className="text-xs text-gray-500 text-center mt-4 flex items-center justify-center gap-1">
-                                        <Shield size={14} />
+                                    <p className="text-sm text-gray-600 text-center mt-4 flex items-center justify-center gap-2">
+                                        <Shield size={16} />
                                         Your payment information is securely processed
                                     </p>
                                 </div>
@@ -768,12 +875,12 @@ const Appointment = () => {
                     </div>
                 </div>
                 
-                <div className="max-w-2xl mx-auto mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                        <AlertTriangle size={20} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                <div className="max-w-2xl mx-auto mt-8 bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 shadow-md">
+                    <div className="flex items-start gap-4">
+                        <AlertTriangle size={24} className="text-yellow-600 mt-0.5 flex-shrink-0" />
                         <div>
-                            <h3 className="font-medium text-yellow-800 mb-1">Cancellation Policy</h3>
-                            <p className="text-sm text-yellow-700">
+                            <h3 className="font-bold text-yellow-900 mb-2 text-lg">Cancellation Policy</h3>
+                            <p className="text-sm text-yellow-800 leading-relaxed">
                                 {slotSettings.allowRescheduling 
                                     ? `Free cancellation up to ${slotSettings.rescheduleHoursBefore} hours before your appointment.`
                                     : 'Please contact us for cancellation policy details.'
@@ -786,11 +893,18 @@ const Appointment = () => {
             
             <style jsx>{`
                 @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
                 .animate-fadeIn {
                     animation: fadeIn 0.3s ease-out;
+                }
+                .scrollbar-hide {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+                .scrollbar-hide::-webkit-scrollbar {
+                    display: none;
                 }
             `}</style>
         </div>
