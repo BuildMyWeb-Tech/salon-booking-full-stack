@@ -26,12 +26,16 @@ export const getAvailableSlots = async (req, res) => {
 
     // Get slot settings to apply correct time range
     const slotSettings = await SlotSettings.findOne();
+    console.log('⚙️ Slot settings loaded for getAvailableSlots:', slotSettings);
     
     // Generate slots with proper time constraints from settings
     const { slots, error } = await generateAvailableSlots(date, slotSettings);
     if (error) {
+      console.log('❌ Error generating slots:', error);
       return res.json({ success: false, message: error });
     }
+
+    console.log(`✅ Generated ${slots.length} slots before filtering by doctor availability`);
 
     if (doctor) {
       const slotKey = date;
@@ -43,9 +47,18 @@ export const getAvailableSlots = async (req, res) => {
         bookedSlots = doctor.slots_booked?.[slotKey] || [];
       }
 
+      console.log(`📅 Doctor has ${bookedSlots.length} slots booked for this date`);
+
       const availableSlots = slots.filter(
         slot => !bookedSlots.includes(slot.startTime)
       );
+
+      console.log(`📋 Returning ${availableSlots.length} available slots after filtering`);
+      
+      if (availableSlots.length > 0) {
+        console.log(`🕒 First available slot: ${new Date(availableSlots[0].startTime).toLocaleTimeString()}`);
+        console.log(`🕒 Last available slot: ${new Date(availableSlots[availableSlots.length-1].startTime).toLocaleTimeString()}`);
+      }
 
       return res.json({
         success: true,

@@ -13,6 +13,7 @@ export const generateAvailableSlots = async (date, customSettings = null) => {
     const settings = customSettings || await SlotSettings.findOne();
     
     if (!settings) {
+      console.log("⚠️ No slot settings found");
       return { 
         slots: [],
         error: "Slot settings not configured" 
@@ -24,6 +25,7 @@ export const generateAvailableSlots = async (date, customSettings = null) => {
     
     // Check if the selected day is in the allowed days
     if (!settings.daysOpen.includes(dayName)) {
+      console.log(`⚠️ Day ${dayName} is not in allowed days:`, settings.daysOpen);
       return { 
         slots: [],
         error: "Selected day is not available for booking" 
@@ -34,10 +36,12 @@ export const generateAvailableSlots = async (date, customSettings = null) => {
     const startTime = settings.slotStartTime || "09:00";
     const endTime = settings.slotEndTime || "17:00";
     
+    console.log(`🕒 Generating slots from ${startTime} to ${endTime} with duration ${settings.slotDuration} minutes`);
+    
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
     
-    const slotDuration = settings.slotDuration || 30; // in minutes
+    const slotDuration = settings.slotDuration || 60; // in minutes
     
     // Create date objects for start and end times
     const startDateTime = new Date(date);
@@ -45,6 +49,11 @@ export const generateAvailableSlots = async (date, customSettings = null) => {
     
     const endDateTime = new Date(date);
     endDateTime.setHours(endHour, endMinute, 0, 0);
+    
+    // If end time is earlier than start time, assume it's next day
+    if (endDateTime <= startDateTime) {
+      endDateTime.setDate(endDateTime.getDate() + 1);
+    }
     
     // Create slots within the time range
     const slots = [];
@@ -65,10 +74,22 @@ export const generateAvailableSlots = async (date, customSettings = null) => {
         const breakEnd = new Date(date);
         breakEnd.setHours(breakEndHour, breakEndMinute, 0, 0);
         
+        // If break crosses midnight
+        if (breakEnd <= breakStart) {
+          breakEnd.setDate(breakEnd.getDate() + 1);
+        }
+        
         isDuringBreak = slotStartTime >= breakStart && slotStartTime < breakEnd;
       }
       
-      if (!isDuringBreak) {
+      // Check if slot is in the past
+      const now = new Date();
+      const minBookingTime = settings.minBookingTimeBeforeSlot || 0; // hours
+      const minBookingBuffer = minBookingTime * 60 * 60 * 1000;
+      const isPastOrTooClose = slotStartTime <= new Date(now.getTime() + minBookingBuffer);
+      
+      // Only add slots that are not during break and not in the past
+      if (!isDuringBreak && !isPastOrTooClose) {
         slots.push({
           startTime: slotStartTime.toISOString(),
           endTime: new Date(slotStartTime.getTime() + slotDuration * 60000).toISOString()
@@ -79,6 +100,8 @@ export const generateAvailableSlots = async (date, customSettings = null) => {
       currentTime.setMinutes(currentTime.getMinutes() + slotDuration);
     }
     
+    console.log(`✅ Generated ${slots.length} available slots`);
+    
     return { slots, error: null };
     
   } catch (error) {
@@ -87,20 +110,14 @@ export const generateAvailableSlots = async (date, customSettings = null) => {
   }
 };
 
-/**
- * Check if a specific slot is available
- */
-export const isSlotAvailable = async (dateString, slotTimeISO) => {
+export const isSlotAvailable = async (date, slotTime) => {
   try {
-    const { slots, error } = await generateAvailableSlots(dateString);
+    const { slots, error } = await generateAvailableSlots(date);
+    if (error) return false;
     
-    if (error) {
-      return false;
-    }
-
-    return slots.some(slot => slot.startTime === slotTimeISO);
+    return slots.some(slot => slot.startTime === slotTime);
   } catch (error) {
-    console.error('Error checking slot availability:', error);
+    console.error("Error checking slot availability:", error);
     return false;
   }
 };

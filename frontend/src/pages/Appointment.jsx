@@ -397,67 +397,71 @@ const Appointment = () => {
     }
   }, [slotSettings, docId, token, backendUrl, datesCacheKey, datesLastFetched, availableDates.length, cacheTTL]);
 
-  const fetchSlots = useCallback(async (dateObj) => {
-    if (!token) {
-      toast.warning('Please login to view available slots');
+const fetchSlots = useCallback(async (dateObj) => {
+  if (!token) {
+    toast.warning('Please login to view available slots');
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    const dateStr = dateObj.toISOString().split("T")[0];
+    
+    console.log('🕒 Fetching slots for date:', dateStr, 'with docId:', docId);
+    console.log('⚙️ Current slot settings:', slotSettings);
+    
+    // Check if we have cached data and it's still fresh
+    const cacheKey = `${docId}_${dateStr}`;
+    const now = Date.now();
+    if (
+      cachedSlots[cacheKey] && 
+      lastCacheUpdate[cacheKey] && 
+      (now - lastCacheUpdate[cacheKey]) < cacheTTL
+    ) {
+      console.log('⚡ Using cached slots data, count:', cachedSlots[cacheKey].length);
+      setAvailableSlots(cachedSlots[cacheKey]);
+      setLoading(false);
       return;
     }
-    
-    try {
-      setLoading(true);
-      const dateStr = dateObj.toISOString().split("T")[0];
-      
-      console.log('🕒 Fetching slots for date:', dateStr, 'with docId:', docId);
-      
-      // Check if we have cached data and it's still fresh
-      const cacheKey = `${docId}_${dateStr}`;
-      const now = Date.now();
-      if (
-        cachedSlots[cacheKey] && 
-        lastCacheUpdate[cacheKey] && 
-        (now - lastCacheUpdate[cacheKey]) < cacheTTL
-      ) {
-        console.log('⚡ Using cached slots data');
-        setAvailableSlots(cachedSlots[cacheKey]);
-        setLoading(false);
-        return;
-      }
 
-      // If no cache or expired, fetch from API
-      const { data } = await axios.get(
-        `${backendUrl}/api/user/available-slots`,
-        {
-          params: { date: dateStr, docId },
-          headers: { token }
-        }
-      );
-
-      if (data.success) {
-        console.log('📋 Received slots data:', data.slots.length, 'slots');
-        
-        // Update cache
-        setCachedSlots(prev => ({
-          ...prev,
-          [cacheKey]: data.slots
-        }));
-        setLastCacheUpdate(prev => ({
-          ...prev,
-          [cacheKey]: now
-        }));
-        
-        setAvailableSlots(data.slots);
-      } else {
-        setAvailableSlots([]);
-        toast.warning(data.message);
+    // If no cache or expired, fetch from API
+    const { data } = await axios.get(
+      `${backendUrl}/api/user/available-slots`,
+      {
+        params: { date: dateStr, docId },
+        headers: { token }
       }
-    } catch (error) {
-      console.error("Error fetching slots:", error);
-      toast.error("Failed to load slots");
+    );
+
+    if (data.success) {
+      console.log('📋 Received slots data:', data.slots.length, 'slots');
+      console.log('📋 First slot start:', data.slots[0]?.startTime);
+      console.log('📋 Last slot start:', data.slots[data.slots.length - 1]?.startTime);
+      
+      // Update cache
+      setCachedSlots(prev => ({
+        ...prev,
+        [cacheKey]: data.slots
+      }));
+      setLastCacheUpdate(prev => ({
+        ...prev,
+        [cacheKey]: now
+      }));
+      
+      setAvailableSlots(data.slots);
+    } else {
+      console.log('❌ Error fetching slots:', data.message);
       setAvailableSlots([]);
-    } finally {
-      setLoading(false);
+      toast.warning(data.message);
     }
-  }, [token, docId, backendUrl, cachedSlots, lastCacheUpdate, cacheTTL]);
+  } catch (error) {
+    console.error("Error fetching slots:", error);
+    toast.error("Failed to load slots");
+    setAvailableSlots([]);
+  } finally {
+    setLoading(false);
+  }
+}, [token, docId, backendUrl, cachedSlots, lastCacheUpdate, cacheTTL, slotSettings]);
 
   // User interaction handlers
   const toggleService = useCallback((service) => {
