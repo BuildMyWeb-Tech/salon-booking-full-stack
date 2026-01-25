@@ -7,163 +7,83 @@ import SpecialWorkingDay from '../models/SpecialWorkingDay.js';
 /**
  * Generate available time slots for a specific date
  */
-export const generateAvailableSlots = async (dateString) => {
+export const generateAvailableSlots = async (date, customSettings = null) => {
   try {
-    const settings = await SlotSettings.findOne();
+    // Get settings from database or use provided custom settings
+    const settings = customSettings || await SlotSettings.findOne();
     
     if (!settings) {
       return { 
-        slots: [], 
+        slots: [],
         error: "Slot settings not configured" 
       };
     }
-
-    // ✅ FIX: Use date-only comparison (ignore time)
-    const requestDate = new Date(dateString);
-    requestDate.setHours(0, 0, 0, 0);
     
-    const fromDate = new Date(settings.openSlotsFromDate);
-    fromDate.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(date);
+    const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
     
-    const tillDate = new Date(settings.openSlotsTillDate);
-    tillDate.setHours(23, 59, 59, 999);
-    
-    console.log('📅 Date validation:', {
-      requestDate: requestDate.toISOString(),
-      fromDate: fromDate.toISOString(),
-      tillDate: tillDate.toISOString(),
-      isValid: requestDate >= fromDate && requestDate <= tillDate
-    });
-
-    // Check if date is within the configured booking range
-    if (requestDate < fromDate || requestDate > tillDate) {
+    // Check if the selected day is in the allowed days
+    if (!settings.daysOpen.includes(dayName)) {
       return { 
-        slots: [], 
-        error: "Date outside booking range" 
+        slots: [],
+        error: "Selected day is not available for booking" 
       };
     }
-
-    // Check if date is blocked
-    const blockedDates = await BlockedDate.find();
-    const isBlocked = blockedDates.some(bd => {
-      const blockedDate = new Date(bd.date);
-      blockedDate.setHours(0, 0, 0, 0);
-      return blockedDate.getTime() === requestDate.getTime();
-    });
     
-    if (isBlocked) {
-      return { 
-        slots: [], 
-        error: "Date is blocked" 
-      };
-    }
-
-    // Check if it's a working day
-    const dayName = requestDate.toLocaleDateString('en-US', { weekday: 'long' });
+    // Parse start and end times from settings
+    const startTime = settings.slotStartTime || "09:00";
+    const endTime = settings.slotEndTime || "17:00";
     
-    // Check for special working days
-    const specialWorkingDays = await SpecialWorkingDay.find();
-    const isSpecialWorkingDay = specialWorkingDays.some(swd => {
-      const specialDate = new Date(swd.date);
-      specialDate.setHours(0, 0, 0, 0);
-      return specialDate.getTime() === requestDate.getTime();
-    });
-
-    // Check for recurring holidays
-    const recurringHolidays = await RecurringHoliday.find();
-    const isRecurringHoliday = recurringHolidays.some(rh => {
-      if (rh.type === 'weekly') {
-        return rh.value === dayName;
-      } else if (rh.type === 'monthly') {
-        return parseInt(rh.value) === requestDate.getDate();
-      }
-      return false;
-    });
-
-    if (isRecurringHoliday && !isSpecialWorkingDay) {
-      return { 
-        slots: [], 
-        error: "Recurring holiday" 
-      };
-    }
-
-    if (!settings.daysOpen.includes(dayName) && !isSpecialWorkingDay) {
-      return { 
-        slots: [], 
-        error: "Not a working day" 
-      };
-    }
-
-    // Check minimum booking time
-    const now = new Date();
-    const minBookingTime = settings.minBookingTimeBeforeSlot || 0;
-    const earliestBookingTime = new Date(now.getTime() + minBookingTime * 60 * 60 * 1000);
-
-    if (requestDate.getTime() === now.setHours(0, 0, 0, 0) && earliestBookingTime > now) {
-      // For today, only show slots after the minimum booking time
-    }
-
-    // Generate time slots
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+    
+    const slotDuration = settings.slotDuration || 30; // in minutes
+    
+    // Create date objects for start and end times
+    const startDateTime = new Date(date);
+    startDateTime.setHours(startHour, startMinute, 0, 0);
+    
+    const endDateTime = new Date(date);
+    endDateTime.setHours(endHour, endMinute, 0, 0);
+    
+    // Create slots within the time range
     const slots = [];
-    const [startHour, startMin] = settings.slotStartTime.split(':').map(Number);
-    const [endHour, endMin] = settings.slotEndTime.split(':').map(Number);
+    let currentTime = new Date(startDateTime);
     
-    let currentTime = new Date(requestDate);
-    currentTime.setHours(startHour, startMin, 0, 0);
-    
-    const endTime = new Date(requestDate);
-    endTime.setHours(endHour, endMin, 0, 0);
-
-    // Handle break time
-    let breakStart = null;
-    let breakEnd = null;
-    
-    if (settings.breakTime && settings.breakStartTime && settings.breakEndTime) {
-      const [breakStartHour, breakStartMin] = settings.breakStartTime.split(':').map(Number);
-      const [breakEndHour, breakEndMin] = settings.breakEndTime.split(':').map(Number);
+    while (currentTime < endDateTime) {
+      const slotStartTime = new Date(currentTime);
       
-      breakStart = new Date(requestDate);
-      breakStart.setHours(breakStartHour, breakStartMin, 0, 0);
-      
-      breakEnd = new Date(requestDate);
-      breakEnd.setHours(breakEndHour, breakEndMin, 0, 0);
-    }
-
-    while (currentTime < endTime) {
-      const slotTime = new Date(currentTime);
-      
-      // Skip if slot is in break time
-      if (breakStart && breakEnd && slotTime >= breakStart && slotTime < breakEnd) {
-        currentTime.setMinutes(currentTime.getMinutes() + settings.slotDuration);
-        continue;
+      // Check if this time is during break
+      let isDuringBreak = false;
+      if (settings.breakTime) {
+        const [breakStartHour, breakStartMinute] = settings.breakStartTime.split(':').map(Number);
+        const [breakEndHour, breakEndMinute] = settings.breakEndTime.split(':').map(Number);
+        
+        const breakStart = new Date(date);
+        breakStart.setHours(breakStartHour, breakStartMinute, 0, 0);
+        
+        const breakEnd = new Date(date);
+        breakEnd.setHours(breakEndHour, breakEndMinute, 0, 0);
+        
+        isDuringBreak = slotStartTime >= breakStart && slotStartTime < breakEnd;
       }
-
-      // Skip past slots for today
-      if (requestDate.toDateString() === now.toDateString() && slotTime <= earliestBookingTime) {
-        currentTime.setMinutes(currentTime.getMinutes() + settings.slotDuration);
-        continue;
+      
+      if (!isDuringBreak) {
+        slots.push({
+          startTime: slotStartTime.toISOString(),
+          endTime: new Date(slotStartTime.getTime() + slotDuration * 60000).toISOString()
+        });
       }
-
-      slots.push({
-        startTime: slotTime.toISOString(),
-        displayTime: slotTime.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        })
-      });
-
-      currentTime.setMinutes(currentTime.getMinutes() + settings.slotDuration);
+      
+      // Move to the next slot
+      currentTime.setMinutes(currentTime.getMinutes() + slotDuration);
     }
-
+    
     return { slots, error: null };
-
+    
   } catch (error) {
-    console.error('Error generating slots:', error);
-    return { 
-      slots: [], 
-      error: error.message 
-    };
+    console.error("Error generating slots:", error);
+    return { slots: [], error: "Failed to generate slots" };
   }
 };
 

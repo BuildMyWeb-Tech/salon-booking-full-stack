@@ -91,6 +91,9 @@ const StylistProfile = memo(({ stylistInfo, slotSettings }) => {
 const DateOption = memo(({ dateInfo, selectedDate, onDateSelect }) => {
   const isSelected = selectedDate && selectedDate.toDateString() === dateInfo.date.toDateString();
   
+  // Format month properly
+  const monthName = dateInfo.date.toLocaleDateString('en-US', { month: 'short' });
+  
   return (
     <div
       onClick={() => onDateSelect(dateInfo.date)}
@@ -112,7 +115,7 @@ const DateOption = memo(({ dateInfo, selectedDate, onDateSelect }) => {
         <div className={`text-xs mb-2 ${
           isSelected ? 'text-blue-200' : 'text-gray-600'
         }`}>
-          {dateInfo.month}
+          {monthName}
         </div>
         <div className={`text-xs font-semibold px-2 py-1 rounded-full ${
           isSelected

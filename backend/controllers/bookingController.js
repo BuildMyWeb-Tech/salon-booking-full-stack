@@ -24,7 +24,11 @@ export const getAvailableSlots = async (req, res) => {
       }
     }
 
-    const { slots, error } = await generateAvailableSlots(date);
+    // Get slot settings to apply correct time range
+    const slotSettings = await SlotSettings.findOne();
+    
+    // Generate slots with proper time constraints from settings
+    const { slots, error } = await generateAvailableSlots(date, slotSettings);
     if (error) {
       return res.json({ success: false, message: error });
     }
