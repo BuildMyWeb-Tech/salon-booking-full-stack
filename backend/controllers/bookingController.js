@@ -123,7 +123,14 @@ export const bookAppointment = async (req, res) => {
     
     bookedSlots.push(slotDateTime.toISOString());
     doctor.slots_booked.set(slotKey, bookedSlots);
-    await doctor.save();
+    
+    // FIX: Use findByIdAndUpdate to update only slots_booked field
+    // This bypasses validation for other fields
+    await doctorModel.findByIdAndUpdate(
+      docId,
+      { slots_booked: doctor.slots_booked },
+      { runValidators: false } // Skip validation
+    );
     
     const displayTime = slotDateTime.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -140,8 +147,8 @@ export const bookAppointment = async (req, res) => {
       slotTime: displayTime,
       slotDateTime,
       amount: totalAmount,
-      paidAmount: paymentAmount, // New field for partial payment
-      paymentPercentage: paymentPercentage, // Track payment percentage
+      paidAmount: paymentAmount,
+      paymentPercentage: paymentPercentage,
       service: serviceNames,
       services: services,
       payment: true,
