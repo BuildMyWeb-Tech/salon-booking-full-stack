@@ -355,44 +355,55 @@ const ServiceCategory = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                             {/* Image Upload */}
                             <div className="flex flex-col items-center justify-start">
-                                <div className="relative w-full max-w-[240px]">
-                                    <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-primary/50 transition-colors">
-                                        {serviceImg ? (
-                                            <img
-                                                src={URL.createObjectURL(serviceImg)}
-                                                alt="Service preview"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : isEditingService && serviceCategories.find(s => s._id === editServiceId)?.imageUrl ? (
-                                            <img
-                                                src={serviceCategories.find(s => s._id === editServiceId)?.imageUrl}
-                                                alt="Service preview"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="text-center p-4">
-                                                <ImagePlus size={40} className="text-gray-300 mx-auto mb-2" />
-                                                <p className="text-sm text-gray-500">Upload service image</p>
-                                                <p className="text-xs text-gray-400 mt-1">Click to browse</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                    
-                                    <label htmlFor="service-image" className="absolute bottom-3 right-3 bg-white text-primary p-2 rounded-full shadow-md hover:bg-primary hover:text-white transition-colors cursor-pointer">
-                                        <Pencil size={16} />
-                                    </label>
-                                    
-                                    <input
-                                        type="file"
-                                        id="service-image"
-                                        accept="image/*"
-                                        onChange={(e) => setServiceImg(e.target.files[0])}
-                                        className="hidden"
+                            <div className="relative w-full max-w-[240px]">
+
+                                {/* Make whole thing clickable */}
+                                <label 
+                                htmlFor="service-image" 
+                                className="block cursor-pointer"
+                                >
+                                <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-primary/50 transition-colors">
+
+                                    {serviceImg ? (
+                                    <img
+                                        src={URL.createObjectURL(serviceImg)}
+                                        alt="Service preview"
+                                        className="w-full h-full object-cover"
                                     />
+                                    ) : isEditingService && serviceCategories.find(s => s._id === editServiceId)?.imageUrl ? (
+                                    <img
+                                        src={serviceCategories.find(s => s._id === editServiceId)?.imageUrl}
+                                        alt="Service preview"
+                                        className="w-full h-full object-cover"
+                                    />
+                                    ) : (
+                                    <div className="text-center p-4 pointer-events-none">
+                                        <ImagePlus size={40} className="text-gray-300 mx-auto mb-2" />
+                                        <p className="text-sm text-gray-500">Upload service image</p>
+                                        <p className="text-xs text-gray-400 mt-1">Click to browse</p>
+                                    </div>
+                                    )}
+
                                 </div>
-                                
-                                
+
+                                {/* Pencil Button */}
+                                <div className="absolute bottom-3 right-3 bg-white text-primary p-2 rounded-full shadow-md transition-colors pointer-events-none">
+                                    <Pencil size={16} />
+                                </div>
+
+                                </label>
+
+                                {/* Hidden Input */}
+                                <input
+                                type="file"
+                                id="service-image"
+                                accept="image/*"
+                                onChange={(e) => setServiceImg(e.target.files[0])}
+                                className="hidden"
+                                />
                             </div>
+                            </div>
+
 
                             {/* Form Fields */}
                             <div className="md:col-span-2 space-y-6">
