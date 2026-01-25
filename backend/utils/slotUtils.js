@@ -43,12 +43,16 @@ export const generateAvailableSlots = async (date, customSettings = null) => {
     
     const slotDuration = settings.slotDuration || 60; // in minutes
     
-    // Create date objects for start and end times
-    const startDateTime = new Date(date);
-    startDateTime.setHours(startHour, startMinute, 0, 0);
+    // ✅ FIX: Create date objects in LOCAL timezone (not UTC)
+    // Use the date string directly to avoid timezone conversion
+    const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
+    const [year, month, day] = dateStr.split('-').map(Number);
     
-    const endDateTime = new Date(date);
-    endDateTime.setHours(endHour, endMinute, 0, 0);
+    const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0, 0);
+    const endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0, 0);
+    
+    console.log(`📅 Start datetime (local): ${startDateTime.toLocaleString()}`);
+    console.log(`📅 End datetime (local): ${endDateTime.toLocaleString()}`);
     
     // If end time is earlier than start time, assume it's next day
     if (endDateTime <= startDateTime) {
@@ -68,11 +72,8 @@ export const generateAvailableSlots = async (date, customSettings = null) => {
         const [breakStartHour, breakStartMinute] = settings.breakStartTime.split(':').map(Number);
         const [breakEndHour, breakEndMinute] = settings.breakEndTime.split(':').map(Number);
         
-        const breakStart = new Date(date);
-        breakStart.setHours(breakStartHour, breakStartMinute, 0, 0);
-        
-        const breakEnd = new Date(date);
-        breakEnd.setHours(breakEndHour, breakEndMinute, 0, 0);
+        const breakStart = new Date(year, month - 1, day, breakStartHour, breakStartMinute, 0, 0);
+        const breakEnd = new Date(year, month - 1, day, breakEndHour, breakEndMinute, 0, 0);
         
         // If break crosses midnight
         if (breakEnd <= breakStart) {
@@ -101,6 +102,10 @@ export const generateAvailableSlots = async (date, customSettings = null) => {
     }
     
     console.log(`✅ Generated ${slots.length} available slots`);
+    if (slots.length > 0) {
+      console.log(`🕒 First slot: ${new Date(slots[0].startTime).toLocaleString()}`);
+      console.log(`🕒 Last slot: ${new Date(slots[slots.length - 1].startTime).toLocaleString()}`);
+    }
     
     return { slots, error: null };
     
