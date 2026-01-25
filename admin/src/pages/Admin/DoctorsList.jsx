@@ -154,7 +154,7 @@ const StylistsList = () => {
           </div>
 
           <div className="flex gap-3 flex-wrap sm:flex-nowrap">
-            <div className="relative min-w-[140px]">
+            {/* <div className="relative min-w-[140px]">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <select
                 value={filterSpecialty}
@@ -170,7 +170,7 @@ const StylistsList = () => {
               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                 <ChevronDown size={16} className="text-gray-400" />
               </div>
-            </div>
+            </div> */}
 
             <div className="relative min-w-[140px]">
               <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />

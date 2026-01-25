@@ -381,6 +381,7 @@ const adminDashboard = async (req, res) => {
     }
 }
 
+
 // Get Slot Settings
 export const getSlotSettings = async (req, res) => {
   try {

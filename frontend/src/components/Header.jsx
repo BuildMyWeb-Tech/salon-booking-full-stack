@@ -102,7 +102,7 @@ const Banner = () => {
   )
 
   return (
-    <section className='w-full bg-gradient-to-b from-purple-50 via-pink-50 to-white py-12 sm:py-16'>
+    <section className='w-full bg-gradient-to-b from-purple-50 via-pink-50 to-white sm:py-12'>
       <div className='container mx-auto px-4'>
         <motion.div
           className='bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-3xl overflow-hidden shadow-2xl relative'
@@ -158,34 +158,7 @@ const Banner = () => {
                 </motion.p>
 
                 {/* Stats */}
-                <motion.div 
-                  className='grid grid-cols-3 gap-4 mb-7 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20'
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  <div className='text-center'>
-                    <div className='flex items-center justify-center mb-1'>
-                      <Users size={20} className="text-yellow-300" />
-                    </div>
-                    <p className='text-2xl font-bold text-white'>5000+</p>
-                    <p className='text-white/80 text-xs'>Happy Clients</p>
-                  </div>
-                  <div className='text-center border-x border-white/20'>
-                    <div className='flex items-center justify-center mb-1'>
-                      <Award size={20} className="text-yellow-300" />
-                    </div>
-                    <p className='text-2xl font-bold text-white'>50+</p>
-                    <p className='text-white/80 text-xs'>Expert Stylists</p>
-                  </div>
-                  <div className='text-center'>
-                    <div className='flex items-center justify-center mb-1'>
-                      <Star size={20} className="text-yellow-300" fill="currentColor" />
-                    </div>
-                    <p className='text-2xl font-bold text-white'>4.9</p>
-                    <p className='text-white/80 text-xs'>Rating</p>
-                  </div>
-                </motion.div>
+               
 
                 <motion.div 
                   className='flex flex-wrap gap-2 mb-8'
@@ -294,7 +267,7 @@ const Banner = () => {
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           >
-            <Sparkles className="text-yellow-300 opacity-30" size={80} />
+            < Scissors className="text-yellow-300 opacity-30" size={80} />
           </motion.div>
 
           <motion.div 
@@ -302,40 +275,12 @@ const Banner = () => {
             animate={{ rotate: -360 }}
             transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
           >
-            <Scissors className="text-pink-300 opacity-30" size={64} />
+            <Sparkles className="text-pink-300 opacity-30" size={64} />
           </motion.div>
 
         </motion.div>
 
-        {/* Features Section Below Banner */}
-        <motion.div 
-          className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8'
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-        >
-          {[
-            { icon: <Clock size={24} />, title: 'Quick Booking', desc: 'Book in under 60 seconds' },
-            { icon: <Award size={24} />, title: 'Certified Stylists', desc: 'All licensed professionals' },
-            { icon: <Star size={24} />, title: 'Top Rated', desc: '4.9/5 customer rating' },
-            { icon: <TrendingUp size={24} />, title: 'Latest Trends', desc: 'Modern styling techniques' }
-          ].map((feature, idx) => (
-            <motion.div
-              key={idx}
-              className='bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all border border-purple-100'
-              whileHover={{ y: -5, scale: 1.02 }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1 + idx * 0.1 }}
-            >
-              <div className='w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg'>
-                {feature.icon}
-              </div>
-              <h3 className='font-bold text-gray-900 mb-2'>{feature.title}</h3>
-              <p className='text-gray-600 text-sm'>{feature.desc}</p>
-            </motion.div>
-          ))}
-        </motion.div>
+        
       </div>
     </section>
   )

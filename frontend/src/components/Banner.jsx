@@ -64,43 +64,7 @@ const Header = () => {
 
         </div>
 
-        {/* ---------- HIGHLIGHTS ---------- */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-        {[
-            {
-            title: 'Express Styling',
-            desc: 'Quick professional styling for busy schedules',
-            icon: Zap,
-            },
-            {
-            title: 'Premium Products',
-            desc: 'Salon-quality products for lasting results',
-            icon: SprayCan,
-            },
-            {
-            title: 'Expert Stylists',
-            desc: 'Trend-driven professionals with experience',
-            icon: Scissors,
-            },
-        ].map((item, i) => (
-            <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 + i * 0.1 }}
-            className="bg-white p-6 rounded-xl shadow-sm flex items-start gap-4"
-            >
-            <item.icon size={28} className="text-primary shrink-0" />
-
-            <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                {item.title}
-                </h3>
-                <p className="text-sm text-gray-600">{item.desc}</p>
-            </div>
-            </motion.div>
-        ))}
-        </div>
+        
 
 
       </div>

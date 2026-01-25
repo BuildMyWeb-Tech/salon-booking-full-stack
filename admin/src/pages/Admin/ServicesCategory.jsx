@@ -391,9 +391,7 @@ const ServiceCategory = () => {
                                     />
                                 </div>
                                 
-                                <p className="mt-3 text-xs text-gray-500 text-center">
-                                    Upload a high quality image to represent this service category
-                                </p>
+                                
                             </div>
 
                             {/* Form Fields */}
@@ -410,9 +408,7 @@ const ServiceCategory = () => {
                                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary focus:outline-none"
                                         required
                                     />
-                                    <p className="text-xs text-gray-500">
-                                        This name will be displayed to clients when booking
-                                    </p>
+                                    
                                 </div>
 
                                 <div className="space-y-1.5">
@@ -430,9 +426,7 @@ const ServiceCategory = () => {
                                             required
                                         />
                                     </div>
-                                    <p className="text-xs text-gray-500">
-                                        Base starting price for this service (individual stylists may charge differently)
-                                    </p>
+                                    
                                 </div>
 
                                 <div className="space-y-1.5">
@@ -447,9 +441,7 @@ const ServiceCategory = () => {
                                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary focus:outline-none"
                                         required
                                     />
-                                    <p className="text-xs text-gray-500">
-                                        Provide details about the service to help clients understand what to expect
-                                    </p>
+                                    
                                 </div>
                             </div>
                         </div>

@@ -39,29 +39,25 @@ const SlotManagementContextProvider = (props) => {
       });
       
       if (data.success) {
-        // Process dates to ensure they're Date objects
+        // Merge settings with the fetched arrays
         const processedData = {
           ...data.settings,
           openSlotsFromDate: new Date(data.settings.openSlotsFromDate),
           openSlotsTillDate: new Date(data.settings.openSlotsTillDate),
-          blockedDates: data.blockedDates.map(date => ({
-            ...date,
-            date: new Date(date.date)
-          })),
-          specialWorkingDays: data.specialWorkingDays.map(day => ({
-            ...day,
-            date: new Date(day.date)
-          }))
+          blockedDates: data.blockedDates || [],
+          recurringHolidays: data.recurringHolidays || [],
+          specialWorkingDays: data.specialWorkingDays || []
         };
         
+        console.log('Processed settings:', processedData); // Debug log
         setSettings(processedData);
       } else {
         toast.error(data.message || 'Failed to load settings');
       }
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching slot settings:', error);
       toast.error('Failed to load slot settings');
+    } finally {
       setLoading(false);
     }
   };
@@ -78,14 +74,14 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Settings saved successfully');
-        fetchSettings(); // Refresh settings
+        await fetchSettings(); // Refresh settings
       } else {
         toast.error(data.message || 'Failed to save settings');
       }
-      setLoading(false);
     } catch (error) {
       console.error('Error saving slot settings:', error);
       toast.error('Failed to save settings');
+    } finally {
       setLoading(false);
     }
   };
@@ -101,7 +97,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Date blocked successfully');
-        fetchSettings(); // Refresh the blocked dates
+        await fetchSettings(); // Refresh the blocked dates
         return data.blockedDate;
       } else {
         toast.error(data.message || 'Failed to block date');
@@ -124,7 +120,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Blocked date removed');
-        fetchSettings(); // Refresh settings
+        await fetchSettings(); // Refresh settings
         return true;
       } else {
         toast.error(data.message || 'Failed to remove blocked date');
@@ -148,7 +144,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Recurring holiday added');
-        fetchSettings(); // Refresh settings
+        await fetchSettings(); // Refresh settings
         return data.recurringHoliday;
       } else {
         toast.error(data.message || 'Failed to add recurring holiday');
@@ -171,7 +167,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Recurring holiday removed');
-        fetchSettings(); // Refresh settings
+        await fetchSettings(); // Refresh settings
         return true;
       } else {
         toast.error(data.message || 'Failed to remove recurring holiday');
@@ -195,7 +191,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Special working day added');
-        fetchSettings(); // Refresh settings
+        await fetchSettings(); // Refresh settings
         return data.specialWorkingDay;
       } else {
         toast.error(data.message || 'Failed to add special working day');
@@ -218,7 +214,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Special working day removed');
-        fetchSettings(); // Refresh settings
+        await fetchSettings(); // Refresh settings
         return true;
       } else {
         toast.error(data.message || 'Failed to remove special working day');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { AppContext } from '../context/AppContext';
 import { specialityData } from '../assets/assets'; // Keep as fallback
@@ -9,6 +9,10 @@ const SpecialityMenu = () => {
   const [serviceCategories, setServiceCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const { backendUrl } = useContext(AppContext);
+  const location = useLocation(); // Get current location
+  
+  // Determine if we're on the home page or services page
+  const isHomePage = location.pathname === '/' || location.pathname === '/home';
 
   useEffect(() => {
     fetchServiceCategories();
@@ -30,6 +34,9 @@ const SpecialityMenu = () => {
 
   // Use real data if available, otherwise use fallback data
   const displayData = serviceCategories.length > 0 ? serviceCategories : specialityData;
+  
+  // Display all data on services page, but limit to 6 on home page
+  const visibleServices = isHomePage ? displayData.slice(0, 6) : displayData;
   
   // Function to get random icon for variety
   const getServiceIcon = (index) => {
@@ -81,7 +88,7 @@ const SpecialityMenu = () => {
         {/* Grid with enhanced card design */}
         {!loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {displayData.map((item, index) => (
+            {visibleServices.map((item, index) => (
               <Link
                 key={item._id || index}
                 to="/services"
@@ -148,8 +155,8 @@ const SpecialityMenu = () => {
           </div>
         )}
         
-        {/* Call-to-action button */}
-        {!loading && (
+        {/* Call-to-action button - Only show on Home Page */}
+        {!loading && isHomePage && (
           <div className="text-center mt-12">
             <Link 
               to="/services"
