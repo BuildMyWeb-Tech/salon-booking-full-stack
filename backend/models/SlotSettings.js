@@ -1,3 +1,4 @@
+// backend/models/SlotSettings.js
 import mongoose from 'mongoose';
 
 const slotSettingsSchema = new mongoose.Schema({
@@ -58,6 +59,16 @@ const slotSettingsSchema = new mongoose.Schema({
   minBookingTimeBeforeSlot: {
     type: Number,
     default: 2
+  },
+  // ✅ NEW: Advanced payment settings
+  advancePaymentRequired: {
+    type: Boolean,
+    default: true
+  },
+  advancePaymentPercentage: {
+    type: Number,
+    enum: [10, 25, 30, 50, 75, 100],
+    default: 100
   }
 }, {
   timestamps: true

@@ -1,4 +1,4 @@
-// controllers/bookingController.js
+// backend/controllers/bookingController.js
 import doctorModel from '../models/doctorModel.js';
 import userModel from '../models/userModel.js';
 import appointmentModel from '../models/appointmentModel.js';
@@ -12,14 +12,10 @@ export const getAvailableSlots = async (req, res) => {
   try {
     const { date, docId } = req.query;
 
-    console.log("RAW DATE FROM FRONTEND:", date);
-
-    // Validate date
     if (!date || isNaN(new Date(date).getTime())) {
       return res.json({ success: false, message: "Invalid date" });
     }
 
-    // Validate doctor availability
     let doctor = null;
     if (docId) {
       doctor = await doctorModel.findById(docId);
@@ -28,19 +24,15 @@ export const getAvailableSlots = async (req, res) => {
       }
     }
 
-    // Generate slots (backend source of truth)
     const { slots, error } = await generateAvailableSlots(date);
     if (error) {
       return res.json({ success: false, message: error });
     }
 
-    // Filter booked slots for this doctor
     if (doctor) {
-      const slotKey = date; // YYYY-MM-DD
-
+      const slotKey = date;
       let bookedSlots = [];
 
-      // Map-safe access
       if (doctor.slots_booked instanceof Map) {
         bookedSlots = doctor.slots_booked.get(slotKey) || [];
       } else {
@@ -57,7 +49,6 @@ export const getAvailableSlots = async (req, res) => {
       });
     }
 
-    // If no doctor filter
     return res.json({
       success: true,
       slots
@@ -70,13 +61,12 @@ export const getAvailableSlots = async (req, res) => {
 };
 
 /**
- * Book a new appointment with multiple services
+ * Book a new appointment with multiple services and payment percentage
  */
 export const bookAppointment = async (req, res) => {
   try {
     const { userId, docId, slotDate, slotTime, services, totalAmount, paymentMethod } = req.body;
     
-    // Basic validation
     if (!userId || !docId || !slotDate || !slotTime) {
       return res.json({ success: false, message: "Missing booking data" });
     }
@@ -85,20 +75,24 @@ export const bookAppointment = async (req, res) => {
       return res.json({ success: false, message: "Please select at least one service" });
     }
     
-    // slotTime MUST be ISO from frontend
     const slotDateTime = new Date(slotTime);
     
     if (isNaN(slotDateTime.getTime())) {
       return res.json({ success: false, message: "Invalid slot time" });
     }
     
-    console.log("BOOK SLOT:", slotDate, slotDateTime.toISOString());
-    console.log("USER ID:", userId);
-    console.log("DOCTOR ID:", docId);
-    console.log("SERVICES:", services);
-    console.log("TOTAL AMOUNT:", totalAmount);
+    // Get settings for payment percentage
+    const settings = await SlotSettings.findOne();
     
-    // Fetch doctor and user for complete data
+    // Calculate payment amount based on percentage
+    let paymentAmount = totalAmount;
+    let paymentPercentage = 100;
+    
+    if (settings && settings.advancePaymentRequired) {
+      paymentPercentage = settings.advancePaymentPercentage || 100;
+      paymentAmount = Math.round((totalAmount * paymentPercentage) / 100);
+    }
+    
     const doctor = await doctorModel.findById(docId);
     if (!doctor || !doctor.available) {
       return res.json({ success: false, message: "Stylist unavailable" });
@@ -109,14 +103,12 @@ export const bookAppointment = async (req, res) => {
       return res.json({ success: false, message: "User not found" });
     }
     
-    // Backend slot validation
     const isAvailable = await isSlotAvailable(slotDate, slotDateTime.toISOString());
     if (!isAvailable) {
       return res.json({ success: false, message: "Slot no longer available" });
     }
     
-    // Prevent double booking (doctor-side)
-    const slotKey = slotDate; // YYYY-MM-DD
+    const slotKey = slotDate;
     
     if (!doctor.slots_booked) doctor.slots_booked = new Map();
     if (!doctor.slots_booked.get(slotKey)) {
@@ -129,22 +121,25 @@ export const bookAppointment = async (req, res) => {
       return res.json({ success: false, message: "Slot already booked" });
     }
     
-    // Lock slot
     bookedSlots.push(slotDateTime.toISOString());
     doctor.slots_booked.set(slotKey, bookedSlots);
-    await doctor.save();
     
-    // Format display time
+    // FIX: Use findByIdAndUpdate to update only slots_booked field
+    // This bypasses validation for other fields
+    await doctorModel.findByIdAndUpdate(
+      docId,
+      { slots_booked: doctor.slots_booked },
+      { runValidators: false } // Skip validation
+    );
+    
     const displayTime = slotDateTime.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true
     });
 
-    // Create service names string for backward compatibility
     const serviceNames = services.map(s => s.name).join(', ');
     
-    // Create appointment with complete data including multiple services
     const appointment = new appointmentModel({
       userId,
       doctorId: docId,
@@ -152,8 +147,10 @@ export const bookAppointment = async (req, res) => {
       slotTime: displayTime,
       slotDateTime,
       amount: totalAmount,
-      service: serviceNames, // Combined service names for display
-      services: services, // Array of service objects
+      paidAmount: paymentAmount,
+      paymentPercentage: paymentPercentage,
+      service: serviceNames,
+      services: services,
       payment: true,
       paymentMethod: paymentMethod || 'razorpay',
       userData: {
@@ -173,13 +170,14 @@ export const bookAppointment = async (req, res) => {
     return res.json({
       success: true,
       message: "Appointment booked successfully",
-      appointmentId: appointment._id
+      appointmentId: appointment._id,
+      paidAmount: paymentAmount,
+      remainingAmount: totalAmount - paymentAmount
     });
     
   } catch (error) {
     console.error("Booking error:", error);
     
-    // Duplicate booking protection
     if (error.code === 11000) {
       return res.json({
         success: false,
@@ -198,74 +196,65 @@ export const rescheduleAppointment = async (req, res) => {
   try {
     const { userId, appointmentId, slotDate, slotTime } = req.body;
     
-    // Validate inputs
     if (!userId || !appointmentId || !slotDate || !slotTime) {
       return res.json({ success: false, message: 'Missing required fields' });
     }
     
-    // Find the appointment
     const appointmentData = await appointmentModel.findById(appointmentId);
     
     if (!appointmentData) {
       return res.json({ success: false, message: 'Appointment not found' });
     }
     
-    // Verify that the appointment belongs to this user
     if (appointmentData.userId.toString() !== userId.toString()) {
       return res.json({ success: false, message: 'Unauthorized action' });
     }
     
-    // Check if appointment is completed
     if (appointmentData.isCompleted) {
       return res.json({ success: false, message: 'Cannot reschedule completed appointment' });
     }
     
-    // Check if rescheduling is allowed based on settings
     const settings = await SlotSettings.findOne();
     
     if (settings && !settings.allowRescheduling) {
       return res.json({ success: false, message: 'Rescheduling is not allowed' });
     }
     
-    // Check reschedule time constraints (3 hours minimum)
     const now = new Date();
     
-    // For cancelled appointments, skip time check
     if (!appointmentData.cancelled) {
       const appointmentTime = new Date(appointmentData.slotDateTime);
-      const rescheduleTimeLimit = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
+      const rescheduleHours = settings?.rescheduleHoursBefore || 3;
+      const rescheduleTimeLimit = rescheduleHours * 60 * 60 * 1000;
       
       if (appointmentTime - now < rescheduleTimeLimit) {
         return res.json({
           success: false,
-          message: 'Appointments can only be rescheduled at least 3 hours before the appointment time'
+          message: `Appointments can only be rescheduled at least ${rescheduleHours} hours before the appointment time`
         });
       }
     }
     
-    // Validate new slot time (ISO string)
     const newSlotDateTime = new Date(slotTime);
     if (isNaN(newSlotDateTime.getTime())) {
       return res.json({ success: false, message: 'Invalid slot time format' });
     }
     
-    // Check that new slot is at least 3 hours in the future
-    const minFutureTime = 3 * 60 * 60 * 1000;
+    const rescheduleHours = settings?.rescheduleHoursBefore || 3;
+    const minFutureTime = rescheduleHours * 60 * 60 * 1000;
     if (newSlotDateTime - now < minFutureTime) {
       return res.json({
         success: false,
-        message: 'New appointment must be at least 3 hours from now'
+        message: `New appointment must be at least ${rescheduleHours} hours from now`
       });
     }
     
-    // Check if the new slot is valid
     const { slots, error } = await generateAvailableSlots(slotDate);
     
     if (error) {
       return res.json({ success: false, message: error });
     }
     
-    // Check if requested time is in our generated slots
     const isValidSlot = slots.some(
       slot => slot.startTime === slotTime
     );
@@ -274,17 +263,14 @@ export const rescheduleAppointment = async (req, res) => {
       return res.json({ success: false, message: 'Invalid slot time' });
     }
     
-    // Get doctor data and check availability
     const docData = await doctorModel.findById(appointmentData.doctorId);
     
     if (!docData || !docData.available) {
       return res.json({ success: false, message: 'Stylist Not Available' });
     }
     
-    // Check if the new slot is already booked
     let slots_booked = docData.slots_booked || new Map();
     
-    // Convert to Map if needed
     if (!(slots_booked instanceof Map)) {
       const oldSlots = slots_booked;
       slots_booked = new Map();
@@ -299,7 +285,6 @@ export const rescheduleAppointment = async (req, res) => {
       return res.json({ success: false, message: 'Slot Not Available' });
     }
     
-    // Remove old slot booking
     const oldSlotDate = appointmentData.slotDate;
     const oldSlotDateTimeISO = appointmentData.slotDateTime.toISOString();
     
@@ -307,29 +292,25 @@ export const rescheduleAppointment = async (req, res) => {
     const updatedOldSlots = oldBookedSlots.filter(time => time !== oldSlotDateTimeISO);
     slots_booked.set(oldSlotDate, updatedOldSlots);
     
-    // Add new slot booking
     const newBookedSlots = slots_booked.get(slotDate) || [];
     newBookedSlots.push(slotTime);
     slots_booked.set(slotDate, newBookedSlots);
     
-    // Format display time
     const displayTime = newSlotDateTime.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true
     });
     
-    // Update appointment data
     await appointmentModel.findByIdAndUpdate(appointmentId, {
       slotDate,
       slotTime: displayTime,
       slotDateTime: newSlotDateTime,
       rescheduled: true,
-      cancelled: false, // Reset cancelled status
+      cancelled: false,
       cancelledBy: null
     });
     
-    // Update doctor's slots
     await doctorModel.findByIdAndUpdate(appointmentData.doctorId, { slots_booked });
     
     res.json({

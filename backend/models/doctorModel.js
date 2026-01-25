@@ -18,7 +18,7 @@ specialty: {
     price: { type: Number, required: true },
     phone: { 
         type: String, 
-        required: true,
+        required: false,
         default: '' 
     },
 
