@@ -33,12 +33,23 @@ const Appointment = () => {
     const [stylistServices, setStylistServices] = useState([]);
     const [availableDates, setAvailableDates] = useState([]);
     const [dateLoading, setDateLoading] = useState(false);
-    
-    // ✅ NEW: Payment calculation states
     const [paymentAmount, setPaymentAmount] = useState(0);
     const [remainingAmount, setRemainingAmount] = useState(0);
 
     const navigate = useNavigate();
+
+    // ✅ DEBUG: Add console logging
+    useEffect(() => {
+        console.log('🔍 DEBUG - Current State:', {
+            token: token ? 'EXISTS' : 'MISSING',
+            backendUrl,
+            docId,
+            stylistInfo: stylistInfo ? 'LOADED' : 'NULL',
+            slotSettings: slotSettings ? 'LOADED' : 'NULL',
+            availableDates: availableDates.length,
+            dateLoading
+        });
+    }, [token, backendUrl, docId, stylistInfo, slotSettings, availableDates, dateLoading]);
 
     const loadRazorpayScript = () => {
         return new Promise((resolve) => {
@@ -52,12 +63,15 @@ const Appointment = () => {
 
     const fetchAllServices = async () => {
         try {
+            console.log('📡 Fetching services from:', `${backendUrl}/api/user/services`);
             const { data } = await axios.get(`${backendUrl}/api/user/services`);
+            console.log('✅ Services response:', data);
             if (data.success) {
                 setAllServices(data.services);
             }
         } catch (error) {
-            console.error("Error fetching services:", error);
+            console.error("❌ Error fetching services:", error);
+            console.error("Error details:", error.response?.data);
             toast.error("Failed to load services");
         }
     };
@@ -67,16 +81,20 @@ const Appointment = () => {
         const filtered = allServices.filter(service => 
             stylistInfo.specialty.includes(service.name)
         );
+        console.log('🎯 Filtered services:', filtered);
         setStylistServices(filtered);
     };
 
     const fetchSlotSettings = async () => {
         try {
+            console.log('📡 Fetching slot settings from:', `${backendUrl}/api/admin/public/slot-settings`);
             const { data } = await axios.get(backendUrl + '/api/admin/public/slot-settings');
+            console.log('✅ Slot settings response:', data);
+            
             if (data.success) {
                 setSlotSettings(data);
             } else {
-                // Fallback to defaults
+                console.warn('⚠️ Slot settings not successful, using defaults');
                 setSlotSettings({
                     slotStartTime: "09:00",
                     slotEndTime: "17:00",
@@ -92,7 +110,8 @@ const Appointment = () => {
                 });
             }
         } catch (error) {
-            console.error("Error fetching slot settings:", error);
+            console.error("❌ Error fetching slot settings:", error);
+            console.error("Error details:", error.response?.data);
             setSlotSettings({
                 slotStartTime: "09:00",
                 slotEndTime: "17:00",
@@ -111,16 +130,34 @@ const Appointment = () => {
 
     const fetchStylistInfo = async () => {
         const stylistInfo = stylists.find((stylist) => stylist._id === docId);
+        console.log('👤 Stylist info:', stylistInfo);
         setStylistInfo(stylistInfo);
     };
 
     const generateAvailableDates = async () => {
-        if (!slotSettings) return;
+        if (!slotSettings) {
+            console.warn('⚠️ Slot settings not loaded yet');
+            return;
+        }
         
+        if (!token) {
+            console.warn('⚠️ Token missing, cannot fetch available dates');
+            toast.warning('Please login to view available dates');
+            return;
+        }
+        
+        console.log('📅 Generating available dates...');
         setDateLoading(true);
         const dates = [];
         const today = new Date();
         const maxDays = slotSettings.maxAdvanceBookingDays || 30;
+        
+        console.log('Settings for date generation:', {
+            maxDays,
+            daysOpen: slotSettings.daysOpen,
+            startTime: slotSettings.slotStartTime,
+            endTime: slotSettings.slotEndTime
+        });
         
         for (let i = 0; i < maxDays && dates.length < 30; i++) {
             const date = new Date(today);
@@ -131,6 +168,8 @@ const Appointment = () => {
             if (slotSettings.daysOpen && slotSettings.daysOpen.includes(dayName)) {
                 try {
                     const dateStr = date.toISOString().split("T")[0];
+                    console.log(`📡 Fetching slots for ${dateStr} (${dayName})`);
+                    
                     const { data } = await axios.get(
                         `${backendUrl}/api/user/available-slots`,
                         {
@@ -138,6 +177,8 @@ const Appointment = () => {
                             headers: { token }
                         }
                     );
+                    
+                    console.log(`Response for ${dateStr}:`, data);
                     
                     const slotCount = data.success ? data.slots.length : 0;
                     
@@ -150,21 +191,34 @@ const Appointment = () => {
                             isToday: i === 0,
                             slotCount: slotCount
                         });
+                    } else {
+                        console.log(`No slots available for ${dateStr}`);
                     }
                 } catch (error) {
-                    console.error("Error fetching slots for date:", date, error);
+                    console.error(`❌ Error fetching slots for ${dateStr}:`, error);
+                    console.error("Error details:", error.response?.data);
                 }
+            } else {
+                console.log(`Skipping ${dayName} - not in daysOpen`);
             }
         }
         
+        console.log('✅ Generated dates:', dates);
         setAvailableDates(dates);
         setDateLoading(false);
     };
 
     const fetchSlots = async (dateObj) => {
+        if (!token) {
+            console.warn('⚠️ Token missing, cannot fetch slots');
+            toast.warning('Please login to view available slots');
+            return;
+        }
+        
         try {
             setLoading(true);
             const dateStr = dateObj.toISOString().split("T")[0];
+            console.log('📡 Fetching slots for specific date:', dateStr);
 
             const { data } = await axios.get(
                 `${backendUrl}/api/user/available-slots`,
@@ -174,6 +228,8 @@ const Appointment = () => {
                 }
             );
 
+            console.log('✅ Slots response:', data);
+
             if (data.success) {
                 setAvailableSlots(data.slots);
             } else {
@@ -181,7 +237,8 @@ const Appointment = () => {
                 toast.warning(data.message);
             }
         } catch (error) {
-            console.error(error);
+            console.error("❌ Error fetching slots:", error);
+            console.error("Error details:", error.response?.data);
             toast.error("Failed to load slots");
             setAvailableSlots([]);
         } finally {
@@ -203,7 +260,6 @@ const Appointment = () => {
         return selectedServices.reduce((total, service) => total + service.basePrice, 0);
     };
 
-    // ✅ Calculate payment amounts based on settings
     useEffect(() => {
         if (selectedServices.length > 0 && slotSettings) {
             const total = getTotalPrice();
@@ -238,7 +294,7 @@ const Appointment = () => {
 
                 const options = {
                     key: razorpayKeyId,
-                    amount: paymentAmount * 100, // ✅ Use calculated payment amount
+                    amount: paymentAmount * 100,
                     currency: "INR",
                     name: "Salon Stylist",
                     description: `Booking with ${stylistInfo.name}`,
@@ -311,6 +367,15 @@ const Appointment = () => {
                 price: s.basePrice
             }));
 
+            console.log('📡 Booking appointment:', {
+                docId,
+                slotDate,
+                slotTime: selectedSlotISO,
+                services: servicesData,
+                totalAmount: getTotalPrice(),
+                paymentMethod
+            });
+
             const { data } = await axios.post(
                 backendUrl + '/api/user/book-appointment',
                 {
@@ -323,6 +388,8 @@ const Appointment = () => {
                 },
                 { headers: { token } }
             );
+
+            console.log('✅ Booking response:', data);
 
             if (data.success) {
                 toast.success(data.message);
@@ -340,34 +407,45 @@ const Appointment = () => {
                 setBookingLoading(false);
             }
         } catch (error) {
-            console.error(error);
+            console.error("❌ Booking error:", error);
+            console.error("Error details:", error.response?.data);
             toast.error(error.response?.data?.message || 'Error booking appointment');
             setBookingLoading(false);
         }
     };
 
     useEffect(() => {
+        console.log('🚀 Initial setup - fetching slot settings and services');
         fetchSlotSettings();
         fetchAllServices();
     }, []);
 
     useEffect(() => {
         if (stylists && stylists.length > 0) {
+            console.log('👥 Stylists loaded, fetching stylist info');
             fetchStylistInfo();
         }
     }, [stylists, docId]);
 
     useEffect(() => {
         if (stylistInfo && allServices.length > 0) {
+            console.log('🎯 Filtering stylist services');
             filterStylistServices();
         }
     }, [stylistInfo, allServices]);
 
     useEffect(() => {
-        if (slotSettings && docId) {
+        if (slotSettings && docId && token) {
+            console.log('📅 Settings and docId ready, generating dates');
             generateAvailableDates();
+        } else {
+            console.log('⏳ Waiting for:', {
+                slotSettings: !!slotSettings,
+                docId: !!docId,
+                token: !!token
+            });
         }
-    }, [slotSettings, docId]);
+    }, [slotSettings, docId, token]);
 
     if (!stylistInfo || !slotSettings) {
         return (
@@ -379,6 +457,7 @@ const Appointment = () => {
 
     return (
         <div className="bg-gray-50 min-h-screen">
+            {/* Rest of your JSX remains the same... */}
             <div className="max-w-7xl mx-auto px-4 py-6 md:py-10">
                 <div className="mb-8 flex items-center">
                     <button 
@@ -389,6 +468,17 @@ const Appointment = () => {
                     </button>
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Book Your Appointment</h1>
                 </div>
+                
+                {/* Debug Info - Remove in production */}
+                {process.env.NODE_ENV === 'development' && (
+                    <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
+                        <p className="text-sm font-mono">
+                            Token: {token ? '✅ Present' : '❌ Missing'} | 
+                            Dates: {availableDates.length} | 
+                            Loading: {dateLoading ? 'Yes' : 'No'}
+                        </p>
+                    </div>
+                )}
                 
                 <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                     {/* Stylist Profile Section */}
