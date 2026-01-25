@@ -381,22 +381,20 @@ const adminDashboard = async (req, res) => {
     }
 }
 
+
 // Get Slot Settings
 export const getSlotSettings = async (req, res) => {
   try {
-    // Find settings or create default if none exist
     let settings = await SlotSettings.findOne();
     if (!settings) {
       settings = await SlotSettings.create({});
     }
 
-    // Get related data
-    const blockedDates = await BlockedDate.find();
-    const recurringHolidays = await RecurringHoliday.find();
-    const specialWorkingDays = await SpecialWorkingDay.find();
+    const blockedDates = await BlockedDate.find().sort({ date: 1 });
+    const recurringHolidays = await RecurringHoliday.find().sort({ name: 1 });
+    const specialWorkingDays = await SpecialWorkingDay.find().sort({ date: 1 });
 
-    // Return in the format expected by the frontend
-    res.status(200).json({
+    res.json({
       success: true,
       settings: settings.toObject(),
       blockedDates,
@@ -405,30 +403,25 @@ export const getSlotSettings = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching slot settings:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to fetch slot settings', 
-      error: error.message 
-    });
+    res.json({ success: false, message: 'Failed to fetch slot settings' });
   }
 };
 
 // Update Slot Settings
 export const updateSlotSettings = async (req, res) => {
   try {
-    // Extract settings from request body
     const {
       slotStartTime, slotEndTime, slotDuration, 
       breakTime, breakStartTime, breakEndTime, 
       daysOpen, openSlotsFromDate, openSlotsTillDate,
       allowRescheduling, rescheduleHoursBefore,
-      maxAdvanceBookingDays, minBookingTimeBeforeSlot
+      maxAdvanceBookingDays, minBookingTimeBeforeSlot,
+      advancePaymentRequired, advancePaymentPercentage
     } = req.body;
 
-    // Update or create settings
     let settings = await SlotSettings.findOne();
+    
     if (settings) {
-      // Update existing settings
       settings.slotStartTime = slotStartTime;
       settings.slotEndTime = slotEndTime;
       settings.slotDuration = slotDuration;
@@ -442,31 +435,22 @@ export const updateSlotSettings = async (req, res) => {
       settings.rescheduleHoursBefore = rescheduleHoursBefore;
       settings.maxAdvanceBookingDays = maxAdvanceBookingDays;
       settings.minBookingTimeBeforeSlot = minBookingTimeBeforeSlot;
+      settings.advancePaymentRequired = advancePaymentRequired;
+      settings.advancePaymentPercentage = advancePaymentPercentage;
       
       await settings.save();
     } else {
-      // Create new settings
-      settings = await SlotSettings.create({
-        slotStartTime, slotEndTime, slotDuration, 
-        breakTime, breakStartTime, breakEndTime, 
-        daysOpen, openSlotsFromDate, openSlotsTillDate,
-        allowRescheduling, rescheduleHoursBefore,
-        maxAdvanceBookingDays, minBookingTimeBeforeSlot
-      });
+      settings = await SlotSettings.create(req.body);
     }
 
-    res.status(200).json({ 
-      success: true,
+    res.json({ 
+      success: true, 
       message: 'Slot settings updated successfully', 
       settings 
     });
   } catch (error) {
     console.error('Error updating slot settings:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to update slot settings', 
-      error: error.message 
-    });
+    res.json({ success: false, message: 'Failed to update slot settings' });
   }
 };
 
@@ -476,26 +460,19 @@ export const addBlockedDate = async (req, res) => {
     const { date, reason } = req.body;
     
     if (!date || !reason) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Date and reason are required' 
-      });
+      return res.json({ success: false, message: 'Date and reason are required' });
     }
     
     const blockedDate = await BlockedDate.create({ date, reason });
     
-    res.status(201).json({
-      success: true,
-      message: 'Blocked date added successfully',
-      blockedDate
+    res.json({ 
+      success: true, 
+      message: 'Date blocked successfully',
+      blockedDate 
     });
   } catch (error) {
     console.error('Error adding blocked date:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to add blocked date', 
-      error: error.message 
-    });
+    res.json({ success: false, message: 'Failed to add blocked date' });
   }
 };
 
@@ -507,23 +484,13 @@ export const removeBlockedDate = async (req, res) => {
     const result = await BlockedDate.findByIdAndDelete(id);
     
     if (!result) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Blocked date not found' 
-      });
+      return res.json({ success: false, message: 'Blocked date not found' });
     }
     
-    res.status(200).json({ 
-      success: true,
-      message: 'Blocked date removed successfully' 
-    });
+    res.json({ success: true, message: 'Blocked date removed successfully' });
   } catch (error) {
     console.error('Error removing blocked date:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to remove blocked date', 
-      error: error.message 
-    });
+    res.json({ success: false, message: 'Failed to remove blocked date' });
   }
 };
 
@@ -533,26 +500,19 @@ export const addRecurringHoliday = async (req, res) => {
     const { name, type, value } = req.body;
     
     if (!name || !type || !value) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Name, type and value are required' 
-      });
+      return res.json({ success: false, message: 'Name, type and value are required' });
     }
     
-    const recurringHoliday = await RecurringHoliday.create({ name, type, value });
+    const holiday = await RecurringHoliday.create({ name, type, value });
     
-    res.status(201).json({
-      success: true,
+    res.json({ 
+      success: true, 
       message: 'Recurring holiday added successfully',
-      recurringHoliday
+      recurringHoliday: holiday 
     });
   } catch (error) {
     console.error('Error adding recurring holiday:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to add recurring holiday', 
-      error: error.message 
-    });
+    res.json({ success: false, message: 'Failed to add recurring holiday' });
   }
 };
 
@@ -564,23 +524,13 @@ export const removeRecurringHoliday = async (req, res) => {
     const result = await RecurringHoliday.findByIdAndDelete(id);
     
     if (!result) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Recurring holiday not found' 
-      });
+      return res.json({ success: false, message: 'Recurring holiday not found' });
     }
     
-    res.status(200).json({ 
-      success: true,
-      message: 'Recurring holiday removed successfully' 
-    });
+    res.json({ success: true, message: 'Recurring holiday removed successfully' });
   } catch (error) {
     console.error('Error removing recurring holiday:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to remove recurring holiday', 
-      error: error.message 
-    });
+    res.json({ success: false, message: 'Failed to remove recurring holiday' });
   }
 };
 
@@ -590,26 +540,19 @@ export const addSpecialWorkingDay = async (req, res) => {
     const { date } = req.body;
     
     if (!date) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Date is required' 
-      });
+      return res.json({ success: false, message: 'Date is required' });
     }
     
-    const specialWorkingDay = await SpecialWorkingDay.create({ date });
+    const specialDay = await SpecialWorkingDay.create({ date });
     
-    res.status(201).json({
-      success: true,
+    res.json({ 
+      success: true, 
       message: 'Special working day added successfully',
-      specialWorkingDay
+      specialWorkingDay: specialDay 
     });
   } catch (error) {
     console.error('Error adding special working day:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to add special working day', 
-      error: error.message 
-    });
+    res.json({ success: false, message: 'Failed to add special working day' });
   }
 };
 
@@ -621,23 +564,13 @@ export const removeSpecialWorkingDay = async (req, res) => {
     const result = await SpecialWorkingDay.findByIdAndDelete(id);
     
     if (!result) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Special working day not found' 
-      });
+      return res.json({ success: false, message: 'Special working day not found' });
     }
     
-    res.status(200).json({ 
-      success: true,
-      message: 'Special working day removed successfully' 
-    });
+    res.json({ success: true, message: 'Special working day removed successfully' });
   } catch (error) {
     console.error('Error removing special working day:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to remove special working day', 
-      error: error.message 
-    });
+    res.json({ success: false, message: 'Failed to remove special working day' });
   }
 };
 
@@ -646,32 +579,23 @@ export const getPublicSlotSettings = async (req, res) => {
   try {
     const settings = await SlotSettings.findOne();
     if (!settings) {
-      return res.status(200).json({
-        success: true,
-        settings: null,
-        blockedDates: [],
-        recurringHolidays: [],
-        specialWorkingDays: []
-      });
+      return res.json({ success: false, message: 'Settings not configured' });
     }
 
     const blockedDates = await BlockedDate.find();
     const recurringHolidays = await RecurringHoliday.find();
     const specialWorkingDays = await SpecialWorkingDay.find();
 
-    res.status(200).json({
+    res.json({
       success: true,
-      settings: settings.toObject(),
+      ...settings.toObject(),
       blockedDates,
       recurringHolidays,
       specialWorkingDays
     });
   } catch (error) {
     console.error("Public slot settings error:", error);
-    res.status(500).json({ 
-      success: false,
-      message: "Failed to fetch slot settings" 
-    });
+    res.json({ success: false, message: "Failed to fetch slot settings" });
   }
 };
 
