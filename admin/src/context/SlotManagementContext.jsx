@@ -1,13 +1,16 @@
 // context/SlotManagementContext.jsx
 import axios from "axios";
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useContext } from "react";
 import { toast } from "react-toastify";
+import { AdminContext } from "./AdminContext";
 
 export const SlotManagementContext = createContext();
 
 const SlotManagementContextProvider = (props) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  const [aToken, setAToken] = useState(localStorage.getItem('aToken') ? localStorage.getItem('aToken') : '');
+  
+  // Get aToken from AdminContext instead of managing it separately
+  const { aToken } = useContext(AdminContext);
 
   // State variables for slot management
   const [loading, setLoading] = useState(false);
@@ -27,11 +30,18 @@ const SlotManagementContextProvider = (props) => {
     allowRescheduling: true,
     rescheduleHoursBefore: 24,
     maxAdvanceBookingDays: 30,
-    minBookingTimeBeforeSlot: 2
+    minBookingTimeBeforeSlot: 2,
+    advancePaymentRequired: false,
+    advancePaymentPercentage: 50
   });
 
   // Fetch slot settings
   const fetchSettings = async () => {
+    if (!aToken) {
+      console.log('No admin token available');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data } = await axios.get(`${backendUrl}/api/admin/slot-settings`, { 
@@ -49,7 +59,7 @@ const SlotManagementContextProvider = (props) => {
           specialWorkingDays: data.specialWorkingDays || []
         };
         
-        console.log('Processed settings:', processedData); // Debug log
+        console.log('Processed settings:', processedData);
         setSettings(processedData);
       } else {
         toast.error(data.message || 'Failed to load settings');
@@ -64,6 +74,11 @@ const SlotManagementContextProvider = (props) => {
 
   // Save slot settings
   const saveSettings = async (settingsData) => {
+    if (!aToken) {
+      toast.error('Not authorized. Please login again.');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data } = await axios.post(
@@ -74,7 +89,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Settings saved successfully');
-        await fetchSettings(); // Refresh settings
+        await fetchSettings();
       } else {
         toast.error(data.message || 'Failed to save settings');
       }
@@ -88,6 +103,11 @@ const SlotManagementContextProvider = (props) => {
 
   // Add a blocked date
   const addBlockedDate = async (date, reason) => {
+    if (!aToken) {
+      toast.error('Not authorized. Please login again.');
+      return null;
+    }
+
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/admin/blocked-dates`, 
@@ -97,7 +117,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Date blocked successfully');
-        await fetchSettings(); // Refresh the blocked dates
+        await fetchSettings();
         return data.blockedDate;
       } else {
         toast.error(data.message || 'Failed to block date');
@@ -112,6 +132,11 @@ const SlotManagementContextProvider = (props) => {
 
   // Remove a blocked date
   const removeBlockedDate = async (id) => {
+    if (!aToken) {
+      toast.error('Not authorized. Please login again.');
+      return false;
+    }
+
     try {
       const { data } = await axios.delete(
         `${backendUrl}/api/admin/blocked-dates/${id}`, 
@@ -120,7 +145,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Blocked date removed');
-        await fetchSettings(); // Refresh settings
+        await fetchSettings();
         return true;
       } else {
         toast.error(data.message || 'Failed to remove blocked date');
@@ -135,6 +160,11 @@ const SlotManagementContextProvider = (props) => {
 
   // Add a recurring holiday
   const addRecurringHoliday = async (name, type, value) => {
+    if (!aToken) {
+      toast.error('Not authorized. Please login again.');
+      return null;
+    }
+
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/admin/recurring-holidays`, 
@@ -144,7 +174,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Recurring holiday added');
-        await fetchSettings(); // Refresh settings
+        await fetchSettings();
         return data.recurringHoliday;
       } else {
         toast.error(data.message || 'Failed to add recurring holiday');
@@ -159,6 +189,11 @@ const SlotManagementContextProvider = (props) => {
 
   // Remove a recurring holiday
   const removeRecurringHoliday = async (id) => {
+    if (!aToken) {
+      toast.error('Not authorized. Please login again.');
+      return false;
+    }
+
     try {
       const { data } = await axios.delete(
         `${backendUrl}/api/admin/recurring-holidays/${id}`, 
@@ -167,7 +202,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Recurring holiday removed');
-        await fetchSettings(); // Refresh settings
+        await fetchSettings();
         return true;
       } else {
         toast.error(data.message || 'Failed to remove recurring holiday');
@@ -182,6 +217,11 @@ const SlotManagementContextProvider = (props) => {
 
   // Add a special working day
   const addSpecialWorkingDay = async (date) => {
+    if (!aToken) {
+      toast.error('Not authorized. Please login again.');
+      return null;
+    }
+
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/admin/special-working-days`, 
@@ -191,7 +231,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Special working day added');
-        await fetchSettings(); // Refresh settings
+        await fetchSettings();
         return data.specialWorkingDay;
       } else {
         toast.error(data.message || 'Failed to add special working day');
@@ -206,6 +246,11 @@ const SlotManagementContextProvider = (props) => {
 
   // Remove a special working day
   const removeSpecialWorkingDay = async (id) => {
+    if (!aToken) {
+      toast.error('Not authorized. Please login again.');
+      return false;
+    }
+
     try {
       const { data } = await axios.delete(
         `${backendUrl}/api/admin/special-working-days/${id}`, 
@@ -214,7 +259,7 @@ const SlotManagementContextProvider = (props) => {
       
       if (data.success) {
         toast.success('Special working day removed');
-        await fetchSettings(); // Refresh settings
+        await fetchSettings();
         return true;
       } else {
         toast.error(data.message || 'Failed to remove special working day');
@@ -249,7 +294,7 @@ const SlotManagementContextProvider = (props) => {
     }
   };
 
-  // Load settings on component mount if token is available
+  // Load settings when aToken becomes available
   useEffect(() => {
     if (aToken) {
       fetchSettings();
