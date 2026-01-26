@@ -298,7 +298,7 @@ const Stylists = () => {
                       <p className="text-white/90 text-sm flex items-center gap-1.5 mb-2">
                         <Scissors size={14} />
                         {stylist.specialty.join(', ')}
-                      </p>
+                      </p>                      
                       
                       {/* Star rating */}
                       {/* <div className="flex items-center gap-1.5 text-sm">
@@ -426,8 +426,9 @@ const Stylists = () => {
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h3 className="text-xl font-bold text-gray-800 group-hover:text-primary transition-colors">{stylist.name}</h3>
-                        <p className="hidden md:block text-primary text-sm font-medium">{stylist.speciality}</p>
-                      </div>
+                        <p className="hidden md:block text-primary text-sm font-medium">                    
+                          {stylist.specialty.join(', ')}</p>                      
+                      </div>                      
                       {/* <span className="font-bold text-primary">₹{stylist.price || stylist.fees || 500}</span> */}
                     </div>
 

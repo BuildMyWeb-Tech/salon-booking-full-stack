@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { AdminContext } from '../../context/AdminContext'
+import axios from 'axios';
 import {
   Scissors,
   Search,
@@ -39,29 +40,85 @@ const StylistsList = () => {
   const [stylistToDelete, setStylistToDelete] = useState(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [serviceCategories, setServiceCategories] = useState([])
   const itemsPerPage = 9
 
+  // Load both stylists and service categories
   useEffect(() => {
     if (aToken) {
       setLoading(true)
-      getAllStylists().finally(() => setLoading(false))
+      
+      Promise.all([
+        getAllStylists(),
+        fetchServiceCategories()
+      ])
+      .then(() => setLoading(false))
+      .catch(() => setLoading(false))
     }
   }, [aToken])
 
-  /* ===== UNIQUE SPECIALTIES FROM ADD STYLIST DATA ===== */
-  const specialties = ['all', ...new Set(stylists.map(s => s.specialty || s.speciality))]
+  // Function to fetch service categories
+  const fetchServiceCategories = async () => {
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL
+      const { data } = await axios.get(
+        `${backendUrl}/api/admin/services`,
+        { headers: { aToken } }
+      )
+      
+      if (data.success) {
+        setServiceCategories(data.services)
+      }
+    } catch (error) {
+      console.error("Error fetching service categories:", error)
+    }
+  }
+
+  // Extract all unique specialties from stylists for fallback
+  const extractUniqueSpecialties = () => {
+    const specialtySets = new Set()
+    
+    stylists.forEach(stylist => {
+      const specialtyArray = stylist.specialty || stylist.speciality || []
+      
+      // Handle both string and array formats
+      if (Array.isArray(specialtyArray)) {
+        specialtyArray.forEach(s => specialtySets.add(s))
+      } else if (typeof specialtyArray === 'string') {
+        specialtySets.add(specialtyArray)
+      }
+    })
+    
+    return ['all', ...Array.from(specialtySets)]
+  }
+
+  /* ===== GET SPECIALTIES FROM SERVICE CATEGORIES OR FALLBACK TO STYLIST DATA ===== */
+  const specialties = serviceCategories.length > 0 
+    ? ['all', ...serviceCategories.map(category => category.name)] 
+    : extractUniqueSpecialties()
 
   /* ===== FILTER + SORT LOGIC ===== */
   const filteredStylists = stylists
     .filter(stylist => {
       const matchesSearch =
         stylist.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (stylist.specialty || stylist.speciality)?.toLowerCase().includes(searchTerm.toLowerCase())
+        (Array.isArray(stylist.specialty) && stylist.specialty.some(s => 
+          s.toLowerCase().includes(searchTerm.toLowerCase())
+        )) || 
+        (Array.isArray(stylist.speciality) && stylist.speciality.some(s => 
+          s.toLowerCase().includes(searchTerm.toLowerCase())
+        ))
+
+      // Check if stylist has the selected specialty
+      const stylistSpecialties = Array.isArray(stylist.specialty) 
+        ? stylist.specialty 
+        : Array.isArray(stylist.speciality)
+          ? stylist.speciality
+          : []
 
       const matchesSpecialty =
         filterSpecialty === 'all' || 
-        (stylist.specialty === filterSpecialty) || 
-        (stylist.speciality === filterSpecialty)
+        stylistSpecialties.includes(filterSpecialty)
 
       return matchesSearch && matchesSpecialty
     })
@@ -73,8 +130,18 @@ const StylistsList = () => {
       }
 
       if (sortBy === 'specialty') {
-        const aSpecialty = a.specialty || a.speciality || ''
-        const bSpecialty = b.specialty || b.speciality || ''
+        const aSpecialty = Array.isArray(a.specialty) 
+          ? a.specialty.join(', ') 
+          : Array.isArray(a.speciality) 
+            ? a.speciality.join(', ')
+            : ''
+            
+        const bSpecialty = Array.isArray(b.specialty) 
+          ? b.specialty.join(', ') 
+          : Array.isArray(b.speciality)
+            ? b.speciality.join(', ')
+            : ''
+            
         result = aSpecialty.localeCompare(bSpecialty)
       }
 
@@ -154,23 +221,27 @@ const StylistsList = () => {
           </div>
 
           <div className="flex gap-3 flex-wrap sm:flex-nowrap">
-            {/* <div className="relative min-w-[140px]">
+            {/* Service Category Filter */}
+            <div className="relative min-w-[200px]">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <select
                 value={filterSpecialty}
-                onChange={e => setFilterSpecialty(e.target.value)}
+                onChange={e => {
+                  setFilterSpecialty(e.target.value)
+                  setCurrentPage(1) // Reset to first page when filter changes
+                }}
                 className="appearance-none pl-9 pr-8 py-2.5 w-full border rounded-lg focus:ring-2 focus:ring-primary/30 focus:outline-none shadow-sm"
               >
-                {specialties.map((sp, i) => (
-                  <option key={i} value={sp}>
-                    {sp === 'all' ? 'All Specialties' : sp}
+                {specialties.map((specialty, i) => (
+                  <option key={i} value={specialty}>
+                    {specialty === 'all' ? 'All Specialties' : specialty}
                   </option>
                 ))}
               </select>
               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                 <ChevronDown size={16} className="text-gray-400" />
               </div>
-            </div> */}
+            </div>
 
             <div className="relative min-w-[140px]">
               <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -210,6 +281,11 @@ const StylistsList = () => {
           <div className="flex items-center gap-2">
             <div className={`h-2 w-2 rounded-full ${sortOrder === 'asc' ? 'bg-green-500' : 'bg-orange-500'}`}></div>
             <span>{sortOrder === 'asc' ? 'A to Z' : 'Z to A'} by {sortBy === 'name' ? 'name' : sortBy === 'specialty' ? 'specialty' : 'experience'}</span>
+            {filterSpecialty !== 'all' && (
+              <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs">
+                Filtered: {filterSpecialty}
+              </span>
+            )}
           </div>
         </div>
 
@@ -279,7 +355,11 @@ const StylistsList = () => {
                       </h3>
 
                       <p className="text-primary text-sm font-medium">
-                        {stylist.specialty.join(', ') || stylist.speciality.join(', ')}
+                        {Array.isArray(stylist.specialty) 
+                          ? stylist.specialty.join(', ') 
+                          : Array.isArray(stylist.speciality)
+                            ? stylist.speciality.join(', ')
+                            : 'General Stylist'}
                       </p>
                     </div>
 

@@ -1,6 +1,8 @@
 import axios from "axios";
 import { createContext, useState } from "react";
 import { toast } from "react-toastify";
+import { useEffect } from 'react';
+
 
 export const AdminContext = createContext()
 
@@ -9,11 +11,19 @@ const AdminContextProvider = (props) => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL
 
     const [aToken, setAToken] = useState(localStorage.getItem('aToken') ? localStorage.getItem('aToken') : '')
+    const [appointmentsData, setAppointmentsData] = useState([]);
 
     const [appointments, setAppointments] = useState([])
     const [appointmentsLoading, setAppointmentsLoading] = useState(false) // Add this
     const [doctors, setDoctors] = useState([])
     const [dashData, setDashData] = useState(false)
+
+     // Use effect to fetch appointments when token changes
+useEffect(() => {
+  if (aToken) {
+    getAllAppointments();
+  }
+}, [aToken]);
 
      // Getting all Doctors data from Database using API
         const getAllDoctors = async () => {
@@ -91,6 +101,8 @@ const AdminContextProvider = (props) => {
                 throw error;
             }
         };
+
+ 
     
         // Function to delete a doctor/stylist
         const deleteDoctor = async (id) => {
@@ -150,33 +162,27 @@ const AdminContextProvider = (props) => {
 
 
  // Getting all appointment data from Database using API
-     const getAllAppointments = async () => {
-         setAppointmentsLoading(true);
-         try {
-             console.log("Fetching appointments with token:", aToken);
-             const { data } = await axios.get(
-                 backendUrl + "/api/admin/appointments",
-                 { headers: { aToken } } // Make sure you're using the correct header name
-             );
-             
-             if (data.success) {
-                 console.log("Appointments fetched successfully:", data.appointments.length);
-                 setAppointments(data.appointments);
-             } else {
-                 console.error("API returned error:", data.message);
-                 toast.error(data.message);
-             }
-         } catch (error) {
-             console.error("Error fetching appointments:", error.message);
-             if (error.response) {
-                 console.error("Response status:", error.response.status);
-                 console.error("Response data:", error.response.data);
-             }
-             toast.error("Failed to load appointments: " + (error.message || "Unknown error"));
-         } finally {
-             setAppointmentsLoading(false);
-         }
-     }
+const getAllAppointments = async () => {
+  setAppointmentsLoading(true);
+  try {
+    const { data } = await axios.get(
+      backendUrl + "/api/admin/appointments",
+      { headers: { aToken } }
+    );
+    
+    if (data.success) {
+      setAppointments(data.appointments);
+      return data.appointments;
+    } else {
+      toast.error(data.message);
+    }
+  } catch (error) {
+    console.error("Error fetching appointments:", error.message);
+    toast.error("Failed to load appointments: " + (error.message || "Unknown error"));
+  } finally {
+    setAppointmentsLoading(false);
+  }
+}
 
     // Function to cancel appointment using API
     const cancelAppointment = async (appointmentId) => {
@@ -247,23 +253,22 @@ const AdminContextProvider = (props) => {
         }
 
     // Getting Admin Dashboard data from Database using API
-    const getDashData = async () => {
-        try {
+   const getDashData = async () => {
+    try {
+        const { data } = await axios.get(backendUrl + '/api/admin/dashboard', { headers: { aToken } });
 
-            const { data } = await axios.get(backendUrl + '/api/admin/dashboard', { headers: { aToken } })
-
-            if (data.success) {
-                setDashData(data.dashData)
-            } else {
-                toast.error(data.message)
-            }
-
-        } catch (error) {
-            console.log(error)
-            toast.error(error.message)
+        if (data.success) {
+            console.log('Dashboard data received:', data.dashData); // Debug log
+            setDashData(data.dashData);
+            return data.dashData;
+        } else {
+            toast.error(data.message);
         }
-
+    } catch (error) {
+        console.log(error);
+        toast.error(error.message);
     }
+}
 
    const value = {
         aToken, 
