@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState, useMemo, memo } from 'react';
+import React, { useCallback, useContext, useEffect, useState, useMemo, memo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { assets } from '../assets/assets';
@@ -10,7 +10,9 @@ import {
   Shield, AlertTriangle, Loader2, Clock, Calendar, Award, User, Scissors
 } from "lucide-react";
 
-// Memoized stylist profile component for better performance
+const stripePromise = loadStripe('pk_test_51NpjZGSJQz3QA6GnHyUmwbQtcYfeTHfQdl0i7YpeCor7Vl6qXn2nKUDRdx6AldHDhxnRUiUJRuAdBECFIwE0QQGy00Ys6rUGi8');
+
+// Memoized components remain the same
 const StylistProfile = memo(({ stylistInfo, slotSettings }) => {
   return (
     <div className="bg-gradient-to-r from-blue-50 to-pink-50 p-6 sm:p-8">
@@ -87,11 +89,8 @@ const StylistProfile = memo(({ stylistInfo, slotSettings }) => {
   );
 });
 
-// Memoized date option component
 const DateOption = memo(({ dateInfo, selectedDate, onDateSelect }) => {
   const isSelected = selectedDate && selectedDate.toDateString() === dateInfo.date.toDateString();
-  
-  // Format month properly
   const monthName = dateInfo.date.toLocaleDateString('en-US', { month: 'short' });
   
   return (
@@ -129,24 +128,15 @@ const DateOption = memo(({ dateInfo, selectedDate, onDateSelect }) => {
   );
 });
 
-// Memoized time slot component
 const TimeSlot = memo(({ slot, selectedSlotISO, onSelectSlot }) => {
-  // Format the time properly
-  const formatTimeDisplay = (isoTime) => {
-    if (!isoTime) return '';
-    
-    // Create date object from ISO string
-    const date = new Date(isoTime);
-    
-    // Format time in 12-hour format (e.g. "9:00 AM")
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
+  const [h, m] = slot.startTime.split(':');
   
-  const displayTime = formatTimeDisplay(slot.startTime);
+  const displayTime = new Date(1970, 0, 1, h, m).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+  
   const isSelected = slot.startTime === selectedSlotISO;
   
   return (
@@ -163,16 +153,37 @@ const TimeSlot = memo(({ slot, selectedSlotISO, onSelectSlot }) => {
   );
 });
 
-// Main component
+const formatDate = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+// Added a more robust formatTime utility
+const formatTime = (timeStr) => {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':');
+  return new Date(1970, 0, 1, h, m).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+
+
+
+// Main component with CRITICAL performance fixes
 const Appointment = () => {
   const { docId } = useParams();
   const { doctors: stylists, currencySymbol, backendUrl, token, getDoctosData: getStylesData } = useContext(AppContext);
 
-  const stripePromise = loadStripe('pk_test_51NpjZGSJQz3QA6GnHyUmwbQtcYfeTHfQdl0i7YpeCor7Vl6qXn2nKUDRdx6AldHDhxnRUiUJRuAdBECFIwE0QQGy00Ys6rUGi8');
   const razorpayKeyId = 'rzp_test_8NBbBv2vkvuTtj';
 
-  // Cache settings
-  const cacheTTL = 5 * 60 * 1000; // 5 minutes cache TTL
+  // ✅ CRITICAL FIX: Use refs to prevent infinite loops
+  const hasFetchedSettings = useRef(false);
+  const hasFetchedServices = useRef(false);
+  const hasFetchedDates = useRef(false);
+  const lastDocId = useRef(null);
 
   // State management
   const [stylistInfo, setStylistInfo] = useState(null);
@@ -194,29 +205,22 @@ const Appointment = () => {
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [remainingAmount, setRemainingAmount] = useState(0);
 
-  // Cache state
-  const [cachedSlots, setCachedSlots] = useState({});
-  const [lastCacheUpdate, setLastCacheUpdate] = useState({});
-  const [datesCacheKey, setDatesCacheKey] = useState('');
-  const [datesLastFetched, setDatesLastFetched] = useState(null);
-
   const navigate = useNavigate();
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🔍 DEBUG - Current State:', {
-      token: token ? 'EXISTS' : 'MISSING',
-      backendUrl,
-      docId,
-      stylistInfo: stylistInfo ? 'LOADED' : 'NULL',
-      slotSettings: slotSettings ? 'LOADED' : 'NULL',
-      availableDates: availableDates.length,
-      dateLoading,
-      selectedDate: selectedDate ? selectedDate.toISOString() : 'NONE'
-    });
-  }, [token, backendUrl, docId, stylistInfo, slotSettings, availableDates, dateLoading, selectedDate]);
+    // ✅ Reduced debug logging
+    useEffect(() => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 DEBUG - Current State:', {
+          token: token ? 'EXISTS' : 'MISSING',
+          docId,
+          stylistInfo: stylistInfo ? 'LOADED' : 'NULL',
+          slotSettings: slotSettings ? 'LOADED' : 'NULL',
+          availableDates: availableDates.length
+        });
+      }
+    }, [token, docId, stylistInfo, slotSettings]);
 
-  // Helpers and utilities
+  // Helpers
   const loadRazorpayScript = useCallback(() => {
     return new Promise((resolve) => {
       const script = document.createElement("script");
@@ -231,15 +235,19 @@ const Appointment = () => {
     return selectedServices.reduce((total, service) => total + service.basePrice, 0);
   }, [selectedServices]);
 
-  // Data fetching functions
+  // ✅ CRITICAL FIX: Prevent re-fetching with ref checks
   const fetchAllServices = useCallback(async () => {
+    if (hasFetchedServices.current) return;
+    
     try {
+      hasFetchedServices.current = true;
       const { data } = await axios.get(`${backendUrl}/api/user/services`);
       if (data.success) {
         console.log('📦 Services fetched:', data.services.length);
         setAllServices(data.services);
       }
     } catch (error) {
+      hasFetchedServices.current = false;
       console.error("Error fetching services:", error);
       toast.error("Failed to load services");
     }
@@ -255,10 +263,17 @@ const Appointment = () => {
   }, [stylistInfo, allServices]);
 
   const fetchSlotSettings = useCallback(async () => {
+    if (hasFetchedSettings.current) return;
+    
     try {
+      hasFetchedSettings.current = true;
       const { data } = await axios.get(backendUrl + '/api/admin/public/slot-settings');
       if (data.success) {
-        console.log('⚙️ Slot settings loaded:', data);
+        console.log('⚙️ Slot settings loaded - Times:', {
+          start: data.slotStartTime,
+          end: data.slotEndTime,
+          duration: data.slotDuration
+        });
         setSlotSettings(data);
       } else {
         setSlotSettings({
@@ -276,20 +291,8 @@ const Appointment = () => {
         });
       }
     } catch (error) {
+      hasFetchedSettings.current = false;
       console.error("Error fetching slot settings:", error);
-      setSlotSettings({
-        slotStartTime: "09:00",
-        slotEndTime: "17:00",
-        slotDuration: 30,
-        breakTime: false,
-        daysOpen: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-        allowRescheduling: true,
-        rescheduleHoursBefore: 24,
-        maxAdvanceBookingDays: 30,
-        minBookingTimeBeforeSlot: 0,
-        advancePaymentRequired: true,
-        advancePaymentPercentage: 100
-      });
     }
   }, [backendUrl]);
 
@@ -299,171 +302,108 @@ const Appointment = () => {
     setStylistInfo(stylistInfo);
   }, [stylists, docId]);
 
-  const generateAvailableDates = useCallback(async () => {
-    if (!slotSettings || !token) {
-      if (!token) toast.warning('Please login to view available dates');
-      return;
-    }
-    
-    setDateLoading(true);
-    
-    // Create a cache key based on current dependencies
-    const newCacheKey = `dates_${docId}_${slotSettings.maxAdvanceBookingDays}`;
-    
-    // Check if we have recently fetched the same data
-    const now = Date.now();
-    if (
-      newCacheKey === datesCacheKey && 
-      datesLastFetched && 
-      (now - datesLastFetched) < cacheTTL && 
-      availableDates.length > 0
-    ) {
-      console.log('📅 Using cached dates');
-      setDateLoading(false);
-      return; // Use existing dates, don't refetch
-    }
-    
-    // Update cache key
-    setDatesCacheKey(newCacheKey);
-    setDatesLastFetched(now);
-    
-    console.log('📅 Generating available dates...');
-    
-    const dates = [];
-    const today = new Date();
-    const maxDays = slotSettings.maxAdvanceBookingDays || 30;
-    
-    // Batch API calls for better performance
-    const promises = [];
-    const potentialDates = [];
-    
-    for (let i = 0; i < maxDays && potentialDates.length < 30; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-      
-      if (slotSettings.daysOpen && slotSettings.daysOpen.includes(dayName)) {
-        const dateStr = date.toISOString().split("T")[0];
-        potentialDates.push({
-          date,
-          dateStr,
-          dayName: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
-          dayNumber: date.getDate(),
-          month: date.toLocaleDateString('en-US', { month: 'short' }),
-          isToday: i === 0
-        });
-        
-        promises.push(axios.get(
-          `${backendUrl}/api/user/available-slots`,
-          {
-            params: { date: dateStr, docId },
-            headers: { token }
-          }
-        ).catch(error => {
-          console.error("Error fetching slots for date:", dateStr, error);
-          return { data: { success: false, slots: [] } };
-        }));
-      }
-    }
-    
-    try {
-      // Make all API calls in parallel
-      const results = await Promise.allSettled(promises);
-      
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          const dateInfo = potentialDates[index];
-          const response = result.value;
-          const data = response.data;
-          const slotCount = data.success ? data.slots.length : 0;
-          
-          if (slotCount > 0) {
-            dates.push({
-              ...dateInfo,
-              slotCount
-            });
-          }
-        }
-      });
-      
-      console.log('📅 Available dates found:', dates.length);
-      setAvailableDates(dates);
-    } catch (error) {
-      console.error("Error fetching available dates:", error);
-      toast.error("Error loading available dates");
-    } finally {
-      setDateLoading(false);
-    }
-  }, [slotSettings, docId, token, backendUrl, datesCacheKey, datesLastFetched, availableDates.length, cacheTTL]);
+  // ✅ CRITICAL FIX: Prevent infinite date generation loops
+const generateAvailableDates = useCallback(async () => {
+  if (!token || !docId) return;
 
-const fetchSlots = useCallback(async (dateObj) => {
-  if (!token) {
-    toast.warning('Please login to view available slots');
-    return;
-  }
-  
+  if (hasFetchedDates.current && lastDocId.current === docId) return;
+
+  setDateLoading(true);
+  hasFetchedDates.current = true;
+  lastDocId.current = docId;
+
   try {
-    setLoading(true);
-    const dateStr = dateObj.toISOString().split("T")[0];
-    
-    console.log('🕒 Fetching slots for date:', dateStr, 'with docId:', docId);
-    console.log('⚙️ Current slot settings:', slotSettings);
-    
-    // Check if we have cached data and it's still fresh
-    const cacheKey = `${docId}_${dateStr}`;
-    const now = Date.now();
-    if (
-      cachedSlots[cacheKey] && 
-      lastCacheUpdate[cacheKey] && 
-      (now - lastCacheUpdate[cacheKey]) < cacheTTL
-    ) {
-      console.log('⚡ Using cached slots data, count:', cachedSlots[cacheKey].length);
-      setAvailableSlots(cachedSlots[cacheKey]);
-      setLoading(false);
+    const response = await axios.get(`${backendUrl}/api/user/available-dates/${docId}`, {
+      headers: { token },
+    });
+
+    if (!response.data.success || !Array.isArray(response.data.dates)) {
+      setAvailableDates([]);
       return;
     }
 
-    // If no cache or expired, fetch from API
-    const { data } = await axios.get(
-      `${backendUrl}/api/user/available-slots`,
-      {
+    const promises = response.data.dates.map(dateStr => 
+      axios.get(`${backendUrl}/api/user/available-slots`, {
         params: { date: dateStr, docId },
         headers: { token }
-      }
+      }).catch(() => ({ data: { success: false, slots: [] } }))
     );
 
-    if (data.success) {
-      console.log('📋 Received slots data:', data.slots.length, 'slots');
-      console.log('📋 First slot start:', data.slots[0]?.startTime);
-      console.log('📋 Last slot start:', data.slots[data.slots.length - 1]?.startTime);
+    const results = await Promise.all(promises);
+    
+    const datesWithSlots = [];
+    
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
       
-      // Update cache
-      setCachedSlots(prev => ({
-        ...prev,
-        [cacheKey]: data.slots
-      }));
-      setLastCacheUpdate(prev => ({
-        ...prev,
-        [cacheKey]: now
-      }));
+      if (!result.data.success || !result.data.slots?.length) continue;
       
-      setAvailableSlots(data.slots);
-    } else {
-      console.log('❌ Error fetching slots:', data.message);
-      setAvailableSlots([]);
-      toast.warning(data.message);
+      // Safely create date object from the available date string
+      const date = new Date(response.data.dates[i]);
+      
+      datesWithSlots.push({
+        date,
+        dateStr: response.data.dates[i],
+        dayName: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+        dayNumber: date.getDate(),
+        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        isToday: new Date().toDateString() === date.toDateString(),
+        slotCount: result.data.slots.length
+      });
     }
+
+    setAvailableDates(datesWithSlots);
   } catch (error) {
-    console.error("Error fetching slots:", error);
-    toast.error("Failed to load slots");
+    console.error("Error loading available dates:", error);
+    toast.error("Failed to load available dates");
+    setAvailableDates([]);
+  } finally {
+    setDateLoading(false);
+  }
+}, [docId, token, backendUrl]);
+
+useEffect(() => {
+  const fetchDates = async () => {
+    try {
+      const res = await axios.get(
+        `${backendUrl}/api/user/available-dates/${docId}`,
+        { headers: { token } }
+      );
+
+      if (res.data.success) {
+        setAvailableDates(res.data.dates);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (docId && token) fetchDates();
+}, [docId, token, backendUrl]);
+
+const fetchSlots = useCallback(async (dateObj) => {
+  if (!token) return toast.warning('Please login to view available slots');
+
+  try {
+    setLoading(true);
+    const dateStr = formatDate(dateObj);
+
+    const { data } = await axios.get(`${backendUrl}/api/user/available-slots`, {
+      params: { date: dateStr, docId },
+      headers: { token },
+    });
+
+    setAvailableSlots(data.success ? data.slots : []);
+    if (!data.success) toast.warning(data.message || 'No slots available');
+  } catch (error) {
+    console.error(error);
+    toast.error('Failed to load slots');
     setAvailableSlots([]);
   } finally {
     setLoading(false);
   }
-}, [token, docId, backendUrl, cachedSlots, lastCacheUpdate, cacheTTL, slotSettings]);
+}, [token, docId, backendUrl]);
 
-  // User interaction handlers
   const toggleService = useCallback((service) => {
     setSelectedServices(prevServices => {
       const isSelected = prevServices.find(s => s._id === service._id);
@@ -476,81 +416,63 @@ const fetchSlots = useCallback(async (dateObj) => {
     });
   }, []);
 
-  const handleDateSelect = useCallback((date) => {
-    setSelectedDate(date);
-    setSelectedSlotISO('');
-    fetchSlots(date);
-  }, [fetchSlots]);
+const handleDateSelect = useCallback((date) => {
+  setSelectedDate(date);
+  setSelectedSlotISO(''); // reset slot
+  fetchSlots(date);
+}, [fetchSlots]);
 
-  // Define the completeBooking function first to avoid circular dependency
-  const completeBooking = useCallback(async (paymentMethod) => {
-    if (!selectedDate) {
-      console.error("Missing selectedDate in completeBooking");
-      return;
+ const completeBooking = useCallback(async (paymentMethod) => {
+  if (!selectedDate) return;
+
+  setBookingLoading(true);
+  const slotDate = formatDate(selectedDate); // ✅ FIXED
+
+  try {
+    const servicesData = selectedServices.map(s => ({
+      name: s.name,
+      price: s.basePrice
+    }));
+
+    const { data } = await axios.post(
+      backendUrl + '/api/user/book-appointment',
+      {
+        docId,
+        slotDate,
+        slotTime: selectedSlotISO,
+        services: servicesData,
+        totalAmount: getTotalPrice(),
+        paymentMethod
+      },
+      { headers: { token } }
+    );
+
+    if (data.success) {
+      toast.success(data.message);
+      await fetchSlots(selectedDate);
+      setSelectedSlotISO('');
+      setSelectedServices([]);
+      navigate('/my-appointments');
+    } else {
+      toast.error(data.message);
     }
-    
-    setBookingLoading(true);
-    const slotDate = selectedDate.toISOString().split("T")[0];
+  } catch (error) {
+    toast.error(error.response?.data?.message || 'Booking failed');
+  } finally {
+    setBookingLoading(false);
+  }
+}, [
+  backendUrl,
+  docId,
+  selectedDate,
+  selectedServices,
+  selectedSlotISO,
+  getTotalPrice,
+  token,
+  fetchSlots,
+  navigate
+]);
 
-    try {
-      const servicesData = selectedServices.map(s => ({
-        name: s.name,
-        price: s.basePrice
-      }));
-
-      console.log('📝 Submitting booking:', { 
-        docId, slotDate, slotTime: selectedSlotISO,
-        services: servicesData.length,
-        totalAmount: getTotalPrice()
-      });
-
-      const { data } = await axios.post(
-        backendUrl + '/api/user/book-appointment',
-        {
-          docId,
-          slotDate,
-          slotTime: selectedSlotISO,
-          services: servicesData,
-          totalAmount: getTotalPrice(),
-          paymentMethod
-        },
-        { headers: { token } }
-      );
-
-      if (data.success) {
-        toast.success(data.message);
-        await fetchSlots(selectedDate);
-        setSelectedSlotISO('');
-        setSelectedServices([]);
-        getStylesData();
-
-        setTimeout(() => {
-          setBookingLoading(false);
-          navigate('/my-appointments');
-        }, 1500);
-      } else {
-        toast.error(data.message);
-        setBookingLoading(false);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || 'Error booking appointment');
-      setBookingLoading(false);
-    }
-  }, [
-    backendUrl,
-    docId,
-    selectedDate,
-    selectedServices,
-    selectedSlotISO,
-    getTotalPrice,
-    token,
-    fetchSlots,
-    getStylesData,
-    navigate
-  ]);
-
-  // IMPORTANT: processPayment must be defined AFTER completeBooking to avoid the circular reference
   const processPayment = useCallback(async (method) => {
     setPaymentMethod(method);
     setPaymentLoading(true);
@@ -594,7 +516,6 @@ const fetchSlots = useCallback(async (dateObj) => {
         const rzpay = new window.Razorpay(options);
         rzpay.open();
       } else {
-        // For other payment methods, simulate a successful payment
         setTimeout(() => {
           setPaymentLoading(false);
           setPaymentSuccess(true);
@@ -635,16 +556,11 @@ const fetchSlots = useCallback(async (dateObj) => {
     processPayment(paymentMethod);
   }, [token, selectedSlotISO, selectedServices, paymentMethod, navigate, processPayment]);
 
-  // Effects for data loading and side effects
+  // ✅ CRITICAL FIX: Run initial fetches only once on mount
   useEffect(() => {
     fetchSlotSettings();
     fetchAllServices();
-
-    // Cleanup on unmount
-    return () => {
-      // Clear any pending tasks, timers, etc.
-    };
-  }, [fetchSlotSettings, fetchAllServices]);
+  }, []); // Empty deps - run once
 
   useEffect(() => {
     if (stylists && stylists.length > 0) {
@@ -658,11 +574,10 @@ const fetchSlots = useCallback(async (dateObj) => {
     }
   }, [stylistInfo, allServices, filterStylistServices]);
 
+  // ✅ CRITICAL FIX: Only generate dates once when conditions are met
   useEffect(() => {
-    if (slotSettings && docId && token) {
-      generateAvailableDates();
-    }
-  }, [slotSettings, docId, token, generateAvailableDates]);
+  if (slotSettings && docId && token) generateAvailableDates();
+}, [slotSettings, docId, token]);// Removed generateAvailableDates from deps
 
   useEffect(() => {
     if (selectedServices.length > 0 && slotSettings) {
@@ -683,7 +598,6 @@ const fetchSlots = useCallback(async (dateObj) => {
     }
   }, [selectedServices, slotSettings, getTotalPrice]);
 
-  // Loading state
   if (!stylistInfo || !slotSettings) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -706,7 +620,6 @@ const fetchSlots = useCallback(async (dateObj) => {
         </div>
         
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          {/* Stylist Profile Section */}
           <StylistProfile stylistInfo={stylistInfo} slotSettings={slotSettings} />
           
           {/* Booking Steps Indicator */}
@@ -733,8 +646,9 @@ const fetchSlots = useCallback(async (dateObj) => {
             </div>
           </div>
           
-          {/* Booking Form Container */}
+          {/* Rest of the UI remains the same - Service selection, date/time, payment */}
           <div className="p-6 sm:p-8">
+            {/* Step 1: Service Selection */}
             {currentStep === 1 && (
               <div className="animate-fadeIn">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Services</h2>
@@ -805,6 +719,7 @@ const fetchSlots = useCallback(async (dateObj) => {
               </div>
             )}
             
+            {/* Step 2: Date & Time Selection */}
             {currentStep === 2 && (
               <div className="animate-fadeIn">
                 <div className="mb-6">
@@ -852,7 +767,7 @@ const fetchSlots = useCallback(async (dateObj) => {
                   ) : (
                     <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
                       {availableDates.map((dateInfo, index) => (
-                                                <DateOption 
+                        <DateOption 
                           key={index}
                           dateInfo={dateInfo}
                           selectedDate={selectedDate}
@@ -919,6 +834,7 @@ const fetchSlots = useCallback(async (dateObj) => {
               </div>
             )}
 
+            {/* Step 3: Payment */}
             {currentStep === 3 && (
               <div className="animate-fadeIn max-w-2xl mx-auto">
                 <div className="mb-6">
@@ -971,14 +887,9 @@ const fetchSlots = useCallback(async (dateObj) => {
                           day: 'numeric',
                           year: 'numeric'
                         })}
-                      </p>
-                      <p className="text-blue-600 font-semibold mt-1">
-                        {selectedSlotISO ? new Date(selectedSlotISO).toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true
-                        }) : ''}
-                      </p>
+                      </p>                    
+                      <p className="text-blue-600 font-semibold mt-1">{formatTime(selectedSlotISO)}</p>
+
                     </div>
                     
                     <div className="space-y-3 pt-2">
@@ -987,7 +898,6 @@ const fetchSlots = useCallback(async (dateObj) => {
                         <span className="font-bold text-gray-900 text-xl">{currencySymbol}{getTotalPrice()}</span>
                       </div>
                       
-                      {/* Show payment breakdown if partial payment */}
                       {slotSettings.advancePaymentRequired && slotSettings.advancePaymentPercentage < 100 && (
                         <>
                           <div className="flex justify-between items-center bg-blue-100 px-4 py-3 rounded-lg">
@@ -1006,7 +916,6 @@ const fetchSlots = useCallback(async (dateObj) => {
                   </div>
                 </div>
                 
-                {/* Payment info notice */}
                 {slotSettings.advancePaymentRequired && slotSettings.advancePaymentPercentage < 100 && (
                   <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
