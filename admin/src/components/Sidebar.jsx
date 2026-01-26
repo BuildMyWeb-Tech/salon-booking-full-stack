@@ -27,7 +27,8 @@ import {
   BookOpen,
   DollarSign,
   BarChart3,
-  Store
+  Store,
+  UserCog
 } from "lucide-react";
 
 const iconClass = "min-w-[23px] w-[23px] h-[23px]";
@@ -114,7 +115,7 @@ const Sidebar = () => {
                 `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
                 ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
               }>
-                <Scissors className={iconClass} />
+                <UserCog className={iconClass} />
                 {!collapsed && <p>Stylists</p>}
               </NavLink>
             </li>
@@ -170,7 +171,7 @@ const Sidebar = () => {
                 ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
               }>
                 <CalendarClock className={iconClass} />
-                {!collapsed && <p>My Appointment </p>}
+                {!collapsed && <p>Appointment </p>}
               </NavLink>
             </li>
 
@@ -301,7 +302,7 @@ const Sidebar = () => {
                     }
                     onClick={() => setMobileOpen(false)}
                   >
-                    <Scissors className={iconClass} />
+                    <UserCog className={iconClass} />
                     <p>Stylists</p>
                   </NavLink>
                 </li>
@@ -315,7 +316,7 @@ const Sidebar = () => {
                     }
                     onClick={() => setMobileOpen(false)}
                   >
-                    <LayoutGrid className={iconClass} />
+                    <Scissors className={iconClass} />
                     <p>Services</p>
                   </NavLink>
                 </li>
@@ -367,7 +368,7 @@ const Sidebar = () => {
                     onClick={() => setMobileOpen(false)}
                   >
                     <CalendarClock className={iconClass} />
-                    <p>My Appointments</p>
+                    <p>Appointments</p>
                   </NavLink>
                 </li>
 
@@ -467,7 +468,7 @@ const Sidebar = () => {
               }
             >
               <Calendar className="w-5 h-5 mb-1" />
-              <span>My Appointments</span>
+              <span>Appointments</span>
             </NavLink>
 
             <NavLink 
@@ -476,7 +477,7 @@ const Sidebar = () => {
                 `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
               }
             >
-              <Scissors className="w-5 h-5 mb-1" />
+              <UserCog className="w-5 h-5 mb-1" />
               <span>Stylists</span>
             </NavLink>
 
@@ -488,7 +489,7 @@ const Sidebar = () => {
                 }`
               }
             >
-              <LayoutGrid className="w-5 h-5 mb-1" />
+              <Scissors className="w-5 h-5 mb-1" />
               <span>Services</span>
             </NavLink>
 
@@ -528,7 +529,7 @@ const Sidebar = () => {
               }
             >
               <CalendarClock className="w-5 h-5 mb-1" />
-              <span>My Appointments</span>
+              <span>Appointments</span>
             </NavLink>
 
             <NavLink 

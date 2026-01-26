@@ -812,7 +812,7 @@ const AllAppointments = () => {
                         className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-red-50 flex items-center gap-3 transition-colors border-b border-gray-100"
                       >
                         <FileText size={18} className="text-red-600" />
-                        <span>Download as PDF</span>
+                        <span>PDF</span>
                       </button>
 
                       <button
@@ -820,7 +820,7 @@ const AllAppointments = () => {
                         className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-green-50 flex items-center gap-3 transition-colors"
                       >
                         <FileSpreadsheet size={18} className="text-green-600" />
-                        <span>Download as Excel</span>
+                        <span>Excel</span>
                       </button>
                     </motion.div>
                   )}
