@@ -41,6 +41,61 @@ const Dashboard = () => {
     }
   }, [appointments, dashData]);
 
+  // API to get dashboard data for admin panel
+const adminDashboard = async (req, res) => {
+    try {
+        const doctors = await doctorModel.find({});
+        const users = await userModel.find({});
+        const appointments = await appointmentModel.find({});
+        
+        // Calculate total revenue from all appointments
+        let totalRevenue = 0;
+        appointments.forEach(appointment => {
+            if (appointment.amount && !appointment.cancelled) {
+                totalRevenue += Number(appointment.amount);
+            }
+        });
+
+        // Get today's appointments
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const todaysAppointments = appointments.filter(app => {
+            const appDate = new Date(app.date || app.slotDate || app.createdAt);
+            return appDate >= today && appDate < tomorrow;
+        });
+
+        // Get this month's appointments
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const firstDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+        
+        const thisMonthAppointments = appointments.filter(app => {
+            const appDate = new Date(app.date || app.slotDate || app.createdAt);
+            return appDate >= firstDayOfMonth && appDate < firstDayOfNextMonth;
+        });
+
+        const dashData = {
+            doctors: doctors.length,
+            stylists: doctors.length, // Adding this for frontend compatibility
+            appointments: appointments.length,
+            patients: users.length,
+            clients: users.length, // Adding this for frontend compatibility
+            todaysAppointments: todaysAppointments.length,
+            thisMonthAppointments: thisMonthAppointments.length,
+            revenue: totalRevenue,
+            latestAppointments: appointments.slice(-5).reverse() // Get latest 5 appointments
+        };
+
+        res.json({ success: true, dashData });
+
+    } catch (error) {
+        console.log(error);
+        res.json({ success: false, message: error.message });
+    }
+};
+
   // Calculate booking trends (appointments per day)
   const processBookingTrends = () => {
     // Create a map to count bookings by date
@@ -109,6 +164,8 @@ const Dashboard = () => {
     setServicePopularity(serviceData);
   };
 
+  
+
   // Calculate revenue data
   const processRevenueData = () => {
     const revenueByMonth = {};
@@ -146,6 +203,68 @@ const Dashboard = () => {
     // Convert to array format for chart
     setRevenueData(Object.values(revenueByMonth));
   };
+
+  // Calculate total revenue from appointments
+const calculateTotalRevenue = () => {
+  if (!appointments || appointments.length === 0) return 0;
+  
+  return appointments.reduce((total, appointment) => {
+    // Only count non-cancelled appointments
+    if (appointment.amount && !appointment.cancelled) {
+      return total + Number(appointment.amount);
+    }
+    return total;
+  }, 0);
+};
+
+// Count today's appointments
+const countTodayAppointments = () => {
+  if (!appointments || appointments.length === 0) return 0;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  return appointments.filter(app => {
+    const appDate = new Date(app.date || app.slotDate || app.createdAt);
+    return appDate >= today && appDate < tomorrow && !app.cancelled;
+  }).length;
+};
+
+// Calculate monthly revenue
+const calculateMonthlyRevenue = () => {
+  if (!appointments || appointments.length === 0) return 0;
+  
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const firstDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  
+  return appointments.reduce((total, appointment) => {
+    if (appointment.amount && !appointment.cancelled) {
+      const appDate = new Date(appointment.date || appointment.slotDate || appointment.createdAt);
+      if (appDate >= firstDayOfMonth && appDate < firstDayOfNextMonth) {
+        return total + Number(appointment.amount);
+      }
+    }
+    return total;
+  }, 0);
+};
+
+// Calculate appointment completion rate
+const calculateCompletionRate = () => {
+  if (!appointments || appointments.length === 0) return 0;
+  
+  const completedCount = appointments.filter(app => 
+    app.isCompleted && !app.cancelled
+  ).length;
+  
+  const totalValidCount = appointments.filter(app => 
+    !app.cancelled
+  ).length;
+  
+  return totalValidCount ? Math.round((completedCount / totalValidCount) * 100) : 0;
+};
 
   // Calculate stylist performance
   const processStylistPerformance = () => {
@@ -233,96 +352,165 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        {/* Stylists Card */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-                Stylists
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-                {dashData.stylists || dashData.doctors || 0}
-              </p>
-              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-                Active team members
-              </p>
-            </div>
-
-            <div className="p-2.5 sm:p-3 rounded-lg bg-blue-50 text-blue-500">
-              <Users size={22} className="sm:hidden" />
-              <Users size={26} className="hidden sm:block" />
-            </div>
-          </div>
-        </div>
-
-        {/* Total Bookings Card */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-                Total Bookings
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-                {dashData.appointments || 0}
-              </p>
-              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-                All time appointments
-              </p>
-            </div>
-
-            <div className="p-2.5 sm:p-3 rounded-lg bg-purple-50 text-purple-500">
-              <Calendar size={22} className="sm:hidden" />
-              <Calendar size={26} className="hidden sm:block" />
-            </div>
-          </div>
-        </div>
-
-        {/* Customers Card */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-                Customers
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-                {dashData.clients || dashData.patients || 0}
-              </p>
-              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-                Registered customers
-              </p>
-            </div>
-
-            <div className="p-2.5 sm:p-3 rounded-lg bg-green-50 text-green-500">
-              <UserCircle size={22} className="sm:hidden" />
-              <UserCircle size={26} className="hidden sm:block" />
-            </div>
-          </div>
-        </div>
-
-        {/* Revenue Card */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-                Revenue
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-                {formatCurrency(dashData.revenue || 0)}
-              </p>
-              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-                Total earnings
-              </p>
-            </div>
-
-            <div className="p-2.5 sm:p-3 rounded-lg bg-amber-50 text-amber-500">
-              <IndianRupee size={22} className="sm:hidden" />
-              <IndianRupee size={26} className="hidden sm:block" />
-            </div>
-          </div>
-        </div>
+     {/* Stats Cards */}
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+  {/* Stylists Card */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Stylists
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {dashData.stylists || dashData.doctors || 0}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Active team members
+        </p>
       </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-blue-50 text-blue-500">
+        <Users size={22} className="sm:hidden" />
+        <Users size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+
+  {/* Total Bookings Card */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Total Bookings
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {dashData.appointments || 0}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          All time appointments
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-purple-50 text-purple-500">
+        <Calendar size={22} className="sm:hidden" />
+        <Calendar size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+
+  {/* Customers Card */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Customers
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {dashData.clients || dashData.patients || 0}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Registered customers
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-green-50 text-green-500">
+        <UserCircle size={22} className="sm:hidden" />
+        <UserCircle size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+
+  {/* Revenue Card - Updated for Clarity */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Revenue
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {formatCurrency(dashData.revenue || calculateTotalRevenue() || 0)}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Total earnings
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-amber-50 text-amber-500">
+        <IndianRupee size={22} className="sm:hidden" />
+        <IndianRupee size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* Additional Stats Cards - for better insight */}
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 mt-5">
+  {/* Today's Appointments */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Today's Bookings
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {dashData.todaysAppointments || countTodayAppointments() || 0}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Appointments scheduled for today
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-green-50 text-green-500">
+        <Calendar size={22} className="sm:hidden" />
+        <Calendar size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+
+  {/* Monthly Revenue */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          This Month's Revenue
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {formatCurrency(calculateMonthlyRevenue() || 0)}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Revenue for {new Date().toLocaleString('default', { month: 'long' })}
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-purple-50 text-purple-500">
+        <IndianRupee size={22} className="sm:hidden" />
+        <IndianRupee size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+  
+  {/* Completion Rate */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Completion Rate
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {calculateCompletionRate()}%
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Appointments completed successfully
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-blue-50 text-blue-500">
+        <CheckCircle size={22} className="sm:hidden" />
+        <CheckCircle size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+</div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">

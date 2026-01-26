@@ -253,23 +253,22 @@ const getAllAppointments = async () => {
         }
 
     // Getting Admin Dashboard data from Database using API
-    const getDashData = async () => {
-        try {
+   const getDashData = async () => {
+    try {
+        const { data } = await axios.get(backendUrl + '/api/admin/dashboard', { headers: { aToken } });
 
-            const { data } = await axios.get(backendUrl + '/api/admin/dashboard', { headers: { aToken } })
-
-            if (data.success) {
-                setDashData(data.dashData)
-            } else {
-                toast.error(data.message)
-            }
-
-        } catch (error) {
-            console.log(error)
-            toast.error(error.message)
+        if (data.success) {
+            console.log('Dashboard data received:', data.dashData); // Debug log
+            setDashData(data.dashData);
+            return data.dashData;
+        } else {
+            toast.error(data.message);
         }
-
+    } catch (error) {
+        console.log(error);
+        toast.error(error.message);
     }
+}
 
    const value = {
         aToken, 
