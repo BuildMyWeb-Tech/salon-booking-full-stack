@@ -325,17 +325,18 @@ const Stylists = () => {
                         <Award size={14} className="text-primary" />
                         <span className="font-medium">{stylist.experience || '5 Years'}</span>
                       </span>
-                      <span className="font-bold text-primary text-base">
+                      {/* <span className="font-bold text-primary text-base">
                         ₹{stylist.price || stylist.fees || null}
-                      </span>
-                    </div>
-                    {/* Instagram handle */}
-                    {stylist.instagram && (
+                      </span> */}
+                        {stylist.instagram && (
                       <div className="flex items-center gap-2 text-sm text-gray-600 hover:text-pink-600 transition-colors">
                         <Instagram size={14} className="text-pink-500" />
                         @{stylist.instagram}
                       </div>
                     )}
+                    </div>
+                    {/* Instagram handle */}
+                  
 
                     {/* Location info */}
                     {stylist.location && (
@@ -427,7 +428,7 @@ const Stylists = () => {
                         <h3 className="text-xl font-bold text-gray-800 group-hover:text-primary transition-colors">{stylist.name}</h3>
                         <p className="hidden md:block text-primary text-sm font-medium">{stylist.speciality}</p>
                       </div>
-                      <span className="font-bold text-primary">₹{stylist.price || stylist.fees || 500}</span>
+                      {/* <span className="font-bold text-primary">₹{stylist.price || stylist.fees || 500}</span> */}
                     </div>
 
                     {/* Rating and experience */}

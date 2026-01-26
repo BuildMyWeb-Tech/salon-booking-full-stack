@@ -1,193 +1,157 @@
 // backend/utils/slotUtils.js
 import SlotSettings from '../models/SlotSettings.js';
-import BlockedDate from '../models/BlockedDate.js';
-import RecurringHoliday from '../models/RecurringHoliday.js';
-import SpecialWorkingDay from '../models/SpecialWorkingDay.js';
+import Appointment from '../models/appointmentModel.js';
+import mongoose from 'mongoose';
 
 /**
- * Check if a date is blocked
+ * Generate available time slots for a specific date
+ * ✅ PRODUCTION SAFE
+ * ✅ NO ISO STRINGS
+ * ✅ NO UTC / Z
+ * ✅ PURE DATE + TIME STRINGS
  */
-const isDateBlocked = async(date) => {
-    const dateStr = new Date(date).toISOString().split('T')[0];
+export const generateAvailableSlots = async (date, customSettings = null) => {
+  try {
+    console.log('🔧 === SLOT GENERATION START ===');
+    console.log('📅 Input date:', date);
 
-    // Check blocked dates
-    const blockedDate = await BlockedDate.findOne({
-        date: {
-            $gte: new Date(dateStr),
-            $lt: new Date(new Date(dateStr).getTime() + 24 * 60 * 60 * 1000)
-        }
-    });
+    const settings = customSettings || await SlotSettings.findOne();
 
-    if (blockedDate) return true;
-
-    // Check recurring holidays
-    const dateObj = new Date(date);
-    const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateObj.getDay()];
-    const dayOfMonth = dateObj.getDate();
-
-    const recurringHolidays = await RecurringHoliday.find({
-        $or: [
-            { type: 'weekly', value: dayOfWeek },
-            { type: 'monthly', value: dayOfMonth.toString() }
-        ]
-    });
-
-    return recurringHolidays.length > 0;
-};
-
-/**
- * Check if a date is a special working day
- */
-const isSpecialWorkingDay = async(date) => {
-    const dateStr = new Date(date).toISOString().split('T')[0];
-
-    const specialDay = await SpecialWorkingDay.findOne({
-        date: {
-            $gte: new Date(dateStr),
-            $lt: new Date(new Date(dateStr).getTime() + 24 * 60 * 60 * 1000)
-        }
-    });
-
-    return !!specialDay;
-};
-
-/**
- * Generate time slots for a specific date
- */
-export const generateAvailableSlots = async(dateString) => {
-    try {
-        const settings = await SlotSettings.findOne();
-
-        if (!settings) {
-            return {
-                slots: [],
-                error: 'Slot settings not configured'
-            };
-        }
-
-        const date = new Date(dateString);
-        const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
-
-        // Check if date is blocked
-        const blocked = await isDateBlocked(date);
-        const specialWorking = await isSpecialWorkingDay(date);
-
-        // If blocked and not special working day, return empty
-        if (blocked && !specialWorking) {
-            return {
-                slots: [],
-                error: 'This date is blocked'
-            };
-        }
-
-        // Check if day is normally open (unless it's a special working day)
-        if (!specialWorking && !settings.daysOpen.includes(dayOfWeek)) {
-            return {
-                slots: [],
-                error: 'Closed on this day'
-            };
-        }
-
-        // Check date range
-        if (date < settings.openSlotsFromDate || date > settings.openSlotsTillDate) {
-            return {
-                slots: [],
-                error: 'Date outside booking range'
-            };
-        }
-
-        // Check max advance booking
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const maxDate = new Date(today);
-        maxDate.setDate(maxDate.getDate() + settings.maxAdvanceBookingDays);
-
-        if (date > maxDate) {
-            return {
-                slots: [],
-                error: `Can only book ${settings.maxAdvanceBookingDays} days in advance`
-            };
-        }
-
-        // Generate slots
-        const slots = [];
-        const [startHour, startMin] = settings.slotStartTime.split(':').map(Number);
-        const [endHour, endMin] = settings.slotEndTime.split(':').map(Number);
-
-        let currentTime = new Date(date);
-        currentTime.setHours(startHour, startMin, 0, 0);
-
-        const endTime = new Date(date);
-        endTime.setHours(endHour, endMin, 0, 0);
-
-        // Handle break time
-        let breakStart, breakEnd;
-        if (settings.breakTime) {
-            const [breakStartHour, breakStartMin] = settings.breakStartTime.split(':').map(Number);
-            const [breakEndHour, breakEndMin] = settings.breakEndTime.split(':').map(Number);
-
-            breakStart = new Date(date);
-            breakStart.setHours(breakStartHour, breakStartMin, 0, 0);
-
-            breakEnd = new Date(date);
-            breakEnd.setHours(breakEndHour, breakEndMin, 0, 0);
-        }
-
-        const now = new Date();
-        const minBookingTime = settings.minBookingTimeBeforeSlot * 60 * 60 * 1000; // Convert hours to ms
-
-        while (currentTime < endTime) {
-            // Skip break time
-            if (settings.breakTime && currentTime >= breakStart && currentTime < breakEnd) {
-                currentTime = new Date(breakEnd);
-                continue;
-            }
-
-            // Check if slot is in the past or too soon
-            if (currentTime - now < minBookingTime) {
-                currentTime = new Date(currentTime.getTime() + settings.slotDuration * 60 * 1000);
-                continue;
-            }
-
-            // Format display time
-            const displayTime = currentTime.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            });
-
-            slots.push({
-                startTime: currentTime.toISOString(),
-                displayTime: displayTime
-            });
-
-            currentTime = new Date(currentTime.getTime() + settings.slotDuration * 60 * 1000);
-        }
-
-        return { slots, error: null };
-
-    } catch (error) {
-        console.error('Error generating slots:', error);
-        return {
-            slots: [],
-            error: 'Failed to generate slots'
-        };
+    if (!settings) {
+      console.log('⚠️ No slot settings found');
+      return { slots: [], error: 'Slot settings not configured' };
     }
+
+    console.log('⚙️ Loaded settings:', {
+      slotStartTime: settings.slotStartTime,
+      slotEndTime: settings.slotEndTime,
+      slotDuration: settings.slotDuration,
+      breakTime: settings.breakTime,
+      breakStartTime: settings.breakStartTime,
+      breakEndTime: settings.breakEndTime,
+      daysOpen: settings.daysOpen,
+    });
+
+    // ✅ DATE STRING ONLY (NO toISOString)
+    const dateStr = typeof date === 'string'
+      ? date
+      : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+    const [year, month, day] = dateStr.split('-').map(Number);
+
+    console.log('📅 Parsed date:', dateStr);
+
+    const selectedDate = new Date(year, month - 1, day);
+    const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+
+    console.log('📅 Day of week:', dayName);
+
+    if (!settings.daysOpen.includes(dayName)) {
+      console.log(`⛔ ${dayName} is not open`);
+      return { slots: [], error: 'Selected day is not available' };
+    }
+
+    const startTimeSetting = settings.slotStartTime || '09:00';
+    const endTimeSetting = settings.slotEndTime || '17:00';
+    const slotDuration = settings.slotDuration || 60;
+
+    console.log(`🕒 Working hours: ${startTimeSetting} → ${endTimeSetting}`);
+    console.log(`⏱️ Slot duration: ${slotDuration} mins`);
+
+    const [startHour, startMinute] = startTimeSetting.split(':').map(Number);
+    const [endHour, endMinute] = endTimeSetting.split(':').map(Number);
+
+    let currentTime = new Date(year, month - 1, day, startHour, startMinute, 0, 0);
+    let endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0, 0);
+
+    if (endDateTime <= currentTime) {
+      endDateTime.setDate(endDateTime.getDate() + 1);
+    }
+
+    const slots = [];
+    const now = new Date();
+    const minBookingBufferMs = (settings.minBookingTimeBeforeSlot || 0) * 60 * 60 * 1000;
+
+    console.log('🔄 Starting slot loop');
+
+    while (currentTime < endDateTime) {
+      const slotStart = new Date(currentTime);
+
+      // 🔕 Break handling
+      let isDuringBreak = false;
+      if (settings.breakTime) {
+        const [bsH, bsM] = settings.breakStartTime.split(':').map(Number);
+        const [beH, beM] = settings.breakEndTime.split(':').map(Number);
+
+        const breakStart = new Date(year, month - 1, day, bsH, bsM);
+        const breakEnd = new Date(year, month - 1, day, beH, beM);
+
+        if (breakEnd <= breakStart) {
+          breakEnd.setDate(breakEnd.getDate() + 1);
+        }
+
+        isDuringBreak = slotStart >= breakStart && slotStart < breakEnd;
+      }
+
+      const isTooSoon = slotStart <= new Date(now.getTime() + minBookingBufferMs);
+
+      if (!isDuringBreak && !isTooSoon) {
+        const slotEnd = new Date(slotStart.getTime() + slotDuration * 60000);
+
+        // ✅ FINAL FIX: ONLY TIME STRINGS
+        const startTime = `${String(slotStart.getHours()).padStart(2, '0')}:${String(slotStart.getMinutes()).padStart(2, '0')}`;
+        const endTime = `${String(slotEnd.getHours()).padStart(2, '0')}:${String(slotEnd.getMinutes()).padStart(2, '0')}`;
+
+        slots.push({
+          date: dateStr,   // YYYY-MM-DD
+          startTime,       // HH:mm
+          endTime          // HH:mm
+        });
+
+        console.log(`✅ Slot added: ${dateStr} ${startTime} → ${endTime}`);
+      }
+
+      currentTime.setMinutes(currentTime.getMinutes() + slotDuration);
+    }
+
+    console.log(`✅ Generated ${slots.length} slots`);
+    console.log('🔧 === SLOT GENERATION END ===');
+
+    return { slots, error: null };
+
+  } catch (error) {
+    console.error('❌ Slot generation failed:', error);
+    return { slots: [], error: 'Failed to generate slots' };
+  }
 };
 
 /**
- * Check if a specific slot is available
+ * Check slot availability using DATE + TIME STRING
  */
-export const isSlotAvailable = async(dateString, slotTimeISO) => {
-    try {
-        const { slots, error } = await generateAvailableSlots(dateString);
-
-        if (error) return false;
-
-        return slots.some(slot => slot.startTime === slotTimeISO);
-
-    } catch (error) {
-        console.error('Error checking slot availability:', error);
-        return false;
+export const isSlotAvailable = async (doctorId, date, time) => {
+  try {
+    // 🛡️ Safety checks
+    if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+      console.error('❌ Invalid doctorId passed to isSlotAvailable:', doctorId);
+      return false;
     }
+
+    if (!date || !time) {
+      console.error('❌ Missing date or time in isSlotAvailable:', { date, time });
+      return false;
+    }
+
+    const existingAppointment = await Appointment.findOne({
+      doctorId,
+      slotDate: date,     // YYYY-MM-DD
+      slotTime: time,     // HH:mm
+      cancelled: false
+    }).lean();
+
+    return !existingAppointment;
+
+  } catch (error) {
+    console.error('❌ isSlotAvailable error:', error);
+    return false;
+  }
 };

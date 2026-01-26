@@ -14,6 +14,7 @@ import {
 
 import { 
     getAvailableSlots, 
+    getAvailableDates,
     bookAppointment, 
     rescheduleAppointment 
 } from '../controllers/bookingController.js';
@@ -39,6 +40,7 @@ userRouter.get("/appointments", authUser, listAppointment);
 userRouter.post("/cancel-appointment", authUser, cancelAppointment);
 
 // New slot management routes
+userRouter.get('/available-dates/:docId',authUser,getAvailableDates);
 userRouter.get("/available-slots", authUser, getAvailableSlots);
 userRouter.post("/reschedule-appointment", authUser, rescheduleAppointment);
 userRouter.post("/payment-razorpay", authUser, paymentRazorpay)

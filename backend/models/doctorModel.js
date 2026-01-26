@@ -15,7 +15,7 @@ specialty: {
 
     available: { type: Boolean, default: true },
 
-    price: { type: Number, required: true },
+    price: { type: Number, required: false },
     phone: { 
         type: String, 
         required: false,
