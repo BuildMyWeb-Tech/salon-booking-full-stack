@@ -306,7 +306,7 @@ const AddStylist = () => {
                             </select>
                         </div>
 
-                        <div className='flex flex-col gap-1.5'>
+                        {/* <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <Hash size={16} className="mr-1.5" /> Base Price
                                 <span className="text-red-500 ml-1">*</span>
@@ -322,7 +322,7 @@ const AddStylist = () => {
                                     required 
                                 />
                             </div>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* Right Column */}
