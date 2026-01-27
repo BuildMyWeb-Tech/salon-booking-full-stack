@@ -42,6 +42,11 @@ const appointmentSchema = new mongoose.Schema(
       default: 0
     },
 
+    remainingAmount: {
+      type: Number,
+      default: 0
+    },
+
     // ✅ NEW: Payment percentage used
     paymentPercentage: {
       type: Number,

@@ -6,22 +6,306 @@ import {
   Scissors, ArrowUpRight, Clock, CheckCircle, 
   XCircle, MoreHorizontal, RefreshCw, TrendingUp
 } from 'lucide-react';
-
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router-dom';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const Dashboard = () => {
-  const { aToken, getDashData, cancelAppointment, dashData } = useContext(AdminContext);
+  const { aToken, getDashData, cancelAppointment, dashData, getAllAppointments, appointments } = useContext(AdminContext);
   const { slotDateFormat } = useContext(AppContext);
   const [isLoading, setIsLoading] = useState(true);
+  const [bookingTrends, setBookingTrends] = useState([]);
+  const [servicePopularity, setServicePopularity] = useState([]);
+  const [revenueData, setRevenueData] = useState([]);
+  const [stylistPerformance, setStylistPerformance] = useState([]);
 
   useEffect(() => {
     if (aToken) {
       setIsLoading(true);
-      getDashData().finally(() => {
+      
+      Promise.all([
+        getDashData(),
+        getAllAppointments()
+      ]).finally(() => {
         setIsLoading(false);
       });
     }
   }, [aToken]);
+  
+  // Process appointments data for charts when appointments or dashData changes
+  useEffect(() => {
+    if (appointments && appointments.length > 0) {
+      processBookingTrends();
+      processServicePopularity();
+      processRevenueData();
+      processStylistPerformance();
+    }
+  }, [appointments, dashData]);
+
+  // API to get dashboard data for admin panel
+const adminDashboard = async (req, res) => {
+    try {
+        const doctors = await doctorModel.find({});
+        const users = await userModel.find({});
+        const appointments = await appointmentModel.find({});
+        
+        // Calculate total revenue from all appointments
+        let totalRevenue = 0;
+        appointments.forEach(appointment => {
+            if (appointment.amount && !appointment.cancelled) {
+                totalRevenue += Number(appointment.amount);
+            }
+        });
+
+        // Get today's appointments
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const todaysAppointments = appointments.filter(app => {
+            const appDate = new Date(app.date || app.slotDate || app.createdAt);
+            return appDate >= today && appDate < tomorrow;
+        });
+
+        // Get this month's appointments
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const firstDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+        
+        const thisMonthAppointments = appointments.filter(app => {
+            const appDate = new Date(app.date || app.slotDate || app.createdAt);
+            return appDate >= firstDayOfMonth && appDate < firstDayOfNextMonth;
+        });
+
+        const dashData = {
+            doctors: doctors.length,
+            stylists: doctors.length, // Adding this for frontend compatibility
+            appointments: appointments.length,
+            patients: users.length,
+            clients: users.length, // Adding this for frontend compatibility
+            todaysAppointments: todaysAppointments.length,
+            thisMonthAppointments: thisMonthAppointments.length,
+            revenue: totalRevenue,
+            latestAppointments: appointments.slice(-5).reverse() // Get latest 5 appointments
+        };
+
+        res.json({ success: true, dashData });
+
+    } catch (error) {
+        console.log(error);
+        res.json({ success: false, message: error.message });
+    }
+};
+
+  // Calculate booking trends (appointments per day)
+  const processBookingTrends = () => {
+    // Create a map to count bookings by date
+    const bookingsByDate = {};
+    
+    // Get last 30 days
+    const dates = [];
+    const today = new Date();
+    for (let i = 30; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      bookingsByDate[dateStr] = 0;
+      dates.push(dateStr);
+    }
+    
+    // Count appointments per day
+    appointments.forEach(appointment => {
+      const appointmentDate = new Date(appointment.date || appointment.slotDate);
+      const dateStr = appointmentDate.toISOString().split('T')[0];
+      
+      if (bookingsByDate[dateStr] !== undefined) {
+        bookingsByDate[dateStr]++;
+      }
+    });
+    
+    // Convert to array format for chart
+    const chartData = dates.map(date => ({
+      date: date.slice(5), // Just month and day (MM-DD)
+      bookings: bookingsByDate[date]
+    }));
+    
+    setBookingTrends(chartData);
+  };
+
+  // Calculate service popularity
+  const processServicePopularity = () => {
+    const serviceCount = {};
+    
+    appointments.forEach(appointment => {
+      if (appointment.services && Array.isArray(appointment.services)) {
+        appointment.services.forEach(service => {
+          if (service.name) {
+            if (!serviceCount[service.name]) {
+              serviceCount[service.name] = 0;
+            }
+            serviceCount[service.name]++;
+          }
+        });
+      } else if (appointment.service) {
+        // Handle legacy format
+        const serviceName = appointment.service;
+        if (!serviceCount[serviceName]) {
+          serviceCount[serviceName] = 0;
+        }
+        serviceCount[serviceName]++;
+      }
+    });
+    
+    // Convert to array and sort by popularity
+    const serviceData = Object.entries(serviceCount)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // Top 5 services
+    
+    setServicePopularity(serviceData);
+  };
+
+  
+
+  // Calculate revenue data
+  const processRevenueData = () => {
+    const revenueByMonth = {};
+    
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    // Initialize with last 6 months
+    const today = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthKey = `${month.getFullYear()}-${month.getMonth()}`;
+      revenueByMonth[monthKey] = {
+        name: monthNames[month.getMonth()],
+        revenue: 0,
+        completedRevenue: 0
+      };
+    }
+    
+    // Calculate revenue
+    appointments.forEach(appointment => {
+      if (appointment.amount) {
+        const appointmentDate = new Date(appointment.date || appointment.slotDate);
+        const monthKey = `${appointmentDate.getFullYear()}-${appointmentDate.getMonth()}`;
+        
+        if (revenueByMonth[monthKey]) {
+          revenueByMonth[monthKey].revenue += appointment.amount;
+          
+          if (appointment.isCompleted) {
+            revenueByMonth[monthKey].completedRevenue += appointment.amount;
+          }
+        }
+      }
+    });
+    
+    // Convert to array format for chart
+    setRevenueData(Object.values(revenueByMonth));
+  };
+
+  // Calculate total revenue from appointments
+const calculateTotalRevenue = () => {
+  if (!appointments || appointments.length === 0) return 0;
+  
+  return appointments.reduce((total, appointment) => {
+    // Only count non-cancelled appointments
+    if (appointment.amount && !appointment.cancelled) {
+      return total + Number(appointment.amount);
+    }
+    return total;
+  }, 0);
+};
+
+// Count today's appointments
+const countTodayAppointments = () => {
+  if (!appointments || appointments.length === 0) return 0;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  return appointments.filter(app => {
+    const appDate = new Date(app.date || app.slotDate || app.createdAt);
+    return appDate >= today && appDate < tomorrow && !app.cancelled;
+  }).length;
+};
+
+// Calculate monthly revenue
+const calculateMonthlyRevenue = () => {
+  if (!appointments || appointments.length === 0) return 0;
+  
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const firstDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  
+  return appointments.reduce((total, appointment) => {
+    if (appointment.amount && !appointment.cancelled) {
+      const appDate = new Date(appointment.date || appointment.slotDate || appointment.createdAt);
+      if (appDate >= firstDayOfMonth && appDate < firstDayOfNextMonth) {
+        return total + Number(appointment.amount);
+      }
+    }
+    return total;
+  }, 0);
+};
+
+// Calculate appointment completion rate
+const calculateCompletionRate = () => {
+  if (!appointments || appointments.length === 0) return 0;
+  
+  const completedCount = appointments.filter(app => 
+    app.isCompleted && !app.cancelled
+  ).length;
+  
+  const totalValidCount = appointments.filter(app => 
+    !app.cancelled
+  ).length;
+  
+  return totalValidCount ? Math.round((completedCount / totalValidCount) * 100) : 0;
+};
+
+  // Calculate stylist performance
+  const processStylistPerformance = () => {
+    const stylistStats = {};
+    
+    appointments.forEach(appointment => {
+      const stylistId = appointment.docId || appointment.doctorId;
+      const stylistName = appointment.docData?.name || "Unknown";
+      
+      if (!stylistStats[stylistId]) {
+        stylistStats[stylistId] = {
+          name: stylistName,
+          appointments: 0,
+          completed: 0,
+          revenue: 0
+        };
+      }
+      
+      stylistStats[stylistId].appointments++;
+      
+      if (appointment.isCompleted) {
+        stylistStats[stylistId].completed++;
+      }
+      
+      if (appointment.amount) {
+        stylistStats[stylistId].revenue += appointment.amount;
+      }
+    });
+    
+    // Convert to array and sort by appointments
+    const performanceData = Object.values(stylistStats)
+      .map(stylist => ({
+        ...stylist,
+        completionRate: stylist.appointments > 0 
+          ? Math.round((stylist.completed / stylist.appointments) * 100) 
+          : 0
+      }))
+      .sort((a, b) => b.appointments - a.appointments);
+    
+    setStylistPerformance(performanceData);
+  };
 
   // Format currency for display
   const formatCurrency = (amount) => {
@@ -31,6 +315,8 @@ const Dashboard = () => {
       maximumFractionDigits: 0
     }).format(amount || 0);
   };
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
   if (isLoading) {
     return (
@@ -48,293 +334,302 @@ const Dashboard = () => {
       {/* Header */}
       <div className='mb-8'>
         <h1 className='text-2xl md:text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2'>
-          
           Salon Dashboard
         </h1>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <p className='text-gray-600'>Welcome to your StyleStudio management portal</p>
-          
-          
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-
-        {/* Stylists Card */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-                Stylists
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-                {dashData.stylists || dashData.doctors || 0}
-              </p>
-              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-                Active team members
-              </p>
-            </div>
-
-            <div className="p-2.5 sm:p-3 rounded-lg bg-blue-50 text-blue-500">
-              <Users size={22} className="sm:hidden" />
-              <Users size={26} className="hidden sm:block" />
-            </div>
-          </div>
-        </div>
-
-        {/* Total Bookings Card */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-                Total Bookings
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-                {dashData.appointments || 0}
-              </p>
-              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-                All time appointments
-              </p>
-            </div>
-
-            <div className="p-2.5 sm:p-3 rounded-lg bg-purple-50 text-purple-500">
-              <Calendar size={22} className="sm:hidden" />
-              <Calendar size={26} className="hidden sm:block" />
-            </div>
-          </div>
-        </div>
-
-        {/* Customers Card */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-                Customers
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-                {dashData.clients || dashData.patients || 0}
-              </p>
-              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-                Registered customers
-              </p>
-            </div>
-
-            <div className="p-2.5 sm:p-3 rounded-lg bg-green-50 text-green-500">
-              <UserCircle size={22} className="sm:hidden" />
-              <UserCircle size={26} className="hidden sm:block" />
-            </div>
-          </div>
-        </div>
-
-        {/* Revenue Card */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-                Revenue
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-                {formatCurrency(dashData.revenue || 0)}
-              </p>
-              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-                Total earnings
-              </p>
-            </div>
-
-            <div className="p-2.5 sm:p-3 rounded-lg bg-amber-50 text-amber-500">
-              <IndianRupee size={22} className="sm:hidden" />
-              <IndianRupee size={26} className="hidden sm:block" />
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-
-
-      {/* Recent Appointments Table */}
-       {/* <div className='mt-8 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden'>
-        <div className='flex items-center justify-between px-6 py-4 border-b'>
-          <h2 className='font-semibold text-gray-800 flex items-center gap-2'>
-            <Calendar className="h-5 w-5 text-primary" />
-            Recent Appointments
-          </h2>
-          
-          <button className="flex items-center gap-1.5 text-sm text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-            <span>View All</span>
-            <ArrowUpRight className="h-4 w-4" />
-          </button>
-
-          <Link
-            to="/all-appointments"
-            className="flex items-center gap-1.5 text-sm text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+          <button 
+            onClick={() => {
+              setIsLoading(true);
+              Promise.all([getDashData(), getAllAppointments()])
+                .finally(() => setIsLoading(false));
+            }}
+            className="flex items-center gap-1 text-sm text-gray-600 hover:text-primary"
           >
-            <span>View All</span>
-            <ArrowUpRight className="h-4 w-4" />
-          </Link>
+            <RefreshCw size={14} />
+            <span>Refresh Data</span>
+          </button>
+        </div>
+      </div>
+
+     {/* Stats Cards */}
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+  {/* Stylists Card */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Stylists
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {dashData.stylists || dashData.doctors || 0}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Active team members
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-blue-50 text-blue-500">
+        <Users size={22} className="sm:hidden" />
+        <Users size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+
+  {/* Total Bookings Card */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Total Bookings
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {dashData.appointments || 0}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          All time appointments
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-purple-50 text-purple-500">
+        <Calendar size={22} className="sm:hidden" />
+        <Calendar size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+
+  {/* Customers Card */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Customers
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {dashData.clients || dashData.patients || 0}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Registered customers
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-green-50 text-green-500">
+        <UserCircle size={22} className="sm:hidden" />
+        <UserCircle size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+
+  {/* Revenue Card - Updated for Clarity */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Overall Revenue
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {formatCurrency(dashData.revenue || calculateTotalRevenue() || 0)}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Total earnings
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-amber-50 text-amber-500">
+        <IndianRupee size={22} className="sm:hidden" />
+        <IndianRupee size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* Additional Stats Cards - for better insight */}
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 mt-5">
+  {/* Today's Appointments */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Today's Bookings
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {dashData.todaysAppointments || countTodayAppointments() || 0}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Appointments scheduled for today
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-green-50 text-green-500">
+        <Calendar size={22} className="sm:hidden" />
+        <Calendar size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+
+  {/* Monthly Revenue */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          This Month's Revenue
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {formatCurrency(calculateMonthlyRevenue() || 0)}
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Revenue for {new Date().toLocaleString('default', { month: 'long' })}
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-purple-50 text-purple-500">
+        <IndianRupee size={22} className="sm:hidden" />
+        <IndianRupee size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+  
+  {/* Completion Rate */}
+  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+    <div className="flex justify-between items-center">
+      <div>
+        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+          Completion Rate
+        </h3>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+          {calculateCompletionRate()}%
+        </p>
+        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+          Appointments completed successfully
+        </p>
+      </div>
+
+      <div className="p-2.5 sm:p-3 rounded-lg bg-blue-50 text-blue-500">
+        <CheckCircle size={22} className="sm:hidden" />
+        <CheckCircle size={26} className="hidden sm:block" />
+      </div>
+    </div>
+  </div>
+</div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Booking Trends Chart */}
+        <div className="bg-white p-4 rounded-xl shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <TrendingUp size={20} className="mr-2 text-blue-500" />
+            Booking Trends
+          </h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={bookingTrends}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="bookings" stroke="#8884d8" activeDot={{ r: 8 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          {dashData.latestAppointments && dashData.latestAppointments.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stylist</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {dashData.latestAppointments.slice(0, 5).map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-semibold uppercase">
-                          {item.userData?.name?.charAt(0) || "C"}
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-800">
-                            {item.userData?.name || "Customer"}
-                          </p>
-                          <p className="text-xs text-gray-500">{item.userData?.email || "customer@example.com"}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-9 w-9">
-                          <img 
-                            className="h-9 w-9 rounded-full object-cover border border-gray-200" 
-                            src={item.stylistData?.image || item.docData?.image} 
-                            alt="Stylist" 
-                          />
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-800">
-                            {item.stylistData?.name || item.docData?.name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {item.stylistData?.speciality || item.docData?.speciality || "Hair Stylist"}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800">
-                        {item.serviceType || "Haircut & Styling"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Clock className="h-4 w-4 mr-1.5 text-gray-400" />
-                        <span>{slotDateFormat(item.slotDate)}, {item.slotTime}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {item.cancelled ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-800">
-                          <XCircle className="h-3.5 w-3.5 mr-1" />
-                          Cancelled
-                        </span>
-                      ) : item.isCompleted ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-800">
-                          <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                          Completed
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800">
-                          <Clock className="h-3.5 w-3.5 mr-1" />
-                          Upcoming
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {!item.cancelled && !item.isCompleted && (
-                        <button
-                          onClick={() => cancelAppointment(item._id)}
-                          className="text-red-600 hover:text-red-900 px-2 py-1 rounded hover:bg-red-50"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                      <button className="text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-50 ml-1">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 px-4">
-              <Calendar className="h-12 w-12 text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-500 mb-1">No bookings yet</h3>
-              <p className="text-gray-400 text-center max-w-md">
-                When customers book appointments, they will appear here
-              </p>
-            </div>
-          )}
-        </div>
-      </div> */}
-
-      {/* Quick Stats - This section is hidden as requested */}
-      {/* <div className='mt-8 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hidden'>
-        <div className='px-6 py-4 border-b'>
-          <h2 className='font-semibold text-gray-800'>Salon Performance</h2>
+        {/* Service Popularity */}
+        <div className="bg-white p-4 rounded-xl shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <Scissors size={20} className="mr-2 text-green-500" />
+            Service Popularity
+          </h3>
+          <div className="h-80 flex">
+            <ResponsiveContainer width="60%" height="100%">
+              <BarChart
+                data={servicePopularity}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="name" type="category" width={80} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="#82ca9d" />
+              </BarChart>
+            </ResponsiveContainer>
+            
+            <ResponsiveContainer width="40%" height="100%">
+              <PieChart>
+                <Pie
+                  data={servicePopularity}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="count"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {servicePopularity.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
         
-        <div className='p-6'>
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-            <div>
-              <h3 className='text-sm font-medium text-gray-500 mb-3'>Popular Services</h3>
-              <div className='space-y-3'>
-                {[
-                  { name: 'Haircut & Styling', value: '42%', color: 'bg-blue-500' },
-                  { name: 'Color Treatment', value: '28%', color: 'bg-purple-500' },
-                  { name: 'Hair Extensions', value: '15%', color: 'bg-pink-500' },
-                  { name: 'Bridal Styling', value: '10%', color: 'bg-yellow-500' },
-                ].map((service, idx) => (
-                  <div key={idx}>
-                    <div className='flex justify-between mb-1 items-center'>
-                      <span className='text-sm text-gray-600'>{service.name}</span>
-                      <span className='text-sm font-medium'>{service.value}</span>
-                    </div>
-                    <div className='w-full bg-gray-100 rounded-full h-2'>
-                      <div className={`${service.color} h-2 rounded-full`} style={{ width: service.value }}></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div>
-              <h3 className='text-sm font-medium text-gray-500 mb-3'>Top Stylists</h3>
-              <div className='space-y-4'>
-                {(dashData.topStylists || dashData.latestAppointments.slice(0, 3)).map((item, index) => (
-                  <div className='flex items-center' key={index}>
-                    <img 
-                      className='w-10 h-10 rounded-full object-cover border border-gray-200' 
-                      src={item.image || item.stylistData?.image || item.docData?.image} 
-                      alt="Stylist" 
-                    />
-                    <div className='ml-3 flex-1'>
-                      <p className='text-sm font-medium text-gray-800'>{item.name || item.stylistData?.name || item.docData?.name}</p>
-                      <p className='text-xs text-gray-500'>{item.specialty || 'Hair Stylist'}</p>
-                    </div>
-                    <div className='flex items-center'>
-                      <span className='px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium'>{item.bookings || '24'} bookings</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {/* Revenue Analytics */}
+        <div className="bg-white p-4 rounded-xl shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <IndianRupee size={20} className="mr-2 text-amber-500" />
+            Revenue Analytics
+          </h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={revenueData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => formatCurrency(value)} />
+                <Legend />
+                <Bar dataKey="revenue" fill="#8884d8" name="Total Revenue" />
+                <Bar dataKey="completedRevenue" fill="#82ca9d" name="Completed Appointments" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
-      </div> */}
+        
+        {/* Stylist Performance */}
+        <div className="bg-white p-4 rounded-xl shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <Users size={20} className="mr-2 text-blue-500" />
+            Stylist Performance
+          </h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={stylistPerformance}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="appointments" fill="#8884d8" name="Total Appointments" />
+                <Bar dataKey="completed" fill="#82ca9d" name="Completed" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

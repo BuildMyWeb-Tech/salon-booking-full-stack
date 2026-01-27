@@ -162,7 +162,7 @@ const Navbar = () => {
               <User size={18} className={darkMode ? 'text-gray-300' : 'text-primary'} />
             </div>
             <div className="hidden md:block">
-              <p className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>Admin User</p>
+              <p className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>Salon Admin</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">{aToken ? 'Administrator' : 'Stylist'}</p>
             </div>
           </div>

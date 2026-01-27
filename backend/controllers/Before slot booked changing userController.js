@@ -224,9 +224,6 @@ export const cancelAppointment = async (req, res) => {
   try {
     const { userId, appointmentId } = req.body;
     
-    console.log('🚫 === CANCELLING APPOINTMENT START ===');
-    console.log('Request data:', { userId, appointmentId });
-    
     if (!appointmentId) {
       return res.json({ success: false, message: 'Appointment ID required' });
     }
@@ -270,10 +267,10 @@ export const cancelAppointment = async (req, res) => {
     appointment.cancelledBy = 'user';
     await appointment.save();
     
-    // 🔥 FIX: Remove the slot from doctor's booked slots
+    // Remove the slot from doctor's booked slots
     const doctor = await doctorModel.findById(appointment.doctorId);
     if (doctor) {
-      const slotDate = appointment.slotDate;
+      const slotKey = appointment.slotDate;
       let slots_booked = doctor.slots_booked || new Map();
       
       // Convert to Map if needed
@@ -285,42 +282,14 @@ export const cancelAppointment = async (req, res) => {
         }
       }
       
-      const bookedSlotsForDate = slots_booked.get(slotDate) || [];
+      const bookedSlotsForDate = slots_booked.get(slotKey) || [];
+      const slotDateTimeISO = appointment.slotDateTime.toISOString();
+      const updatedSlots = bookedSlotsForDate.filter(time => time !== slotDateTimeISO);
+      slots_booked.set(slotKey, updatedSlots);
       
-      // 🔥 FIX: Convert appointment time back to 24-hour format
-      const slotTimeStr = appointment.slotTime;
-      let time24hr = '';
-      
-      const timeParts = slotTimeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-      if (timeParts) {
-        let hours = parseInt(timeParts[1]);
-        const minutes = timeParts[2];
-        const period = timeParts[3].toUpperCase();
-        
-        if (period === 'PM' && hours !== 12) hours += 12;
-        if (period === 'AM' && hours === 12) hours = 0;
-        
-        time24hr = `${String(hours).padStart(2, '0')}:${minutes}`;
-      }
-      
-      console.log('🔍 Removing slot:', time24hr, 'from date:', slotDate);
-      console.log('📋 Current booked slots:', bookedSlotsForDate);
-      
-      // Remove the time slot
-      const updatedSlots = bookedSlotsForDate.filter(time => time !== time24hr);
-      slots_booked.set(slotDate, updatedSlots);
-      
-      console.log('📋 Updated booked slots:', updatedSlots);
-      
-      await doctorModel.findByIdAndUpdate(
-        appointment.doctorId,
-        { slots_booked },
-        { runValidators: false }
-      );
+      doctor.slots_booked = slots_booked;
+      await doctor.save();
     }
-    
-    console.log('✅ Appointment cancelled successfully');
-    console.log('🚫 === CANCELLING APPOINTMENT END ===');
     
     res.json({ 
       success: true, 

@@ -5,28 +5,29 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { assets } from '../assets/assets';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Calendar, 
-  Clock, 
-  Scissors, 
-  X, 
-  ChevronLeft,
-  Check,
-  CheckCircle,
-  AlertCircle,
-  BadgeCheck,
-  ChevronsUp,
-  Info,
-  AlertTriangle,
-  Calendar as CalendarIcon,
-  User,
-  MapPin,
-  Phone,
-  ArrowRight,
-  CalendarCheck,
-  CalendarX,
-  RefreshCw,
-  Sparkles
+import {
+    Calendar,
+    Clock,
+    Scissors,
+    X,
+    ChevronLeft,
+    Check,
+    CheckCircle,
+    AlertCircle,
+    BadgeCheck,
+    ChevronsUp,
+    Info,
+    AlertTriangle,
+    Calendar as CalendarIcon,
+    User,
+    MapPin,
+    Phone,
+    ArrowRight,
+    CalendarCheck,
+    CalendarX,
+    RefreshCw,
+    Sparkles,
+    DollarSign
 } from 'lucide-react';
 
 const MyAppointments = () => {
@@ -57,7 +58,7 @@ const MyAppointments = () => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 20);
         };
-        
+
         window.addEventListener('scroll', handleScroll);
         return () => {
             window.removeEventListener('scroll', handleScroll);
@@ -89,21 +90,21 @@ const MyAppointments = () => {
 
     const cancelAppointment = async () => {
         if (!appointmentToCancel) return;
-        
+
         try {
-            setLocalAppointments(prevAppointments => 
-                prevAppointments.map(app => 
-                    app._id === appointmentToCancel._id ? 
-                    { ...app, cancelled: true, cancelledBy: 'user' } : 
-                    app
+            setLocalAppointments(prevAppointments =>
+                prevAppointments.map(app =>
+                    app._id === appointmentToCancel._id ?
+                        { ...app, cancelled: true, cancelledBy: 'user' } :
+                        app
                 )
             );
-            
+
             setActiveTab('cancelled');
-            
+
             const { data } = await axios.post(
-                backendUrl + '/api/user/cancel-appointment', 
-                { appointmentId: appointmentToCancel._id }, 
+                backendUrl + '/api/user/cancel-appointment',
+                { appointmentId: appointmentToCancel._id },
                 { headers: { token } }
             );
 
@@ -114,22 +115,22 @@ const MyAppointments = () => {
                 getUserAppointments();
             } else {
                 toast.error(data.message);
-                setLocalAppointments(prevAppointments => 
-                    prevAppointments.map(app => 
-                        app._id === appointmentToCancel._id ? 
-                        { ...app, cancelled: false, cancelledBy: null } : 
-                        app
+                setLocalAppointments(prevAppointments =>
+                    prevAppointments.map(app =>
+                        app._id === appointmentToCancel._id ?
+                            { ...app, cancelled: false, cancelledBy: null } :
+                            app
                     )
                 );
             }
         } catch (error) {
             console.log(error);
             toast.error(error.message);
-            setLocalAppointments(prevAppointments => 
-                prevAppointments.map(app => 
-                    app._id === appointmentToCancel._id ? 
-                    { ...app, cancelled: false, cancelledBy: null } : 
-                    app
+            setLocalAppointments(prevAppointments =>
+                prevAppointments.map(app =>
+                    app._id === appointmentToCancel._id ?
+                        { ...app, cancelled: false, cancelledBy: null } :
+                        app
                 )
             );
         }
@@ -137,23 +138,43 @@ const MyAppointments = () => {
 
     const getAvailableSlots = async (stylistId, appointmentDate) => {
         setIsRescheduling(true);
-        
+
         try {
             const response = await axios.get(
-                backendUrl + `/api/user/available-slots`, 
-                { 
+                backendUrl + `/api/user/available-slots`,
+                {
                     params: { date: appointmentDate, docId: stylistId },
-                    headers: { token } 
+                    headers: { token }
                 }
             );
-            
+
             if (response.data.success) {
-                setAvailableSlots(response.data.slots);
+                // Filter out past time slots for today
+                const now = new Date();
+                const selectedDate = new Date(appointmentDate);
+                const isToday = selectedDate.toDateString() === now.toDateString();
+
+                let slots = response.data.slots || [];
+
+                if (isToday) {
+                    const currentTime = now.getHours() * 60 + now.getMinutes();
+                    slots = slots.filter(slot => {
+                        const [hours, minutes] = slot.startTime.split(':').map(Number);
+                        const slotTime = hours * 60 + minutes;
+                        return slotTime > currentTime;
+                    });
+                }
+
+                setAvailableSlots(slots);
+
+                if (slots.length === 0) {
+                    toast.info('No available slots for this date. Please select another date.');
+                }
             } else {
                 toast.error(response.data.message);
                 setAvailableSlots([]);
             }
-            
+
         } catch (error) {
             console.log(error);
             toast.error("Failed to fetch available slots");
@@ -165,30 +186,30 @@ const MyAppointments = () => {
 
     const checkRescheduleEligibility = (appointment) => {
         if (!appointment || appointment.isCompleted) return false;
-        
+
         const appointmentDateTime = new Date(appointment.slotDateTime);
         const now = new Date();
         const diffMs = appointmentDateTime - now;
         const diffHours = diffMs / (1000 * 60 * 60);
-        
+
         return diffHours > 3;
     };
 
     const checkCancellationEligibility = (appointment) => {
         if (!appointment || appointment.cancelled || appointment.isCompleted) return false;
-        
+
         const appointmentDateTime = new Date(appointment.slotDateTime);
         const now = new Date();
         const diffMs = appointmentDateTime - now;
         const diffHours = diffMs / (1000 * 60 * 60);
-        
+
         return diffHours > 3;
     };
 
     const openRescheduleModal = (appointment) => {
         const canReschedule = appointment.cancelled || checkRescheduleEligibility(appointment);
         setCanReschedule(canReschedule);
-        
+
         setAppointmentToReschedule(appointment);
         if (canReschedule) {
             const tomorrow = new Date();
@@ -214,7 +235,7 @@ const MyAppointments = () => {
         }
 
         setIsRescheduling(true);
-        
+
         try {
             const { data } = await axios.post(
                 backendUrl + '/api/user/reschedule-appointment',
@@ -284,7 +305,7 @@ const MyAppointments = () => {
         const lastDay = new Date(year, month + 1, 0);
         const daysInMonth = lastDay.getDate();
         const startingDayOfWeek = firstDay.getDay();
-        
+
         return { daysInMonth, startingDayOfWeek, year, month };
     };
 
@@ -293,16 +314,16 @@ const MyAppointments = () => {
         const clickedDate = new Date(year, month, day);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         if (clickedDate < today) {
             return;
         }
-        
+
         setSelectedCalendarDate(clickedDate);
         const dateStr = clickedDate.toISOString().split('T')[0];
         setSelectedDate(dateStr);
         setSelectedTime('');
-        
+
         if (appointmentToReschedule) {
             getAvailableSlots(appointmentToReschedule.doctorId, dateStr);
         }
@@ -335,51 +356,45 @@ const MyAppointments = () => {
     return (
         <div className="bg-gray-50 min-h-screen pb-20 pt-6 px-4 sm:px-6 lg:px-8 relative">
             <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent h-64 pointer-events-none" />
-            
+
             <div className="max-w-5xl mx-auto relative">
                 <div className="flex items-center justify-between mb-4">
-                    <button 
-                        onClick={() => navigate(-1)} 
+                    <button
+                        onClick={() => navigate(-1)}
                         className="flex items-center gap-1 text-gray-600 hover:text-primary transition-colors bg-white p-2 rounded-lg shadow-sm"
                     >
                         <ChevronLeft size={20} />
                         <span className="font-medium hidden sm:inline">Back</span>
                     </button>
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
-                        <div className="bg-primary/10 p-2 rounded-lg">
-                            <Scissors size={20} className="text-primary" />
-                        </div>
                         My Appointments
                     </h1>
                     <div className="w-[40px] sm:w-[56px]"></div>
                 </div>
-                
-                <div 
-                    className={`sticky top-[60px] z-10 transition-all duration-300 ${
-                        scrolled ? 'py-2 bg-white/95 backdrop-blur-sm shadow-md' : 'py-1 bg-transparent'
-                    } rounded-xl mb-6`}
+
+                <div
+                    className={`sticky top-[60px] z-10 transition-all duration-300 ${scrolled ? 'py-2 bg-white/95 backdrop-blur-sm shadow-md' : 'py-1 bg-transparent'
+                        } rounded-xl mb-6`}
                 >
                     <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${scrolled ? 'mx-4' : ''}`}>
                         <div className="flex">
                             <button
                                 onClick={() => setActiveTab('upcoming')}
-                                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${
-                                    activeTab === 'upcoming'
-                                        ? 'bg-primary text-white shadow-inner'
-                                        : 'text-gray-700 hover:bg-gray-100'
-                                }`}
+                                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'upcoming'
+                                    ? 'bg-primary text-white shadow-inner'
+                                    : 'text-gray-700 hover:bg-gray-100'
+                                    }`}
                             >
                                 <div className="flex items-center justify-center gap-2">
                                     <CalendarCheck size={18} />
                                     <span className="hidden sm:inline">Upcoming</span>
                                 </div>
                                 {upcomingCount > 0 && (
-                                    <span 
-                                        className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                                            activeTab === 'upcoming' 
-                                                ? 'bg-white text-primary' 
-                                                : 'bg-primary text-white'
-                                        }`}
+                                    <span
+                                        className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === 'upcoming'
+                                            ? 'bg-white text-primary'
+                                            : 'bg-primary text-white'
+                                            }`}
                                     >
                                         {upcomingCount}
                                     </span>
@@ -388,23 +403,21 @@ const MyAppointments = () => {
 
                             <button
                                 onClick={() => setActiveTab('completed')}
-                                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${
-                                    activeTab === 'completed'
-                                        ? 'bg-primary text-white shadow-inner'
-                                        : 'text-gray-700 hover:bg-gray-100'
-                                }`}
+                                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'completed'
+                                    ? 'bg-primary text-white shadow-inner'
+                                    : 'text-gray-700 hover:bg-gray-100'
+                                    }`}
                             >
                                 <div className="flex items-center justify-center gap-2">
                                     <CheckCircle size={18} />
                                     <span className="hidden sm:inline">Completed</span>
                                 </div>
                                 {completedCount > 0 && (
-                                    <span 
-                                        className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                                            activeTab === 'completed' 
-                                                ? 'bg-white text-primary' 
-                                                : 'bg-primary text-white'
-                                        }`}
+                                    <span
+                                        className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === 'completed'
+                                            ? 'bg-white text-primary'
+                                            : 'bg-primary text-white'
+                                            }`}
                                     >
                                         {completedCount}
                                     </span>
@@ -413,23 +426,21 @@ const MyAppointments = () => {
 
                             <button
                                 onClick={() => setActiveTab('cancelled')}
-                                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${
-                                    activeTab === 'cancelled'
-                                        ? 'bg-primary text-white shadow-inner'
-                                        : 'text-gray-700 hover:bg-gray-100'
-                                }`}
+                                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'cancelled'
+                                    ? 'bg-primary text-white shadow-inner'
+                                    : 'text-gray-700 hover:bg-gray-100'
+                                    }`}
                             >
                                 <div className="flex items-center justify-center gap-2">
                                     <CalendarX size={18} />
                                     <span className="hidden sm:inline">Cancelled</span>
                                 </div>
                                 {cancelledCount > 0 && (
-                                    <span 
-                                        className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                                            activeTab === 'cancelled' 
-                                                ? 'bg-white text-primary' 
-                                                : 'bg-primary text-white'
-                                        }`}
+                                    <span
+                                        className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === 'cancelled'
+                                            ? 'bg-white text-primary'
+                                            : 'bg-primary text-white'
+                                            }`}
                                     >
                                         {cancelledCount}
                                     </span>
@@ -456,8 +467,8 @@ const MyAppointments = () => {
                         <p className="text-gray-500 mb-6 max-w-md mx-auto">
                             You haven't booked any styling appointments. Schedule your first session with one of our expert stylists.
                         </p>
-                        <button 
-                            onClick={() => navigate('/stylists')} 
+                        <button
+                            onClick={() => navigate('/stylists')}
                             className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-sm flex items-center gap-2 mx-auto"
                         >
                             <Scissors size={18} />
@@ -479,16 +490,16 @@ const MyAppointments = () => {
                             No {activeTab} appointments
                         </h3>
                         <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">
-                            {activeTab === 'upcoming' 
+                            {activeTab === 'upcoming'
                                 ? "You don't have any upcoming appointments scheduled. Book your next style session!"
                                 : activeTab === 'completed'
-                                ? "You don't have any completed appointments yet. They will appear here after your service."
-                                : "You don't have any cancelled appointments. That's a good thing!"
+                                    ? "You don't have any completed appointments yet. They will appear here after your service."
+                                    : "You don't have any cancelled appointments. That's a good thing!"
                             }
                         </p>
                         {activeTab === 'upcoming' && (
-                            <button 
-                                onClick={() => navigate('/stylists')} 
+                            <button
+                                onClick={() => navigate('/stylists')}
                                 className="px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-sm flex items-center gap-2 mx-auto"
                             >
                                 <Calendar size={16} />
@@ -501,19 +512,24 @@ const MyAppointments = () => {
                         {filteredAppointments.map((item, index) => {
                             const isRescheduleEligible = item.cancelled || checkRescheduleEligibility(item);
                             const isCancellable = checkCancellationEligibility(item);
-                            
+
                             const now = new Date();
                             const appointmentDate = new Date(item.slotDateTime);
                             const hoursUntilAppointment = (appointmentDate - now) / (1000 * 60 * 60);
                             const isComingSoon = hoursUntilAppointment > 0 && hoursUntilAppointment < 24;
-                            
+
+                            // Extract payment information
+                            const totalAmount = item.amount || 0;
+                            const paidAmount = item.paidAmount || 0;
+                            const remainingAmount = item.remainingAmount || 0;
+                            const hasPartialPayment = paidAmount > 0 && remainingAmount > 0;
+
                             return (
-                                <motion.div 
-                                    key={item._id || index} 
-                                    className={`bg-white rounded-xl shadow-sm overflow-hidden border transition-all ${
-                                        isComingSoon && activeTab === 'upcoming' ? 'border-primary/50' : 'border-gray-100'
-                                    } hover:shadow-md`}
-                                    initial={{ opacity: 0, y: 20 }}
+                                <motion.div
+                                    key={item._id || index}
+                                    className={`bg-white rounded-xl shadow-sm overflow-hidden border transition-all ${isComingSoon && activeTab === 'upcoming' ? 'border-primary/50' : 'border-gray-100'
+                                        } hover:shadow-md`}
+                                    initial={{ opacity: 0, y: -20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.3, delay: index * 0.05 }}
                                 >
@@ -523,24 +539,29 @@ const MyAppointments = () => {
                                             <span>Coming Soon - Your appointment is within 24 hours</span>
                                         </div>
                                     )}
-                                    
+
                                     <div className="p-5 sm:p-6">
                                         <div className="flex flex-col sm:flex-row gap-6">
                                             <div className="sm:w-1/4 lg:w-1/5">
                                                 <div className="relative mx-auto sm:mx-0 w-32 sm:w-full max-w-[160px] group">
                                                     <div className="rounded-xl overflow-hidden shadow-sm border-2 border-gray-100 aspect-square">
-                                                        <img 
-                                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                                                        <img
+                                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                             src={item.docData?.image || assets.defaultProfile}
                                                             alt={item.docData?.name || "Stylist"}
                                                         />
                                                     </div>
-                                                    
+
                                                     <div className="absolute -top-2 -right-2">
-                                                        {item.cancelled ? (
+                                                        {item.cancelled && item.cancelledBy === "admin" ? (
                                                             <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full shadow-sm whitespace-nowrap flex items-center gap-1">
                                                                 <X size={12} />
-                                                                {item.cancelledBy === 'admin' ? 'By Admin' : 'Cancelled'}
+                                                                Cancelled by Admin
+                                                            </div>
+                                                        ) : item.cancelled && item.cancelledBy === "user" ? (
+                                                            <div className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full shadow-sm whitespace-nowrap flex items-center gap-1">
+                                                                <X size={12} />
+                                                                Cancelled by You
                                                             </div>
                                                         ) : item.isCompleted ? (
                                                             <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
@@ -561,7 +582,7 @@ const MyAppointments = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="flex-1">
                                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
                                                     <div>
@@ -574,15 +595,11 @@ const MyAppointments = () => {
                                                                 </span>
                                                             )}
                                                         </h3>
-                                                        <p className="text-primary text-sm font-medium flex items-center gap-1">
-                                                            <Scissors size={14} className="text-primary/70" />
-                                                            {item.service || item.docData?.speciality || "Salon Service"}
-                                                        </p>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className="border-b border-gray-100 mb-4 mt-2"></div>
-                                                
+
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
                                                     <div className="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors group">
                                                         <div className="flex gap-3">
@@ -626,21 +643,45 @@ const MyAppointments = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
-                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-2 rounded-lg bg-gray-50">
-                                                            <p className="font-bold text-lg text-gray-800">{currencySymbol}{item.amount}</p>
+
+                                                {/* Payment Information Section */}
+                                                <div className="mb-4 bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border border-blue-100">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        {/* <DollarSign size={18} className="text-blue-600" /> */}
+                                                        <h4 className="font-semibold text-gray-800">Payment Details</h4>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Total Amount:</span>
+                                                            <span className="font-bold text-gray-900">{currencySymbol}{totalAmount}</span>
                                                         </div>
-                                                        
+
+                                                        {hasPartialPayment && (
+                                                            <>
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm text-gray-600">Paid Amount:</span>
+                                                                    <span className="font-semibold text-green-600">{currencySymbol}{paidAmount}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm text-gray-600">Remaining (Pay at Salon):</span>
+                                                                    <span className="font-semibold text-orange-600">{currencySymbol}{remainingAmount}</span>
+                                                                </div>
+                                                            </>
+                                                        )}
+
                                                         {item.payment && (
-                                                            <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                                                                <Check size={12} />
-                                                                Payment completed
-                                                            </span>
+                                                            <div className="mt-2 pt-2 border-t border-blue-200">
+                                                                <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
+                                                                    <Check size={12} />
+                                                                    {hasPartialPayment ? 'Advance payment completed' : 'Payment completed'}
+                                                                </span>
+                                                            </div>
                                                         )}
                                                     </div>
-                                                    
+                                                </div>
+
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
                                                     <div className="flex flex-wrap gap-3">
                                                         {item.cancelled && item.payment && (
                                                             <button
@@ -651,7 +692,7 @@ const MyAppointments = () => {
                                                                 Reschedule
                                                             </button>
                                                         )}
-                                                        
+
                                                         {!item.cancelled && !item.isCompleted && isRescheduleEligible && (
                                                             <button
                                                                 onClick={() => openRescheduleModal(item)}
@@ -661,7 +702,7 @@ const MyAppointments = () => {
                                                                 Reschedule
                                                             </button>
                                                         )}
-                                                        
+
                                                         {!item.cancelled && !item.isCompleted && isCancellable && (
                                                             <button
                                                                 onClick={() => openCancelModal(item)}
@@ -671,7 +712,7 @@ const MyAppointments = () => {
                                                                 Cancel
                                                             </button>
                                                         )}
-                                                        
+
                                                         {(item.isCompleted || (item.cancelled && !item.payment)) && (
                                                             <button
                                                                 onClick={() => navigate(`/appointment/${item.doctorId}`)}
@@ -685,20 +726,20 @@ const MyAppointments = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         {item.cancelled && item.cancelledBy && (
-                                            <div className="mt-4 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-fadeIn">
+                                            <div className="mt-4 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-slideDown">
                                                 <AlertCircle size={18} className="text-red-500" />
                                                 <span className="text-red-800">
-                                                    {item.cancelledBy === 'admin' 
-                                                        ? 'Cancelled by Admin - You can reschedule to a new time slot' 
+                                                    {item.cancelledBy === 'admin'
+                                                        ? 'Cancelled by Admin - You can reschedule to a new time slot'
                                                         : 'Cancelled by You - You may reschedule if payment was made'}
                                                 </span>
                                             </div>
                                         )}
-                                        
+
                                         {!item.cancelled && !item.isCompleted && !isCancellable && (
-                                            <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-fadeIn">
+                                            <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-slideDown">
                                                 <AlertTriangle size={16} className="text-yellow-500" />
                                                 <span className="text-yellow-800">
                                                     Appointments can only be cancelled at least 3 hours before the scheduled time.
@@ -711,7 +752,7 @@ const MyAppointments = () => {
                         })}
                     </div>
                 )}
-                
+
                 <AnimatePresence>
                     {rescheduleModal && (
                         <motion.div
@@ -720,31 +761,31 @@ const MyAppointments = () => {
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
                         >
-                            <motion.div 
+                            <motion.div
                                 className="bg-white rounded-xl overflow-hidden max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto"
-                                initial={{ scale: 0.9, y: 20 }}
+                                initial={{ scale: 0.9, y: -50 }}
                                 animate={{ scale: 1, y: 0 }}
-                                exit={{ scale: 0.9, y: 20 }}
+                                exit={{ scale: 0.9, y: -50 }}
                             >
                                 <div className="bg-gradient-to-r from-primary/10 to-primary/5 flex justify-between items-center p-4">
                                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                                         <RefreshCw size={18} className="text-primary" />
                                         Reschedule Appointment
                                     </h3>
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             setRescheduleModal(false);
                                             setAppointmentToReschedule(null);
                                             setSelectedDate('');
                                             setSelectedTime('');
                                             setSelectedCalendarDate(null);
-                                        }} 
+                                        }}
                                         className="text-gray-400 hover:text-gray-500 bg-white p-1 rounded-full"
                                     >
                                         <X size={20} />
                                     </button>
                                 </div>
-                                
+
                                 <div className="p-6">
                                     {!canReschedule ? (
                                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
@@ -778,10 +819,10 @@ const MyAppointments = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="space-y-3">
                                                 <label className="block text-sm font-medium text-gray-700">Select New Date</label>
-                                                
+
                                                 <div className="bg-white border border-gray-200 rounded-xl p-4">
                                                     <div className="flex items-center justify-between mb-4">
                                                         <button
@@ -791,11 +832,11 @@ const MyAppointments = () => {
                                                         >
                                                             <ChevronLeft size={20} className="text-gray-600" />
                                                         </button>
-                                                        
+
                                                         <h3 className="text-base font-semibold text-gray-800">
                                                             {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                                                         </h3>
-                                                        
+
                                                         <button
                                                             type="button"
                                                             onClick={() => navigateMonth(1)}
@@ -804,60 +845,59 @@ const MyAppointments = () => {
                                                             <ChevronLeft size={20} className="text-gray-600 rotate-180" />
                                                         </button>
                                                     </div>
-                                                    
+
                                                     <div className="grid grid-cols-7 gap-1">
                                                         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
                                                             <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
                                                                 {day}
                                                             </div>
                                                         ))}
-                                                        
+
                                                         {(() => {
                                                             const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentMonth);
                                                             const days = [];
-                                                            
+
                                                             for (let i = 0; i < startingDayOfWeek; i++) {
                                                                 days.push(
                                                                     <div key={`empty-${i}`} className="aspect-square" />
                                                                 );
                                                             }
-                                                            
+
                                                             for (let day = 1; day <= daysInMonth; day++) {
                                                                 const disabled = isDateDisabled(day);
                                                                 const selected = isDateSelected(day);
-                                                                
+
                                                                 days.push(
                                                                     <button
                                                                         key={day}
                                                                         type="button"
                                                                         onClick={() => !disabled && handleDateClick(day)}
                                                                         disabled={disabled}
-                                                                        className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all ${
-                                                                            disabled
-                                                                                ? 'text-gray-300 cursor-not-allowed'
-                                                                                : selected
+                                                                        className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all ${disabled
+                                                                            ? 'text-gray-300 cursor-not-allowed'
+                                                                            : selected
                                                                                 ? 'bg-primary text-white shadow-sm scale-105'
                                                                                 : 'text-gray-700 hover:bg-gray-100'
-                                                                        }`}
+                                                                            }`}
                                                                     >
                                                                         {day}
                                                                     </button>
                                                                 );
                                                             }
-                                                            
+
                                                             return days;
                                                         })()}
                                                     </div>
                                                 </div>
                                             </div>
-                                            
+
                                             {selectedDate && (
                                                 <div className="space-y-2">
                                                     <label className="flex justify-between items-center">
                                                         <span className="text-sm font-medium text-gray-700">Select New Time</span>
                                                         <span className="text-xs text-primary">All times are in local time</span>
                                                     </label>
-                                                    
+
                                                     <div className="border border-gray-200 rounded-lg p-3">
                                                         {isRescheduling ? (
                                                             <div className="py-8 text-center">
@@ -877,19 +917,19 @@ const MyAppointments = () => {
                                                         ) : (
                                                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-1">
                                                                 {availableSlots.map((slot, idx) => {
-                                                                    const startTime = slot.displayTime.split(' - ')[0];
+                                                                    if (!slot?.startTime) return null;
+
                                                                     return (
                                                                         <button
-                                                                            key={idx}
+                                                                            key={`${slot.date}-${slot.startTime}-${idx}`}
                                                                             type="button"
                                                                             onClick={() => setSelectedTime(slot.startTime)}
-                                                                            className={`p-2.5 text-sm rounded-md transition-all ${
-                                                                                selectedTime === slot.startTime 
-                                                                                    ? 'bg-primary text-white font-medium shadow-sm' 
-                                                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                                            }`}
+                                                                            className={`p-2.5 text-sm rounded-md transition-all ${selectedTime === slot.startTime
+                                                                                ? 'bg-primary text-white font-medium shadow-sm'
+                                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                                                }`}
                                                                         >
-                                                                            {startTime}
+                                                                            {slot.startTime}
                                                                         </button>
                                                                     );
                                                                 })}
@@ -898,18 +938,18 @@ const MyAppointments = () => {
                                                     </div>
                                                 </div>
                                             )}
-                                            
+
                                             <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-800 flex items-start gap-2 mt-4">
                                                 <Info size={18} className="text-blue-500 mt-0.5 flex-shrink-0" />
                                                 <div>
                                                     <p className="font-medium mb-1">Rescheduling Policy</p>
                                                     <p className="text-blue-700 text-xs">
-                                                        Rescheduling must be done at least 3 hours before your appointment time. 
+                                                        Rescheduling must be done at least 3 hours before your appointment time.
                                                         Your payment will be applied to the new appointment.
                                                     </p>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
                                                 <button
                                                     type="button"
@@ -928,11 +968,10 @@ const MyAppointments = () => {
                                                     type="button"
                                                     onClick={rescheduleAppointment}
                                                     disabled={!selectedDate || !selectedTime || isRescheduling}
-                                                    className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${
-                                                        !selectedDate || !selectedTime || isRescheduling
-                                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                                                            : 'bg-primary text-white hover:bg-primary/90 shadow-sm'
-                                                    }`}
+                                                    className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${!selectedDate || !selectedTime || isRescheduling
+                                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        : 'bg-primary text-white hover:bg-primary/90 shadow-sm'
+                                                        }`}
                                                 >
                                                     {isRescheduling ? (
                                                         <>
@@ -954,7 +993,7 @@ const MyAppointments = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
-                
+
                 <AnimatePresence>
                     {cancelModal && (
                         <motion.div
@@ -963,11 +1002,11 @@ const MyAppointments = () => {
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
                         >
-                            <motion.div 
+                            <motion.div
                                 className="bg-white rounded-xl overflow-hidden max-w-md w-full shadow-xl"
-                                initial={{ scale: 0.9, y: 20 }}
+                                initial={{ scale: 0.9, y: -50 }}
                                 animate={{ scale: 1, y: 0 }}
-                                exit={{ scale: 0.9, y: 20 }}
+                                exit={{ scale: 0.9, y: -50 }}
                             >
                                 <div className="bg-gradient-to-r from-red-50 to-white p-4 border-b border-gray-100">
                                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -977,7 +1016,7 @@ const MyAppointments = () => {
                                         Cancel Appointment
                                     </h3>
                                 </div>
-                                
+
                                 <div className="p-6">
                                     <div className="text-center">
                                         <p className="text-gray-600 mb-6">
@@ -986,12 +1025,12 @@ const MyAppointments = () => {
                                             <span className="font-medium text-gray-800">{appointmentToCancel?.slotTime}</span> with{' '}
                                             <span className="font-medium text-gray-800">{appointmentToCancel?.docData?.name}</span>?
                                         </p>
-                                        
+
                                         <div className="bg-gray-50 rounded-lg p-4 mb-6 text-sm border border-gray-200">
                                             <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-12 h-12 rounded-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden">
-                                                        <img 
+                                                        <img
                                                             src={appointmentToCancel?.docData?.image || assets.defaultProfile}
                                                             alt={appointmentToCancel?.docData?.name || "Stylist"}
                                                             className="w-full h-full object-cover"
@@ -1013,19 +1052,19 @@ const MyAppointments = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 mb-6 text-sm text-yellow-800 text-left">
                                             <p className="flex items-start gap-2">
                                                 <Info size={18} className="text-yellow-500 mt-0.5 flex-shrink-0" />
                                                 <span>
-                                                    {appointmentToCancel?.payment 
+                                                    {appointmentToCancel?.payment
                                                         ? "Cancellations may be subject to our refund policy. Please contact customer support for refund details if needed."
                                                         : "You can cancel unpaid appointments without any charge."
                                                     }
                                                 </span>
                                             </p>
                                         </div>
-                                        
+
                                         <div className="flex justify-center gap-3">
                                             <button
                                                 type="button"
@@ -1051,22 +1090,28 @@ const MyAppointments = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
-                
-                <button 
+
+                <button
                     onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                     className={`fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center transform ${scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}
                 >
                     <ChevronsUp size={20} />
                 </button>
-                
-                <style jsx>{`
-                    @keyframes fadeIn {
-                        from { opacity: 0; }
-                        to { opacity: 1; }
+
+                <style>{`
+                    @keyframes slideDown {
+                        from { 
+                            opacity: 0; 
+                            transform: translateY(-10px); 
+                        }
+                        to { 
+                            opacity: 1; 
+                            transform: translateY(0); 
+                        }
                     }
                     
-                    .animate-fadeIn {
-                        animation: fadeIn 0.3s ease-out;
+                    .animate-slideDown {
+                        animation: slideDown 0.3s ease-out;
                     }
                     
                     @media (max-width: 640px) {
