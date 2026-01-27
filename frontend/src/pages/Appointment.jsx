@@ -1047,7 +1047,7 @@ const Appointment = () => {
           </div>
         </div>
 
-        {/* <div className="max-w-2xl mx-auto mt-8 bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 shadow-md">
+        <div className="max-w-2xl mx-auto mt-8 bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 shadow-md">
           <div className="flex items-start gap-4">
             <AlertTriangle size={24} className="text-yellow-600 mt-0.5 flex-shrink-0" />
             <div>
@@ -1071,7 +1071,7 @@ const Appointment = () => {
               </div>
             </div>
           </div>
-        </div> */}
+        </div>
       </div>
 
       <style>
