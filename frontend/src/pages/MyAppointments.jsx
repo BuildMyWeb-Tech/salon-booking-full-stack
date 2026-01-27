@@ -26,7 +26,8 @@ import {
     CalendarCheck,
     CalendarX,
     RefreshCw,
-    Sparkles
+    Sparkles,
+    DollarSign
 } from 'lucide-react';
 
 const MyAppointments = () => {
@@ -500,12 +501,18 @@ const MyAppointments = () => {
                             const hoursUntilAppointment = (appointmentDate - now) / (1000 * 60 * 60);
                             const isComingSoon = hoursUntilAppointment > 0 && hoursUntilAppointment < 24;
 
+                            // Extract payment information
+                            const totalAmount = item.amount || 0;
+                            const paidAmount = item.paidAmount || 0;
+                            const remainingAmount = item.remainingAmount || 0;
+                            const hasPartialPayment = paidAmount > 0 && remainingAmount > 0;
+
                             return (
                                 <motion.div
                                     key={item._id || index}
                                     className={`bg-white rounded-xl shadow-sm overflow-hidden border transition-all ${isComingSoon && activeTab === 'upcoming' ? 'border-primary/50' : 'border-gray-100'
                                         } hover:shadow-md`}
-                                    initial={{ opacity: 0, y: 20 }}
+                                    initial={{ opacity: 0, y: -20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.3, delay: index * 0.05 }}
                                 >
@@ -619,20 +626,44 @@ const MyAppointments = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-2 rounded-lg bg-gray-50">
-                                                            <p className="font-bold text-lg text-gray-800">{currencySymbol}{item.amount}</p>
+                                                {/* Payment Information Section */}
+                                                <div className="mb-4 bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border border-blue-100">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <DollarSign size={18} className="text-blue-600" />
+                                                        <h4 className="font-semibold text-gray-800">Payment Details</h4>
+                                                    </div>
+                                                    
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Total Amount:</span>
+                                                            <span className="font-bold text-gray-900">{currencySymbol}{totalAmount}</span>
                                                         </div>
-
+                                                        
+                                                        {hasPartialPayment && (
+                                                            <>
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm text-gray-600">Paid Amount:</span>
+                                                                    <span className="font-semibold text-green-600">{currencySymbol}{paidAmount}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm text-gray-600">Remaining (Pay at Salon):</span>
+                                                                    <span className="font-semibold text-orange-600">{currencySymbol}{remainingAmount}</span>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                        
                                                         {item.payment && (
-                                                            <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                                                                <Check size={12} />
-                                                                Payment completed
-                                                            </span>
+                                                            <div className="mt-2 pt-2 border-t border-blue-200">
+                                                                <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
+                                                                    <Check size={12} />
+                                                                    {hasPartialPayment ? 'Advance payment completed' : 'Payment completed'}
+                                                                </span>
+                                                            </div>
                                                         )}
                                                     </div>
+                                                </div>
 
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
                                                     <div className="flex flex-wrap gap-3">
                                                         {item.cancelled && item.payment && (
                                                             <button
@@ -679,7 +710,7 @@ const MyAppointments = () => {
                                         </div>
 
                                         {item.cancelled && item.cancelledBy && (
-                                            <div className="mt-4 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-fadeIn">
+                                            <div className="mt-4 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-slideDown">
                                                 <AlertCircle size={18} className="text-red-500" />
                                                 <span className="text-red-800">
                                                     {item.cancelledBy === 'admin'
@@ -690,7 +721,7 @@ const MyAppointments = () => {
                                         )}
 
                                         {!item.cancelled && !item.isCompleted && !isCancellable && (
-                                            <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-fadeIn">
+                                            <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-slideDown">
                                                 <AlertTriangle size={16} className="text-yellow-500" />
                                                 <span className="text-yellow-800">
                                                     Appointments can only be cancelled at least 3 hours before the scheduled time.
@@ -714,9 +745,9 @@ const MyAppointments = () => {
                         >
                             <motion.div
                                 className="bg-white rounded-xl overflow-hidden max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto"
-                                initial={{ scale: 0.9, y: 20 }}
+                                initial={{ scale: 0.9, y: -50 }}
                                 animate={{ scale: 1, y: 0 }}
-                                exit={{ scale: 0.9, y: 20 }}
+                                exit={{ scale: 0.9, y: -50 }}
                             >
                                 <div className="bg-gradient-to-r from-primary/10 to-primary/5 flex justify-between items-center p-4">
                                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -955,9 +986,9 @@ const MyAppointments = () => {
                         >
                             <motion.div
                                 className="bg-white rounded-xl overflow-hidden max-w-md w-full shadow-xl"
-                                initial={{ scale: 0.9, y: 20 }}
+                                initial={{ scale: 0.9, y: -50 }}
                                 animate={{ scale: 1, y: 0 }}
-                                exit={{ scale: 0.9, y: 20 }}
+                                exit={{ scale: 0.9, y: -50 }}
                             >
                                 <div className="bg-gradient-to-r from-red-50 to-white p-4 border-b border-gray-100">
                                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -1050,13 +1081,19 @@ const MyAppointments = () => {
                 </button>
 
                 <style>{`
-                    @keyframes fadeIn {
-                        from { opacity: 0; }
-                        to { opacity: 1; }
+                    @keyframes slideDown {
+                        from { 
+                            opacity: 0; 
+                            transform: translateY(-10px); 
+                        }
+                        to { 
+                            opacity: 1; 
+                            transform: translateY(0); 
+                        }
                     }
                     
-                    .animate-fadeIn {
-                        animation: fadeIn 0.3s ease-out;
+                    .animate-slideDown {
+                        animation: slideDown 0.3s ease-out;
                     }
                     
                     @media (max-width: 640px) {

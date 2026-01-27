@@ -159,7 +159,7 @@ const formatDate = (date) => {
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 };
-// Added a more robust formatTime utility
+
 const formatTime = (timeStr) => {
   if (!timeStr) return '';
   const [h, m] = timeStr.split(':');
@@ -170,7 +170,21 @@ const formatTime = (timeStr) => {
   });
 };
 
-
+// Helper function to filter out past time slots for today
+const filterPastTimeSlots = (slots, selectedDate) => {
+  const today = new Date();
+  const isToday = selectedDate && selectedDate.toDateString() === today.toDateString();
+  
+  if (!isToday) return slots;
+  
+  const currentTime = today.getHours() * 60 + today.getMinutes();
+  
+  return slots.filter(slot => {
+    const [hours, minutes] = slot.startTime.split(':').map(Number);
+    const slotTime = hours * 60 + minutes;
+    return slotTime > currentTime;
+  });
+};
 
 // Main component with CRITICAL performance fixes
 const Appointment = () => {
@@ -179,11 +193,11 @@ const Appointment = () => {
 
   const razorpayKeyId = 'rzp_test_8NBbBv2vkvuTtj';
 
-  // ✅ CRITICAL FIX: Use refs to prevent infinite loops
   const hasFetchedSettings = useRef(false);
   const hasFetchedServices = useRef(false);
   const hasFetchedDates = useRef(false);
   const lastDocId = useRef(null);
+  const hasCheckedAuth = useRef(false);
 
   // State management
   const [stylistInfo, setStylistInfo] = useState(null);
@@ -207,18 +221,26 @@ const Appointment = () => {
 
   const navigate = useNavigate();
 
-    // ✅ Reduced debug logging
-    useEffect(() => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 DEBUG - Current State:', {
-          token: token ? 'EXISTS' : 'MISSING',
-          docId,
-          stylistInfo: stylistInfo ? 'LOADED' : 'NULL',
-          slotSettings: slotSettings ? 'LOADED' : 'NULL',
-          availableDates: availableDates.length
-        });
-      }
-    }, [token, docId, stylistInfo, slotSettings]);
+  // Check if user is logged in on page load (with ref to prevent double toast)
+  useEffect(() => {
+    if (!token && !hasCheckedAuth.current) {
+      hasCheckedAuth.current = true;
+      toast.warning('Please login to book an appointment');
+      navigate('/login');
+    }
+  }, [token, navigate]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 DEBUG - Current State:', {
+        token: token ? 'EXISTS' : 'MISSING',
+        docId,
+        stylistInfo: stylistInfo ? 'LOADED' : 'NULL',
+        slotSettings: slotSettings ? 'LOADED' : 'NULL',
+        availableDates: availableDates.length
+      });
+    }
+  }, [token, docId, stylistInfo, slotSettings]);
 
   // Helpers
   const loadRazorpayScript = useCallback(() => {
@@ -235,7 +257,6 @@ const Appointment = () => {
     return selectedServices.reduce((total, service) => total + service.basePrice, 0);
   }, [selectedServices]);
 
-  // ✅ CRITICAL FIX: Prevent re-fetching with ref checks
   const fetchAllServices = useCallback(async () => {
     if (hasFetchedServices.current) return;
     
@@ -302,107 +323,102 @@ const Appointment = () => {
     setStylistInfo(stylistInfo);
   }, [stylists, docId]);
 
-  // ✅ CRITICAL FIX: Prevent infinite date generation loops
-const generateAvailableDates = useCallback(async () => {
-  if (!token || !docId) return;
+  const generateAvailableDates = useCallback(async () => {
+    if (!docId || !token) return;
 
-  if (hasFetchedDates.current && lastDocId.current === docId) return;
+    if (hasFetchedDates.current && lastDocId.current === docId) return;
 
-  setDateLoading(true);
-  hasFetchedDates.current = true;
-  lastDocId.current = docId;
+    setDateLoading(true);
+    hasFetchedDates.current = true;
+    lastDocId.current = docId;
 
-  try {
-    const response = await axios.get(`${backendUrl}/api/user/available-dates/${docId}`, {
-      headers: { token },
-    });
+    try {
+      const response = await axios.get(`${backendUrl}/api/user/available-dates/${docId}`, {
+        headers: { token },
+      });
 
-    if (!response.data.success || !Array.isArray(response.data.dates)) {
+      if (!response.data.success || !Array.isArray(response.data.dates)) {
+        setAvailableDates([]);
+        return;
+      }
+
+      const promises = response.data.dates.map(dateStr => 
+        axios.get(`${backendUrl}/api/user/available-slots`, {
+          params: { date: dateStr, docId },
+          headers: { token }
+        }).catch(() => ({ data: { success: false, slots: [] } }))
+      );
+
+      const results = await Promise.all(promises);
+      
+      const datesWithSlots = [];
+      
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        
+        if (!result.data.success || !result.data.slots?.length) continue;
+        
+        const date = new Date(response.data.dates[i]);
+        
+        datesWithSlots.push({
+          date,
+          dateStr: response.data.dates[i],
+          dayName: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+          dayNumber: date.getDate(),
+          month: date.toLocaleDateString('en-US', { month: 'short' }),
+          isToday: new Date().toDateString() === date.toDateString(),
+          slotCount: result.data.slots.length
+        });
+      }
+
+      setAvailableDates(datesWithSlots);
+    } catch (error) {
+      console.error("Error loading available dates:", error);
+      toast.error("Failed to load available dates");
       setAvailableDates([]);
+    } finally {
+      setDateLoading(false);
+    }
+  }, [docId, token, backendUrl]);
+
+  const fetchSlots = useCallback(async (dateObj) => {
+    if (!token) {
+      toast.warning('Please login to view available slots');
+      navigate('/login');
       return;
     }
 
-    const promises = response.data.dates.map(dateStr => 
-      axios.get(`${backendUrl}/api/user/available-slots`, {
-        params: { date: dateStr, docId },
-        headers: { token }
-      }).catch(() => ({ data: { success: false, slots: [] } }))
-    );
-
-    const results = await Promise.all(promises);
-    
-    const datesWithSlots = [];
-    
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      
-      if (!result.data.success || !result.data.slots?.length) continue;
-      
-      // Safely create date object from the available date string
-      const date = new Date(response.data.dates[i]);
-      
-      datesWithSlots.push({
-        date,
-        dateStr: response.data.dates[i],
-        dayName: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
-        dayNumber: date.getDate(),
-        month: date.toLocaleDateString('en-US', { month: 'short' }),
-        isToday: new Date().toDateString() === date.toDateString(),
-        slotCount: result.data.slots.length
-      });
-    }
-
-    setAvailableDates(datesWithSlots);
-  } catch (error) {
-    console.error("Error loading available dates:", error);
-    toast.error("Failed to load available dates");
-    setAvailableDates([]);
-  } finally {
-    setDateLoading(false);
-  }
-}, [docId, token, backendUrl]);
-
-useEffect(() => {
-  const fetchDates = async () => {
     try {
-      const res = await axios.get(
-        `${backendUrl}/api/user/available-dates/${docId}`,
-        { headers: { token } }
-      );
+      setLoading(true);
+      const dateStr = formatDate(dateObj);
 
-      if (res.data.success) {
-        setAvailableDates(res.data.dates);
+      const { data } = await axios.get(`${backendUrl}/api/user/available-slots`, {
+        params: { date: dateStr, docId },
+        headers: { token },
+      });
+
+      if (data.success) {
+        // Filter out past time slots for today
+        const filteredSlots = filterPastTimeSlots(data.slots, dateObj);
+        setAvailableSlots(filteredSlots);
+        
+        if (filteredSlots.length === 0 && data.slots.length > 0) {
+          toast.info('All slots for today have passed. Please select another date.');
+        } else if (filteredSlots.length === 0) {
+          toast.warning('No slots available for this date');
+        }
+      } else {
+        setAvailableSlots([]);
+        toast.warning(data.message || 'No slots available');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load slots');
+      setAvailableSlots([]);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  if (docId && token) fetchDates();
-}, [docId, token, backendUrl]);
-
-const fetchSlots = useCallback(async (dateObj) => {
-  if (!token) return toast.warning('Please login to view available slots');
-
-  try {
-    setLoading(true);
-    const dateStr = formatDate(dateObj);
-
-    const { data } = await axios.get(`${backendUrl}/api/user/available-slots`, {
-      params: { date: dateStr, docId },
-      headers: { token },
-    });
-
-    setAvailableSlots(data.success ? data.slots : []);
-    if (!data.success) toast.warning(data.message || 'No slots available');
-  } catch (error) {
-    console.error(error);
-    toast.error('Failed to load slots');
-    setAvailableSlots([]);
-  } finally {
-    setLoading(false);
-  }
-}, [token, docId, backendUrl]);
+  }, [docId, backendUrl, token, navigate]);
 
   const toggleService = useCallback((service) => {
     setSelectedServices(prevServices => {
@@ -416,62 +432,66 @@ const fetchSlots = useCallback(async (dateObj) => {
     });
   }, []);
 
-const handleDateSelect = useCallback((date) => {
-  setSelectedDate(date);
-  setSelectedSlotISO(''); // reset slot
-  fetchSlots(date);
-}, [fetchSlots]);
+  const handleDateSelect = useCallback((date) => {
+    setSelectedDate(date);
+    setSelectedSlotISO('');
+    fetchSlots(date);
+  }, [fetchSlots]);
 
- const completeBooking = useCallback(async (paymentMethod) => {
-  if (!selectedDate) return;
+  const completeBooking = useCallback(async (paymentMethod) => {
+    if (!selectedDate) return;
 
-  setBookingLoading(true);
-  const slotDate = formatDate(selectedDate); // ✅ FIXED
+    setBookingLoading(true);
+    const slotDate = formatDate(selectedDate);
 
-  try {
-    const servicesData = selectedServices.map(s => ({
-      name: s.name,
-      price: s.basePrice
-    }));
+    try {
+      const servicesData = selectedServices.map(s => ({
+        name: s.name,
+        price: s.basePrice
+      }));
 
-    const { data } = await axios.post(
-      backendUrl + '/api/user/book-appointment',
-      {
-        docId,
-        slotDate,
-        slotTime: selectedSlotISO,
-        services: servicesData,
-        totalAmount: getTotalPrice(),
-        paymentMethod
-      },
-      { headers: { token } }
-    );
+      const { data } = await axios.post(
+        backendUrl + '/api/user/book-appointment',
+        {
+          docId,
+          slotDate,
+          slotTime: selectedSlotISO,
+          services: servicesData,
+          totalAmount: getTotalPrice(),
+          paidAmount: paymentAmount,
+          remainingAmount: remainingAmount,
+          paymentMethod
+        },
+        { headers: { token } }
+      );
 
-    if (data.success) {
-      toast.success(data.message);
-      await fetchSlots(selectedDate);
-      setSelectedSlotISO('');
-      setSelectedServices([]);
-      navigate('/my-appointments');
-    } else {
-      toast.error(data.message);
+      if (data.success) {
+        toast.success(data.message);
+        await fetchSlots(selectedDate);
+        setSelectedSlotISO('');
+        setSelectedServices([]);
+        navigate('/my-appointments');
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Booking failed');
+    } finally {
+      setBookingLoading(false);
     }
-  } catch (error) {
-    toast.error(error.response?.data?.message || 'Booking failed');
-  } finally {
-    setBookingLoading(false);
-  }
-}, [
-  backendUrl,
-  docId,
-  selectedDate,
-  selectedServices,
-  selectedSlotISO,
-  getTotalPrice,
-  token,
-  fetchSlots,
-  navigate
-]);
+  }, [
+    backendUrl,
+    docId,
+    selectedDate,
+    selectedServices,
+    selectedSlotISO,
+    getTotalPrice,
+    paymentAmount,
+    remainingAmount,
+    token,
+    fetchSlots,
+    navigate
+  ]);
 
   const processPayment = useCallback(async (method) => {
     setPaymentMethod(method);
@@ -536,11 +556,6 @@ const handleDateSelect = useCallback((date) => {
   ]);
 
   const initiateBooking = useCallback(() => {
-    if (!token) {
-      toast.warning('Login to book appointment');
-      return navigate('/login');
-    }
-
     if (!selectedSlotISO) {
       return toast.warning('Please select a time slot');
     }
@@ -554,13 +569,12 @@ const handleDateSelect = useCallback((date) => {
     }
 
     processPayment(paymentMethod);
-  }, [token, selectedSlotISO, selectedServices, paymentMethod, navigate, processPayment]);
+  }, [selectedSlotISO, selectedServices, paymentMethod, processPayment]);
 
-  // ✅ CRITICAL FIX: Run initial fetches only once on mount
   useEffect(() => {
     fetchSlotSettings();
     fetchAllServices();
-  }, []); // Empty deps - run once
+  }, []);
 
   useEffect(() => {
     if (stylists && stylists.length > 0) {
@@ -574,10 +588,11 @@ const handleDateSelect = useCallback((date) => {
     }
   }, [stylistInfo, allServices, filterStylistServices]);
 
-  // ✅ CRITICAL FIX: Only generate dates once when conditions are met
   useEffect(() => {
-  if (slotSettings && docId && token) generateAvailableDates();
-}, [slotSettings, docId, token]);// Removed generateAvailableDates from deps
+    if (slotSettings && docId && token) {
+      generateAvailableDates();
+    }
+  }, [slotSettings, docId, token, generateAvailableDates]);
 
   useEffect(() => {
     if (selectedServices.length > 0 && slotSettings) {
@@ -646,11 +661,10 @@ const handleDateSelect = useCallback((date) => {
             </div>
           </div>
           
-          {/* Rest of the UI remains the same - Service selection, date/time, payment */}
           <div className="p-6 sm:p-8">
             {/* Step 1: Service Selection */}
             {currentStep === 1 && (
-              <div className="animate-fadeIn">
+              <div className="animate-slideDown">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Services</h2>
                 
                 {stylistServices.length === 0 ? (
@@ -702,7 +716,7 @@ const handleDateSelect = useCallback((date) => {
                         <p className="text-2xl font-bold text-gray-900">Total: {currencySymbol}{getTotalPrice()}</p>
                         {slotSettings.advancePaymentRequired && slotSettings.advancePaymentPercentage < 100 && (
                           <p className="text-sm text-blue-700 mt-1">
-                            Pay {slotSettings.advancePaymentPercentage}% now ({currencySymbol}{paymentAmount})
+                            Pay {slotSettings.advancePaymentPercentage}% now ({currencySymbol}{Math.round((getTotalPrice() * slotSettings.advancePaymentPercentage) / 100)})
                           </p>
                         )}
                       </div>
@@ -721,7 +735,7 @@ const handleDateSelect = useCallback((date) => {
             
             {/* Step 2: Date & Time Selection */}
             {currentStep === 2 && (
-              <div className="animate-fadeIn">
+              <div className="animate-slideDown">
                 <div className="mb-6">
                   <button 
                     onClick={() => setCurrentStep(1)} 
@@ -780,7 +794,7 @@ const handleDateSelect = useCallback((date) => {
 
                 {/* Time Selection */}
                 {selectedDate && (
-                  <div className="mb-8">
+                  <div className="mb-8 animate-slideDown">
                     <label className="block text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <Clock size={20} className="text-blue-600" />
                       Select Time
@@ -836,7 +850,7 @@ const handleDateSelect = useCallback((date) => {
 
             {/* Step 3: Payment */}
             {currentStep === 3 && (
-              <div className="animate-fadeIn max-w-2xl mx-auto">
+              <div className="animate-slideDown max-w-2xl mx-auto">
                 <div className="mb-6">
                   <button 
                     onClick={() => setCurrentStep(2)} 
@@ -889,7 +903,6 @@ const handleDateSelect = useCallback((date) => {
                         })}
                       </p>                    
                       <p className="text-blue-600 font-semibold mt-1">{formatTime(selectedSlotISO)}</p>
-
                     </div>
                     
                     <div className="space-y-3 pt-2">
@@ -1032,12 +1045,18 @@ const handleDateSelect = useCallback((date) => {
 
       <style>
         {`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes slideDown {
+          from { 
+            opacity: 0; 
+            transform: translateY(-20px); 
+          }
+          to { 
+            opacity: 1; 
+            transform: translateY(0); 
+          }
         }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
+        .animate-slideDown {
+          animation: slideDown 0.4s ease-out;
         }
         .scrollbar-hide {
           -ms-overflow-style: none;
