@@ -352,13 +352,33 @@ const Appointment = () => {
       const results = await Promise.all(promises);
       
       const datesWithSlots = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
       
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
         
-        if (!result.data.success || !result.data.slots?.length) continue;
+        // Parse the date string properly
+        const [year, month, day] = response.data.dates[i].split('-').map(Number);
+        const date = new Date(year, month - 1, day);
         
-        const date = new Date(response.data.dates[i]);
+        // Filter past time slots for today
+        let availableSlots = result.data.slots || [];
+        const isToday = date.toDateString() === new Date().toDateString();
+        
+        if (isToday) {
+          const now = new Date();
+          const currentTime = now.getHours() * 60 + now.getMinutes();
+          
+          availableSlots = availableSlots.filter(slot => {
+            const [hours, minutes] = slot.startTime.split(':').map(Number);
+            const slotTime = hours * 60 + minutes;
+            return slotTime > currentTime;
+          });
+        }
+        
+        // Only include dates with available slots
+        if (!result.data.success || availableSlots.length === 0) continue;
         
         datesWithSlots.push({
           date,
@@ -366,8 +386,8 @@ const Appointment = () => {
           dayName: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
           dayNumber: date.getDate(),
           month: date.toLocaleDateString('en-US', { month: 'short' }),
-          isToday: new Date().toDateString() === date.toDateString(),
-          slotCount: result.data.slots.length
+          isToday: isToday,
+          slotCount: availableSlots.length
         });
       }
 
@@ -1027,20 +1047,31 @@ const Appointment = () => {
           </div>
         </div>
 
-        <div className="max-w-2xl mx-auto mt-8 bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 shadow-md">
+        {/* <div className="max-w-2xl mx-auto mt-8 bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 shadow-md">
           <div className="flex items-start gap-4">
             <AlertTriangle size={24} className="text-yellow-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="font-bold text-yellow-900 mb-2 text-lg">Cancellation Policy</h3>
-              <p className="text-sm text-yellow-800 leading-relaxed">
-                {slotSettings.allowRescheduling 
-                  ? `Free cancellation up to ${slotSettings.rescheduleHoursBefore} hours before your appointment.`
-                  : 'Please contact us for cancellation policy details.'
-                } After that, you may be charged a cancellation fee of 50% of the service price.
-              </p>
+              <h3 className="font-bold text-yellow-900 mb-2 text-lg">Cancellation & Rescheduling Policy</h3>
+              <div className="text-sm text-yellow-800 leading-relaxed space-y-2">
+                <p>
+                  <strong>Free Cancellation:</strong> {slotSettings.allowRescheduling 
+                    ? `You may cancel or reschedule your appointment free of charge up to ${slotSettings.rescheduleHoursBefore} hours (${Math.floor(slotSettings.rescheduleHoursBefore / 24)} ${Math.floor(slotSettings.rescheduleHoursBefore / 24) === 1 ? 'day' : 'days'}) before your scheduled time.`
+                    : 'Please contact us at least 24 hours in advance to cancel or reschedule your appointment.'
+                  }
+                </p>
+                <p>
+                  <strong>Late Cancellations:</strong> Cancellations made less than {slotSettings.rescheduleHoursBefore || 24} hours before your appointment will incur a cancellation fee of 50% of the service price.
+                </p>
+                <p>
+                  <strong>No-Shows:</strong> If you fail to show up for your appointment without prior notice, you will be charged the full service price.
+                </p>
+                <p>
+                  <strong>How to Cancel:</strong> You can cancel your appointment anytime through the "My Appointments" section or by contacting our support team.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <style>

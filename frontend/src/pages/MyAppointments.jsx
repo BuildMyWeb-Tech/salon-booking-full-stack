@@ -149,7 +149,27 @@ const MyAppointments = () => {
             );
 
             if (response.data.success) {
-                setAvailableSlots(response.data.slots);
+                // Filter out past time slots for today
+                const now = new Date();
+                const selectedDate = new Date(appointmentDate);
+                const isToday = selectedDate.toDateString() === now.toDateString();
+                
+                let slots = response.data.slots || [];
+                
+                if (isToday) {
+                    const currentTime = now.getHours() * 60 + now.getMinutes();
+                    slots = slots.filter(slot => {
+                        const [hours, minutes] = slot.startTime.split(':').map(Number);
+                        const slotTime = hours * 60 + minutes;
+                        return slotTime > currentTime;
+                    });
+                }
+                
+                setAvailableSlots(slots);
+                
+                if (slots.length === 0) {
+                    toast.info('No available slots for this date. Please select another date.');
+                }
             } else {
                 toast.error(response.data.message);
                 setAvailableSlots([]);
@@ -347,9 +367,6 @@ const MyAppointments = () => {
                         <span className="font-medium hidden sm:inline">Back</span>
                     </button>
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
-                        {/* <div className="bg-primary/10 p-2 rounded-lg">
-                            <Scissors size={20} className="text-primary" />
-                        </div> */}
                         My Appointments
                     </h1>
                     <div className="w-[40px] sm:w-[56px]"></div>
@@ -573,10 +590,6 @@ const MyAppointments = () => {
                                                                 </span>
                                                             )}
                                                         </h3>
-                                                        {/* <p className="text-primary text-sm font-medium flex items-center gap-1">
-                                                            <Scissors size={14} className="text-primary/70" />
-                                                            {item.service || item.docData?.speciality || "Salon Service"}
-                                                        </p> */}
                                                     </div>
                                                 </div>
 
