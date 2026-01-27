@@ -82,21 +82,7 @@ const appointmentsAdmin = async (req, res) => {
   }
 };
 
-// API for appointment cancellation
-const appointmentCancel = async (req, res) => {
-    try {
 
-        const { appointmentId } = req.body
-        await appointmentModel.findByIdAndUpdate(appointmentId, { cancelled: true })
-
-        res.json({ success: true, message: 'Appointment Cancelled' })
-
-    } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
-    }
-
-}
 
 // API for adding Stylist
 const addDoctor = async (req, res) => {
@@ -606,77 +592,31 @@ export const getPublicSlotSettings = async (req, res) => {
 export const cancelAppointment = async (req, res) => {
   try {
     const { appointmentId } = req.body;
-    
-    if (!appointmentId) {
-      return res.json({ success: false, message: 'Appointment ID required' });
-    }
-    
+
     const appointment = await appointmentModel.findById(appointmentId);
-    
     if (!appointment) {
       return res.json({ success: false, message: 'Appointment not found' });
     }
-    
-    // Check if appointment is already cancelled
+
     if (appointment.cancelled) {
       return res.json({ success: false, message: 'Appointment already cancelled' });
     }
-    
-    // Check if appointment is completed
+
     if (appointment.isCompleted) {
       return res.json({ success: false, message: 'Cannot cancel completed appointment' });
     }
-    
-    // Check if appointment time has passed
-    const appointmentTime = new Date(appointment.slotDateTime);
-    const now = new Date();
-    
-    if (appointmentTime <= now) {
-      return res.json({ 
-        success: false, 
-        message: 'Cannot cancel appointments that have already started or passed' 
-      });
-    }
-    
-    // Cancel the appointment
+
     appointment.cancelled = true;
     appointment.cancelledBy = 'admin';
     await appointment.save();
-    
-    // Remove the slot from doctor's booked slots
-    const doctor = await doctorModel.findById(appointment.doctorId);
-    if (doctor) {
-      const slotKey = appointment.slotDate;
-      let slots_booked = doctor.slots_booked || new Map();
-      
-      // Convert to Map if needed
-      if (!(slots_booked instanceof Map)) {
-        const oldSlots = slots_booked;
-        slots_booked = new Map();
-        for (const [key, value] of Object.entries(oldSlots)) {
-          slots_booked.set(key, value);
-        }
-      }
-      
-      const bookedSlotsForDate = slots_booked.get(slotKey) || [];
-      const slotDateTimeISO = appointment.slotDateTime.toISOString();
-      const updatedSlots = bookedSlotsForDate.filter(time => time !== slotDateTimeISO);
-      slots_booked.set(slotKey, updatedSlots);
-      
-      doctor.slots_booked = slots_booked;
-      await doctor.save();
-    }
-    
-    res.json({ 
-      success: true, 
-      message: 'Appointment cancelled successfully' 
-    });
-    
+
+    res.json({ success: true, message: 'Appointment cancelled successfully' });
+
   } catch (error) {
-    console.error('Error cancelling appointment:', error);
     res.json({ success: false, message: error.message });
   }
 };
+
 
 /**
  * Mark appointment as completed
@@ -745,11 +685,9 @@ export const markAppointmentIncomplete = async (req, res) => {
 };
 
 export {
-    loginAdmin,
-    appointmentsAdmin,
-    appointmentCancel,
-    addDoctor,
-    allDoctors,
-    adminDashboard,
-       
+  loginAdmin,
+  appointmentsAdmin,
+  addDoctor,
+  allDoctors,
+  adminDashboard,
 }

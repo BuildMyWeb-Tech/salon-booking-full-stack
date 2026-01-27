@@ -75,12 +75,11 @@ export const getAvailableSlots = async (req, res) => {
       }
 
       console.log(`📅 Doctor has ${bookedSlots.length} slots booked for this date`);
-      console.log(`📋 Booked slots:`, bookedSlots);
 
-      // 🔥 CRITICAL FIX - Filter out booked slots properly
+      // 🔥 CRITICAL FIX (STEP 2)
       const availableSlots = slots.filter(slot => {
-        // Just check if the time is booked (not the full identifier)
-        return !bookedSlots.includes(slot.startTime);
+        const slotIdentifier = `${slot.date} ${slot.startTime}`;
+        return !bookedSlots.includes(slotIdentifier);
       });
 
       console.log(`📋 Returning ${availableSlots.length} available slots after filtering`);
@@ -129,13 +128,14 @@ export const getAvailableDates = async (req, res) => {
 
     const dates = [];
     const today = new Date();
-    // Reset time to start of day for accurate comparison
-    today.setHours(0, 0, 0, 0);
 
-    // 🔥 FIX: Start from 0 to include today
     for (let i = 0; i < maxDays; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
+      // 🔥 LOCAL DATE (NO UTC)
+      const d = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() + i
+      );
 
       const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
 
@@ -147,8 +147,6 @@ export const getAvailableDates = async (req, res) => {
 
       dates.push(`${yyyy}-${mm}-${dd}`);
     }
-
-    console.log('📅 Available dates generated:', dates);
 
     return res.json({ success: true, dates });
   } catch (err) {
@@ -169,8 +167,6 @@ export const bookAppointment = async (req, res) => {
       slotTime,   // HH:mm
       services,
       totalAmount,
-      paidAmount,      // 🔥 NEW: from frontend
-      remainingAmount, // 🔥 NEW: from frontend
       paymentMethod
     } = req.body;
 
@@ -181,8 +177,6 @@ export const bookAppointment = async (req, res) => {
       slotDate,
       slotTime,
       totalAmount,
-      paidAmount,
-      remainingAmount,
       paymentMethod
     });
 
@@ -199,16 +193,14 @@ export const bookAppointment = async (req, res) => {
     const settings = await SlotSettings.findOne();
 
     let paymentPercentage = 100;
-    let finalPaidAmount = paidAmount || totalAmount;
-    let finalRemainingAmount = remainingAmount || 0;
+    let paidAmount = totalAmount;
 
-    if (settings?.advancePaymentRequired && settings.advancePaymentPercentage < 100) {
-      paymentPercentage = settings.advancePaymentPercentage;
-      finalPaidAmount = paidAmount || Math.round((totalAmount * paymentPercentage) / 100);
-      finalRemainingAmount = remainingAmount || (totalAmount - finalPaidAmount);
+    if (settings?.advancePaymentRequired) {
+      paymentPercentage = settings.advancePaymentPercentage || 100;
+      paidAmount = Math.round((totalAmount * paymentPercentage) / 100);
     }
 
-    console.log(`💰 Payment: ${paymentPercentage}% = ${finalPaidAmount}, Remaining: ${finalRemainingAmount}`);
+    console.log(`💰 Payment: ${paymentPercentage}% = ${paidAmount}`);
 
     // ✅ Load doctor
     const doctor = await doctorModel.findById(docId);
@@ -222,32 +214,22 @@ export const bookAppointment = async (req, res) => {
       return res.json({ success: false, message: 'User not found' });
     }
 
-    // ✅ Initialize slots_booked as Map
-    if (!doctor.slots_booked) {
-      doctor.slots_booked = new Map();
-    } else if (!(doctor.slots_booked instanceof Map)) {
-      // Convert object to Map if needed
-      const oldSlots = doctor.slots_booked;
-      doctor.slots_booked = new Map();
-      for (const [key, value] of Object.entries(oldSlots)) {
-        doctor.slots_booked.set(key, value);
-      }
+    // ✅ CORRECT availability check
+    const isAvailable = await isSlotAvailable(docId, slotDate, slotTime);
+    if (!isAvailable) {
+      return res.json({ success: false, message: 'Slot no longer available' });
     }
 
+    // ✅ Initialize slots_booked
+    if (!doctor.slots_booked) doctor.slots_booked = new Map();
     const daySlots = doctor.slots_booked.get(slotDate) || [];
 
-    // 🔥 FIX: Check if slot time is already booked (just the time, not full identifier)
     if (daySlots.includes(slotTime)) {
-      console.log('❌ Slot already booked:', slotTime);
       return res.json({ success: false, message: 'Slot already booked' });
     }
 
-    // 🔥 FIX: Store just the time (HH:mm format)
     daySlots.push(slotTime);
     doctor.slots_booked.set(slotDate, daySlots);
-
-    console.log('✅ Booking slot:', slotTime, 'for date:', slotDate);
-    console.log('📋 All booked slots for this date:', daySlots);
 
     await doctorModel.findByIdAndUpdate(
       docId,
@@ -273,8 +255,7 @@ export const bookAppointment = async (req, res) => {
       slotTime: displayTime,
       slotDateTime,
       amount: totalAmount,
-      paidAmount: finalPaidAmount,        // 🔥 SAVE PAID AMOUNT
-      remainingAmount: finalRemainingAmount, // 🔥 SAVE REMAINING AMOUNT
+      paidAmount,
       paymentPercentage,
       service: serviceNames,
       services,
@@ -301,8 +282,8 @@ export const bookAppointment = async (req, res) => {
       success: true,
       message: 'Appointment booked successfully',
       appointmentId: appointment._id,
-      paidAmount: finalPaidAmount,
-      remainingAmount: finalRemainingAmount
+      paidAmount,
+      remainingAmount: totalAmount - paidAmount
     });
 
   } catch (error) {
@@ -348,9 +329,9 @@ export const rescheduleAppointment = async (req, res) => {
       return res.json({ success: false, message: 'Rescheduling is not allowed' });
     }
 
-    // ⏱️ Time restriction check
+    // ⏱️ Time restriction check (Date used ONLY for validation)
     const now = new Date();
-    const oldSlotDateTime = new Date(appointmentData.slotDateTime);
+    const oldSlotDateTime = new Date(`${appointmentData.slotDate}T${appointmentData.slotTime}`);
 
     const rescheduleHours = settings?.rescheduleHoursBefore || 3;
     const minMs = rescheduleHours * 60 * 60 * 1000;
@@ -361,6 +342,13 @@ export const rescheduleAppointment = async (req, res) => {
         message: `Appointments can only be rescheduled at least ${rescheduleHours} hours before`
       });
     }
+
+    // 🔑 NEW SLOT KEY (CRITICAL FIX)
+    const newSlotKey = `${slotDate} ${slotTime}`;
+    const oldSlotKey = appointmentData.slotKey;
+
+    console.log('🔑 Old slot key:', oldSlotKey);
+    console.log('🔑 New slot key:', newSlotKey);
 
     // ✅ Validate slot exists
     const { slots, error } = await generateAvailableSlots(slotDate);
@@ -392,39 +380,22 @@ export const rescheduleAppointment = async (req, res) => {
 
     // ❌ Check if new slot already booked
     const bookedForNewDate = slots_booked.get(slotDate) || [];
-    if (bookedForNewDate.includes(slotTime)) {
+    if (bookedForNewDate.includes(newSlotKey)) {
       return res.json({ success: false, message: 'Slot not available' });
     }
 
-    // ✅ Remove old slot (extract time from old slot)
-    const oldDate = appointmentData.slotDate;
-    const oldSlots = slots_booked.get(oldDate) || [];
-    
-    // Extract just the time part from the old appointment
-    const oldTimeMatch = appointmentData.slotTime;
-    
-    // Convert 12-hour format back to 24-hour format for comparison
-    let oldTime24hr = '';
-    if (oldTimeMatch) {
-      const timeParts = oldTimeMatch.match(/(\d+):(\d+)\s*(AM|PM)/i);
-      if (timeParts) {
-        let hours = parseInt(timeParts[1]);
-        const minutes = timeParts[2];
-        const period = timeParts[3].toUpperCase();
-        
-        if (period === 'PM' && hours !== 12) hours += 12;
-        if (period === 'AM' && hours === 12) hours = 0;
-        
-        oldTime24hr = `${String(hours).padStart(2, '0')}:${minutes}`;
-      }
+    // ✅ Remove old slot
+    if (oldSlotKey) {
+      const oldDate = appointmentData.slotDate;
+      const oldSlots = slots_booked.get(oldDate) || [];
+      slots_booked.set(
+        oldDate,
+        oldSlots.filter(s => s !== oldSlotKey)
+      );
     }
-    
-    // Remove the old time slot
-    const updatedOldSlots = oldSlots.filter(s => s !== oldTime24hr);
-    slots_booked.set(oldDate, updatedOldSlots);
 
     // ✅ Add new slot
-    bookedForNewDate.push(slotTime);
+    bookedForNewDate.push(newSlotKey);
     slots_booked.set(slotDate, bookedForNewDate);
 
     // ⏰ Display time
@@ -438,7 +409,7 @@ export const rescheduleAppointment = async (req, res) => {
     await appointmentModel.findByIdAndUpdate(appointmentId, {
       slotDate,
       slotTime: displayTime,
-      slotDateTime: new Date(`${slotDate}T${slotTime}:00`),
+      slotKey: newSlotKey,
       rescheduled: true,
       cancelled: false,
       cancelledBy: null
@@ -464,3 +435,4 @@ export const rescheduleAppointment = async (req, res) => {
     return res.json({ success: false, message: 'Reschedule failed' });
   }
 };
+

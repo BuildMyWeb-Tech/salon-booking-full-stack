@@ -26,7 +26,8 @@ import {
     CalendarCheck,
     CalendarX,
     RefreshCw,
-    Sparkles
+    Sparkles,
+    DollarSign
 } from 'lucide-react';
 
 const MyAppointments = () => {
@@ -148,7 +149,27 @@ const MyAppointments = () => {
             );
 
             if (response.data.success) {
-                setAvailableSlots(response.data.slots);
+                // Filter out past time slots for today
+                const now = new Date();
+                const selectedDate = new Date(appointmentDate);
+                const isToday = selectedDate.toDateString() === now.toDateString();
+
+                let slots = response.data.slots || [];
+
+                if (isToday) {
+                    const currentTime = now.getHours() * 60 + now.getMinutes();
+                    slots = slots.filter(slot => {
+                        const [hours, minutes] = slot.startTime.split(':').map(Number);
+                        const slotTime = hours * 60 + minutes;
+                        return slotTime > currentTime;
+                    });
+                }
+
+                setAvailableSlots(slots);
+
+                if (slots.length === 0) {
+                    toast.info('No available slots for this date. Please select another date.');
+                }
             } else {
                 toast.error(response.data.message);
                 setAvailableSlots([]);
@@ -346,9 +367,6 @@ const MyAppointments = () => {
                         <span className="font-medium hidden sm:inline">Back</span>
                     </button>
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
-                        {/* <div className="bg-primary/10 p-2 rounded-lg">
-                            <Scissors size={20} className="text-primary" />
-                        </div> */}
                         My Appointments
                     </h1>
                     <div className="w-[40px] sm:w-[56px]"></div>
@@ -363,8 +381,8 @@ const MyAppointments = () => {
                             <button
                                 onClick={() => setActiveTab('upcoming')}
                                 className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'upcoming'
-                                        ? 'bg-primary text-white shadow-inner'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-primary text-white shadow-inner'
+                                    : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                             >
                                 <div className="flex items-center justify-center gap-2">
@@ -374,8 +392,8 @@ const MyAppointments = () => {
                                 {upcomingCount > 0 && (
                                     <span
                                         className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === 'upcoming'
-                                                ? 'bg-white text-primary'
-                                                : 'bg-primary text-white'
+                                            ? 'bg-white text-primary'
+                                            : 'bg-primary text-white'
                                             }`}
                                     >
                                         {upcomingCount}
@@ -386,8 +404,8 @@ const MyAppointments = () => {
                             <button
                                 onClick={() => setActiveTab('completed')}
                                 className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'completed'
-                                        ? 'bg-primary text-white shadow-inner'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-primary text-white shadow-inner'
+                                    : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                             >
                                 <div className="flex items-center justify-center gap-2">
@@ -397,8 +415,8 @@ const MyAppointments = () => {
                                 {completedCount > 0 && (
                                     <span
                                         className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === 'completed'
-                                                ? 'bg-white text-primary'
-                                                : 'bg-primary text-white'
+                                            ? 'bg-white text-primary'
+                                            : 'bg-primary text-white'
                                             }`}
                                     >
                                         {completedCount}
@@ -409,8 +427,8 @@ const MyAppointments = () => {
                             <button
                                 onClick={() => setActiveTab('cancelled')}
                                 className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'cancelled'
-                                        ? 'bg-primary text-white shadow-inner'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-primary text-white shadow-inner'
+                                    : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                             >
                                 <div className="flex items-center justify-center gap-2">
@@ -420,8 +438,8 @@ const MyAppointments = () => {
                                 {cancelledCount > 0 && (
                                     <span
                                         className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === 'cancelled'
-                                                ? 'bg-white text-primary'
-                                                : 'bg-primary text-white'
+                                            ? 'bg-white text-primary'
+                                            : 'bg-primary text-white'
                                             }`}
                                     >
                                         {cancelledCount}
@@ -500,12 +518,18 @@ const MyAppointments = () => {
                             const hoursUntilAppointment = (appointmentDate - now) / (1000 * 60 * 60);
                             const isComingSoon = hoursUntilAppointment > 0 && hoursUntilAppointment < 24;
 
+                            // Extract payment information
+                            const totalAmount = item.amount || 0;
+                            const paidAmount = item.paidAmount || 0;
+                            const remainingAmount = item.remainingAmount || 0;
+                            const hasPartialPayment = paidAmount > 0 && remainingAmount > 0;
+
                             return (
                                 <motion.div
                                     key={item._id || index}
                                     className={`bg-white rounded-xl shadow-sm overflow-hidden border transition-all ${isComingSoon && activeTab === 'upcoming' ? 'border-primary/50' : 'border-gray-100'
                                         } hover:shadow-md`}
-                                    initial={{ opacity: 0, y: 20 }}
+                                    initial={{ opacity: 0, y: -20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.3, delay: index * 0.05 }}
                                 >
@@ -529,10 +553,15 @@ const MyAppointments = () => {
                                                     </div>
 
                                                     <div className="absolute -top-2 -right-2">
-                                                        {item.cancelled ? (
+                                                        {item.cancelled && item.cancelledBy === "admin" ? (
                                                             <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full shadow-sm whitespace-nowrap flex items-center gap-1">
                                                                 <X size={12} />
-                                                                {item.cancelledBy === 'admin' ? 'By Admin' : 'Cancelled'}
+                                                                Cancelled by Admin
+                                                            </div>
+                                                        ) : item.cancelled && item.cancelledBy === "user" ? (
+                                                            <div className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full shadow-sm whitespace-nowrap flex items-center gap-1">
+                                                                <X size={12} />
+                                                                Cancelled by You
                                                             </div>
                                                         ) : item.isCompleted ? (
                                                             <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
@@ -566,10 +595,6 @@ const MyAppointments = () => {
                                                                 </span>
                                                             )}
                                                         </h3>
-                                                        {/* <p className="text-primary text-sm font-medium flex items-center gap-1">
-                                                            <Scissors size={14} className="text-primary/70" />
-                                                            {item.service || item.docData?.speciality || "Salon Service"}
-                                                        </p> */}
                                                     </div>
                                                 </div>
 
@@ -619,20 +644,44 @@ const MyAppointments = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-2 rounded-lg bg-gray-50">
-                                                            <p className="font-bold text-lg text-gray-800">{currencySymbol}{item.amount}</p>
-                                                        </div>
-
-                                                        {item.payment && (
-                                                            <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                                                                <Check size={12} />
-                                                                Payment completed
-                                                            </span>
-                                                        )}
+                                                {/* Payment Information Section */}
+                                                <div className="mb-4 bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border border-blue-100">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        {/* <DollarSign size={18} className="text-blue-600" /> */}
+                                                        <h4 className="font-semibold text-gray-800">Payment Details</h4>
                                                     </div>
 
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Total Amount:</span>
+                                                            <span className="font-bold text-gray-900">{currencySymbol}{totalAmount}</span>
+                                                        </div>
+
+                                                        {hasPartialPayment && (
+                                                            <>
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm text-gray-600">Paid Amount:</span>
+                                                                    <span className="font-semibold text-green-600">{currencySymbol}{paidAmount}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm text-gray-600">Remaining (Pay at Salon):</span>
+                                                                    <span className="font-semibold text-orange-600">{currencySymbol}{remainingAmount}</span>
+                                                                </div>
+                                                            </>
+                                                        )}
+
+                                                        {item.payment && (
+                                                            <div className="mt-2 pt-2 border-t border-blue-200">
+                                                                <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
+                                                                    <Check size={12} />
+                                                                    {hasPartialPayment ? 'Advance payment completed' : 'Payment completed'}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
                                                     <div className="flex flex-wrap gap-3">
                                                         {item.cancelled && item.payment && (
                                                             <button
@@ -679,7 +728,7 @@ const MyAppointments = () => {
                                         </div>
 
                                         {item.cancelled && item.cancelledBy && (
-                                            <div className="mt-4 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-fadeIn">
+                                            <div className="mt-4 bg-red-50 border border-red-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-slideDown">
                                                 <AlertCircle size={18} className="text-red-500" />
                                                 <span className="text-red-800">
                                                     {item.cancelledBy === 'admin'
@@ -690,7 +739,7 @@ const MyAppointments = () => {
                                         )}
 
                                         {!item.cancelled && !item.isCompleted && !isCancellable && (
-                                            <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-fadeIn">
+                                            <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-slideDown">
                                                 <AlertTriangle size={16} className="text-yellow-500" />
                                                 <span className="text-yellow-800">
                                                     Appointments can only be cancelled at least 3 hours before the scheduled time.
@@ -714,9 +763,9 @@ const MyAppointments = () => {
                         >
                             <motion.div
                                 className="bg-white rounded-xl overflow-hidden max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto"
-                                initial={{ scale: 0.9, y: 20 }}
+                                initial={{ scale: 0.9, y: -50 }}
                                 animate={{ scale: 1, y: 0 }}
-                                exit={{ scale: 0.9, y: 20 }}
+                                exit={{ scale: 0.9, y: -50 }}
                             >
                                 <div className="bg-gradient-to-r from-primary/10 to-primary/5 flex justify-between items-center p-4">
                                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -825,10 +874,10 @@ const MyAppointments = () => {
                                                                         onClick={() => !disabled && handleDateClick(day)}
                                                                         disabled={disabled}
                                                                         className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all ${disabled
-                                                                                ? 'text-gray-300 cursor-not-allowed'
-                                                                                : selected
-                                                                                    ? 'bg-primary text-white shadow-sm scale-105'
-                                                                                    : 'text-gray-700 hover:bg-gray-100'
+                                                                            ? 'text-gray-300 cursor-not-allowed'
+                                                                            : selected
+                                                                                ? 'bg-primary text-white shadow-sm scale-105'
+                                                                                : 'text-gray-700 hover:bg-gray-100'
                                                                             }`}
                                                                     >
                                                                         {day}
@@ -876,8 +925,8 @@ const MyAppointments = () => {
                                                                             type="button"
                                                                             onClick={() => setSelectedTime(slot.startTime)}
                                                                             className={`p-2.5 text-sm rounded-md transition-all ${selectedTime === slot.startTime
-                                                                                    ? 'bg-primary text-white font-medium shadow-sm'
-                                                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                                                ? 'bg-primary text-white font-medium shadow-sm'
+                                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                                                 }`}
                                                                         >
                                                                             {slot.startTime}
@@ -920,8 +969,8 @@ const MyAppointments = () => {
                                                     onClick={rescheduleAppointment}
                                                     disabled={!selectedDate || !selectedTime || isRescheduling}
                                                     className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${!selectedDate || !selectedTime || isRescheduling
-                                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                            : 'bg-primary text-white hover:bg-primary/90 shadow-sm'
+                                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        : 'bg-primary text-white hover:bg-primary/90 shadow-sm'
                                                         }`}
                                                 >
                                                     {isRescheduling ? (
@@ -955,9 +1004,9 @@ const MyAppointments = () => {
                         >
                             <motion.div
                                 className="bg-white rounded-xl overflow-hidden max-w-md w-full shadow-xl"
-                                initial={{ scale: 0.9, y: 20 }}
+                                initial={{ scale: 0.9, y: -50 }}
                                 animate={{ scale: 1, y: 0 }}
-                                exit={{ scale: 0.9, y: 20 }}
+                                exit={{ scale: 0.9, y: -50 }}
                             >
                                 <div className="bg-gradient-to-r from-red-50 to-white p-4 border-b border-gray-100">
                                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -1050,13 +1099,19 @@ const MyAppointments = () => {
                 </button>
 
                 <style>{`
-                    @keyframes fadeIn {
-                        from { opacity: 0; }
-                        to { opacity: 1; }
+                    @keyframes slideDown {
+                        from { 
+                            opacity: 0; 
+                            transform: translateY(-10px); 
+                        }
+                        to { 
+                            opacity: 1; 
+                            transform: translateY(0); 
+                        }
                     }
                     
-                    .animate-fadeIn {
-                        animation: fadeIn 0.3s ease-out;
+                    .animate-slideDown {
+                        animation: slideDown 0.3s ease-out;
                     }
                     
                     @media (max-width: 640px) {

@@ -425,7 +425,7 @@ const calculateCompletionRate = () => {
     <div className="flex justify-between items-center">
       <div>
         <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-          Revenue
+          Overall Revenue
         </h3>
         <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
           {formatCurrency(dashData.revenue || calculateTotalRevenue() || 0)}
