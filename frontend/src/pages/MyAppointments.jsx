@@ -153,9 +153,9 @@ const MyAppointments = () => {
                 const now = new Date();
                 const selectedDate = new Date(appointmentDate);
                 const isToday = selectedDate.toDateString() === now.toDateString();
-                
+
                 let slots = response.data.slots || [];
-                
+
                 if (isToday) {
                     const currentTime = now.getHours() * 60 + now.getMinutes();
                     slots = slots.filter(slot => {
@@ -164,9 +164,9 @@ const MyAppointments = () => {
                         return slotTime > currentTime;
                     });
                 }
-                
+
                 setAvailableSlots(slots);
-                
+
                 if (slots.length === 0) {
                     toast.info('No available slots for this date. Please select another date.');
                 }
@@ -381,8 +381,8 @@ const MyAppointments = () => {
                             <button
                                 onClick={() => setActiveTab('upcoming')}
                                 className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'upcoming'
-                                        ? 'bg-primary text-white shadow-inner'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-primary text-white shadow-inner'
+                                    : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                             >
                                 <div className="flex items-center justify-center gap-2">
@@ -392,8 +392,8 @@ const MyAppointments = () => {
                                 {upcomingCount > 0 && (
                                     <span
                                         className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === 'upcoming'
-                                                ? 'bg-white text-primary'
-                                                : 'bg-primary text-white'
+                                            ? 'bg-white text-primary'
+                                            : 'bg-primary text-white'
                                             }`}
                                     >
                                         {upcomingCount}
@@ -404,8 +404,8 @@ const MyAppointments = () => {
                             <button
                                 onClick={() => setActiveTab('completed')}
                                 className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'completed'
-                                        ? 'bg-primary text-white shadow-inner'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-primary text-white shadow-inner'
+                                    : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                             >
                                 <div className="flex items-center justify-center gap-2">
@@ -415,8 +415,8 @@ const MyAppointments = () => {
                                 {completedCount > 0 && (
                                     <span
                                         className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === 'completed'
-                                                ? 'bg-white text-primary'
-                                                : 'bg-primary text-white'
+                                            ? 'bg-white text-primary'
+                                            : 'bg-primary text-white'
                                             }`}
                                     >
                                         {completedCount}
@@ -427,8 +427,8 @@ const MyAppointments = () => {
                             <button
                                 onClick={() => setActiveTab('cancelled')}
                                 className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${activeTab === 'cancelled'
-                                        ? 'bg-primary text-white shadow-inner'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-primary text-white shadow-inner'
+                                    : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                             >
                                 <div className="flex items-center justify-center gap-2">
@@ -438,8 +438,8 @@ const MyAppointments = () => {
                                 {cancelledCount > 0 && (
                                     <span
                                         className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === 'cancelled'
-                                                ? 'bg-white text-primary'
-                                                : 'bg-primary text-white'
+                                            ? 'bg-white text-primary'
+                                            : 'bg-primary text-white'
                                             }`}
                                     >
                                         {cancelledCount}
@@ -553,10 +553,15 @@ const MyAppointments = () => {
                                                     </div>
 
                                                     <div className="absolute -top-2 -right-2">
-                                                        {item.cancelled ? (
+                                                        {item.cancelled && item.cancelledBy === "admin" ? (
                                                             <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full shadow-sm whitespace-nowrap flex items-center gap-1">
                                                                 <X size={12} />
-                                                                {item.cancelledBy === 'admin' ? 'By Admin' : 'Cancelled'}
+                                                                Cancelled by Admin
+                                                            </div>
+                                                        ) : item.cancelled && item.cancelledBy === "user" ? (
+                                                            <div className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full shadow-sm whitespace-nowrap flex items-center gap-1">
+                                                                <X size={12} />
+                                                                Cancelled by You
                                                             </div>
                                                         ) : item.isCompleted ? (
                                                             <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
@@ -642,16 +647,16 @@ const MyAppointments = () => {
                                                 {/* Payment Information Section */}
                                                 <div className="mb-4 bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border border-blue-100">
                                                     <div className="flex items-center gap-2 mb-3">
-                                                        <DollarSign size={18} className="text-blue-600" />
+                                                        {/* <DollarSign size={18} className="text-blue-600" /> */}
                                                         <h4 className="font-semibold text-gray-800">Payment Details</h4>
                                                     </div>
-                                                    
+
                                                     <div className="space-y-2">
                                                         <div className="flex justify-between items-center">
                                                             <span className="text-sm text-gray-600">Total Amount:</span>
                                                             <span className="font-bold text-gray-900">{currencySymbol}{totalAmount}</span>
                                                         </div>
-                                                        
+
                                                         {hasPartialPayment && (
                                                             <>
                                                                 <div className="flex justify-between items-center">
@@ -664,7 +669,7 @@ const MyAppointments = () => {
                                                                 </div>
                                                             </>
                                                         )}
-                                                        
+
                                                         {item.payment && (
                                                             <div className="mt-2 pt-2 border-t border-blue-200">
                                                                 <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
@@ -869,10 +874,10 @@ const MyAppointments = () => {
                                                                         onClick={() => !disabled && handleDateClick(day)}
                                                                         disabled={disabled}
                                                                         className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all ${disabled
-                                                                                ? 'text-gray-300 cursor-not-allowed'
-                                                                                : selected
-                                                                                    ? 'bg-primary text-white shadow-sm scale-105'
-                                                                                    : 'text-gray-700 hover:bg-gray-100'
+                                                                            ? 'text-gray-300 cursor-not-allowed'
+                                                                            : selected
+                                                                                ? 'bg-primary text-white shadow-sm scale-105'
+                                                                                : 'text-gray-700 hover:bg-gray-100'
                                                                             }`}
                                                                     >
                                                                         {day}
@@ -920,8 +925,8 @@ const MyAppointments = () => {
                                                                             type="button"
                                                                             onClick={() => setSelectedTime(slot.startTime)}
                                                                             className={`p-2.5 text-sm rounded-md transition-all ${selectedTime === slot.startTime
-                                                                                    ? 'bg-primary text-white font-medium shadow-sm'
-                                                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                                                ? 'bg-primary text-white font-medium shadow-sm'
+                                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                                                 }`}
                                                                         >
                                                                             {slot.startTime}
@@ -964,8 +969,8 @@ const MyAppointments = () => {
                                                     onClick={rescheduleAppointment}
                                                     disabled={!selectedDate || !selectedTime || isRescheduling}
                                                     className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${!selectedDate || !selectedTime || isRescheduling
-                                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                            : 'bg-primary text-white hover:bg-primary/90 shadow-sm'
+                                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        : 'bg-primary text-white hover:bg-primary/90 shadow-sm'
                                                         }`}
                                                 >
                                                     {isRescheduling ? (
