@@ -15,6 +15,7 @@ import Login from './pages/Login';
 import DoctorAppointments from './pages/Doctor/DoctorAppointments';
 import DoctorDashboard from './pages/Doctor/DoctorDashboard';
 import DoctorProfile from './pages/Doctor/DoctorProfile';
+import DoctorEarnings from './pages/Doctor/DoctorEarnings'; // ✅ NEW
 import MyProfile from './pages/Admin/MyProfile';
 import SlotManagement from './pages/Admin/SlotManagement';
 import EditStylist from './pages/Admin/EditStylist';
@@ -31,6 +32,7 @@ const App = () => {
         <Navbar />
         <div className='md:ml-20 lg:ml-64 p-4 sm:p-6 pb-20 md:pb-6 flex-grow'>
           <Routes>  
+            {/* Admin Routes */}
             <Route path='/' element={<Dashboard />} />
             <Route path='/all-appointments' element={<AllAppointments />} />
             <Route path='/slot-management' element={<SlotManagement />} />
@@ -38,11 +40,13 @@ const App = () => {
             <Route path="/edit-stylist/:id" element={<EditStylist />} />
             <Route path='/services-category' element={<ServiceCategory />} />
             <Route path='/stylist-list' element={<DoctorsList />} />
-            <Route path='/stylist-dashboard' element={<DoctorDashboard />} />
-            <Route path='/stylist-appointments' element={<DoctorAppointments />} />
-            {/* <Route path='/stylist-settings' element={<DoctorProfile />} /> */}
             <Route path="/my-profile" element={<MyProfile />} />
             
+            {/* Stylist/Doctor Panel Routes */}
+            <Route path='/stylist-dashboard' element={<DoctorDashboard />} />
+            <Route path='/stylist-appointments' element={<DoctorAppointments />} />
+            <Route path='/stylist-profile' element={<DoctorProfile />} />
+            <Route path='/stylist-earnings' element={<DoctorEarnings />} /> {/* ✅ NEW */}
           </Routes>
         </div>
       </div>

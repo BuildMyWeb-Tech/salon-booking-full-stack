@@ -2,7 +2,6 @@ import { createContext, useState } from "react";
 import axios from 'axios'
 import { toast } from 'react-toastify'
 
-
 export const DoctorContext = createContext()
 
 const DoctorContextProvider = (props) => {
@@ -17,7 +16,6 @@ const DoctorContextProvider = (props) => {
     // Getting Doctor appointment data from Database using API
     const getAppointments = async () => {
         try {
-
             const { data } = await axios.get(backendUrl + '/api/doctor/appointments', { headers: { dToken } })
 
             if (data.success) {
@@ -35,10 +33,14 @@ const DoctorContextProvider = (props) => {
     // Getting Doctor profile data from Database using API
     const getProfileData = async () => {
         try {
-
             const { data } = await axios.get(backendUrl + '/api/doctor/profile', { headers: { dToken } })
-            console.log(data.profileData)
-            setProfileData(data.profileData)
+            
+            if (data.success) {
+                console.log('Profile Data:', data.profileData)
+                setProfileData(data.profileData)
+            } else {
+                toast.error(data.message)
+            }
 
         } catch (error) {
             console.log(error)
@@ -48,15 +50,16 @@ const DoctorContextProvider = (props) => {
 
     // Function to cancel doctor appointment using API
     const cancelAppointment = async (appointmentId) => {
-
         try {
-
-            const { data } = await axios.post(backendUrl + '/api/doctor/cancel-appointment', { appointmentId }, { headers: { dToken } })
+            const { data } = await axios.post(
+                backendUrl + '/api/doctor/cancel-appointment', 
+                { appointmentId }, 
+                { headers: { dToken } }
+            )
 
             if (data.success) {
                 toast.success(data.message)
                 getAppointments()
-                // after creating dashboard
                 getDashData()
             } else {
                 toast.error(data.message)
@@ -66,20 +69,20 @@ const DoctorContextProvider = (props) => {
             toast.error(error.message)
             console.log(error)
         }
-
     }
 
     // Function to Mark appointment completed using API
     const completeAppointment = async (appointmentId) => {
-
         try {
-
-            const { data } = await axios.post(backendUrl + '/api/doctor/complete-appointment', { appointmentId }, { headers: { dToken } })
+            const { data } = await axios.post(
+                backendUrl + '/api/doctor/complete-appointment', 
+                { appointmentId }, 
+                { headers: { dToken } }
+            )
 
             if (data.success) {
                 toast.success(data.message)
                 getAppointments()
-                // Later after creating getDashData Function
                 getDashData()
             } else {
                 toast.error(data.message)
@@ -89,13 +92,11 @@ const DoctorContextProvider = (props) => {
             toast.error(error.message)
             console.log(error)
         }
-
     }
 
     // Getting Doctor dashboard data using API
     const getDashData = async () => {
         try {
-
             const { data } = await axios.get(backendUrl + '/api/doctor/dashboard', { headers: { dToken } })
 
             if (data.success) {
@@ -108,17 +109,20 @@ const DoctorContextProvider = (props) => {
             console.log(error)
             toast.error(error.message)
         }
-
     }
 
     const value = {
-        dToken, setDToken, backendUrl,
+        dToken, 
+        setDToken, 
+        backendUrl,
         appointments,
         getAppointments,
         cancelAppointment,
         completeAppointment,
-        dashData, getDashData,
-        profileData, setProfileData,
+        dashData, 
+        getDashData,
+        profileData, 
+        setProfileData,
         getProfileData,
     }
 
@@ -127,8 +131,6 @@ const DoctorContextProvider = (props) => {
             {props.children}
         </DoctorContext.Provider>
     )
-
-
 }
 
 export default DoctorContextProvider
