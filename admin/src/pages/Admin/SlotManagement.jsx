@@ -124,7 +124,7 @@ const SlotManagement = () => {
       </div>
       
       {error && (
-        <div className="mb-4 bg-red-50 text-red-700 p-4 rounded-lg flex items-center gap-2">
+        <div className="mb-4 bg-red-50 text-red-700  rounded-lg flex items-center gap-2">
           <AlertCircle size={18} />
           {error}
         </div>
@@ -135,7 +135,7 @@ const SlotManagement = () => {
           {['basic', 'dates', 'booking', 'payment'].map(tab => (
             <button
               key={tab}
-              className={`py-3 px-5 border-b-2 font-medium text-sm ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-500'}`}
+              className={`py-3 px-2 border-b-2 font-medium text-sm ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-500'}`}
               onClick={() => setActiveTab(tab)}
             >
               {tab === 'basic' && 'Basic Settings'}

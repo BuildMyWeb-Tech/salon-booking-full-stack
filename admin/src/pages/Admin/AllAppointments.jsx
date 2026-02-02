@@ -764,8 +764,21 @@ const AllAppointments = () => {
     setShowExportMenu(false);
   };
 
+  // Modified to reload the entire page
   const manualRefresh = () => {
-    getAllAppointments();
+    window.location.reload();
+  };
+
+  // Check if any filters are active
+  const isFilterActive = () => {
+    return (
+      filterStatus !== 'all' || 
+      filterPayment !== 'all' || 
+      searchTerm !== '' || 
+      startDate !== '' || 
+      endDate !== '' || 
+      todayFilter
+    );
   };
 
   return (
@@ -860,7 +873,7 @@ const AllAppointments = () => {
                 <button 
                   onClick={() => {setFilterStatus('upcoming'); setTodayFilter(false);}}
                   className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all shadow-sm ${
-                    filterStatus === 'upcoming' && !todayFilter
+                                        filterStatus === 'upcoming' && !todayFilter
                       ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg scale-105' 
                       : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
                   }`}
@@ -940,6 +953,17 @@ const AllAppointments = () => {
                   <option value="price-desc">Price: High to Low</option>
                   <option value="price-asc">Price: Low to High</option>
                 </select>
+                
+                {/* Clear Filters Button - Only show when filters are active */}
+                {isFilterActive() && (
+                  <button
+                    onClick={clearFilters}
+                    className="px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-amber-600 hover:to-orange-600 transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
+                  >
+                    <Filter size={16} className="sm:w-4 sm:h-4" />
+                    <span>Clear Filters</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
