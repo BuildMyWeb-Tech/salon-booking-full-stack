@@ -4,7 +4,9 @@ import { AppContext } from '../../context/AppContext';
 import { 
   Users, Calendar, UserCircle, IndianRupee, 
   Scissors, ArrowUpRight, Clock, CheckCircle, 
-  XCircle, MoreHorizontal, RefreshCw, TrendingUp
+  XCircle, MoreHorizontal, RefreshCw, TrendingUp,
+  TrendingDown, Sparkles, Award, Star, Gem,
+  UserCheck, ShoppingBag, Heart
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -17,6 +19,7 @@ const Dashboard = () => {
   const [servicePopularity, setServicePopularity] = useState([]);
   const [revenueData, setRevenueData] = useState([]);
   const [stylistPerformance, setStylistPerformance] = useState([]);
+  const [customerRetention, setCustomerRetention] = useState([]);
 
   useEffect(() => {
     if (aToken) {
@@ -38,63 +41,9 @@ const Dashboard = () => {
       processServicePopularity();
       processRevenueData();
       processStylistPerformance();
+      processCustomerRetention();
     }
   }, [appointments, dashData]);
-
-  // API to get dashboard data for admin panel
-const adminDashboard = async (req, res) => {
-    try {
-        const doctors = await doctorModel.find({});
-        const users = await userModel.find({});
-        const appointments = await appointmentModel.find({});
-        
-        // Calculate total revenue from all appointments
-        let totalRevenue = 0;
-        appointments.forEach(appointment => {
-            if (appointment.amount && !appointment.cancelled) {
-                totalRevenue += Number(appointment.amount);
-            }
-        });
-
-        // Get today's appointments
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        const todaysAppointments = appointments.filter(app => {
-            const appDate = new Date(app.date || app.slotDate || app.createdAt);
-            return appDate >= today && appDate < tomorrow;
-        });
-
-        // Get this month's appointments
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const firstDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-        
-        const thisMonthAppointments = appointments.filter(app => {
-            const appDate = new Date(app.date || app.slotDate || app.createdAt);
-            return appDate >= firstDayOfMonth && appDate < firstDayOfNextMonth;
-        });
-
-        const dashData = {
-            doctors: doctors.length,
-            stylists: doctors.length, // Adding this for frontend compatibility
-            appointments: appointments.length,
-            patients: users.length,
-            clients: users.length, // Adding this for frontend compatibility
-            todaysAppointments: todaysAppointments.length,
-            thisMonthAppointments: thisMonthAppointments.length,
-            revenue: totalRevenue,
-            latestAppointments: appointments.slice(-5).reverse() // Get latest 5 appointments
-        };
-
-        res.json({ success: true, dashData });
-
-    } catch (error) {
-        console.log(error);
-        res.json({ success: false, message: error.message });
-    }
-};
 
   // Calculate booking trends (appointments per day)
   const processBookingTrends = () => {
@@ -135,6 +84,17 @@ const adminDashboard = async (req, res) => {
   const processServicePopularity = () => {
     const serviceCount = {};
     
+    // Define default services for salon
+    const defaultServices = [
+      "Haircut & Style", "Hair Coloring", "Blowout & Styling", 
+      "Hair Treatment", "Beard Trim", "Bridal Style"
+    ];
+    
+    // Initialize default services
+    defaultServices.forEach(service => {
+      serviceCount[service] = 0;
+    });
+    
     appointments.forEach(appointment => {
       if (appointment.services && Array.isArray(appointment.services)) {
         appointment.services.forEach(service => {
@@ -153,6 +113,11 @@ const adminDashboard = async (req, res) => {
         }
         serviceCount[serviceName]++;
       }
+      
+      // If no service found, assign to general haircut
+      if (!appointment.service && !appointment.services) {
+        serviceCount["Haircut & Style"]++;
+      }
     });
     
     // Convert to array and sort by popularity
@@ -163,8 +128,6 @@ const adminDashboard = async (req, res) => {
     
     setServicePopularity(serviceData);
   };
-
-  
 
   // Calculate revenue data
   const processRevenueData = () => {
@@ -204,67 +167,107 @@ const adminDashboard = async (req, res) => {
     setRevenueData(Object.values(revenueByMonth));
   };
 
+  // Process customer retention data (repeat customers)
+  const processCustomerRetention = () => {
+    // Count appointments per customer
+    const appointmentsByCustomer = {};
+    
+    appointments.forEach(appointment => {
+      const customerId = appointment.userId || 'unknown';
+      if (!appointmentsByCustomer[customerId]) {
+        appointmentsByCustomer[customerId] = 0;
+      }
+      appointmentsByCustomer[customerId]++;
+    });
+    
+    // Count customers by number of appointments
+    const customersByAppointmentCount = {
+      '1 visit': 0,
+      '2-3 visits': 0,
+      '4-5 visits': 0,
+      '6+ visits': 0
+    };
+    
+    Object.values(appointmentsByCustomer).forEach(count => {
+      if (count === 1) {
+        customersByAppointmentCount['1 visit']++;
+      } else if (count >= 2 && count <= 3) {
+        customersByAppointmentCount['2-3 visits']++;
+      } else if (count >= 4 && count <= 5) {
+        customersByAppointmentCount['4-5 visits']++;
+      } else {
+        customersByAppointmentCount['6+ visits']++;
+      }
+    });
+    
+    // Convert to array format for chart
+    const retentionData = Object.entries(customersByAppointmentCount)
+      .map(([name, value]) => ({ name, value }));
+    
+    setCustomerRetention(retentionData);
+  };
+
   // Calculate total revenue from appointments
-const calculateTotalRevenue = () => {
-  if (!appointments || appointments.length === 0) return 0;
-  
-  return appointments.reduce((total, appointment) => {
-    // Only count non-cancelled appointments
-    if (appointment.amount && !appointment.cancelled) {
-      return total + Number(appointment.amount);
-    }
-    return total;
-  }, 0);
-};
-
-// Count today's appointments
-const countTodayAppointments = () => {
-  if (!appointments || appointments.length === 0) return 0;
-  
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  
-  return appointments.filter(app => {
-    const appDate = new Date(app.date || app.slotDate || app.createdAt);
-    return appDate >= today && appDate < tomorrow && !app.cancelled;
-  }).length;
-};
-
-// Calculate monthly revenue
-const calculateMonthlyRevenue = () => {
-  if (!appointments || appointments.length === 0) return 0;
-  
-  const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const firstDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  
-  return appointments.reduce((total, appointment) => {
-    if (appointment.amount && !appointment.cancelled) {
-      const appDate = new Date(appointment.date || appointment.slotDate || appointment.createdAt);
-      if (appDate >= firstDayOfMonth && appDate < firstDayOfNextMonth) {
+  const calculateTotalRevenue = () => {
+    if (!appointments || appointments.length === 0) return 0;
+    
+    return appointments.reduce((total, appointment) => {
+      // Only count non-cancelled appointments
+      if (appointment.amount && !appointment.cancelled) {
         return total + Number(appointment.amount);
       }
-    }
-    return total;
-  }, 0);
-};
+      return total;
+    }, 0);
+  };
 
-// Calculate appointment completion rate
-const calculateCompletionRate = () => {
-  if (!appointments || appointments.length === 0) return 0;
-  
-  const completedCount = appointments.filter(app => 
-    app.isCompleted && !app.cancelled
-  ).length;
-  
-  const totalValidCount = appointments.filter(app => 
-    !app.cancelled
-  ).length;
-  
-  return totalValidCount ? Math.round((completedCount / totalValidCount) * 100) : 0;
-};
+  // Count today's appointments
+  const countTodayAppointments = () => {
+    if (!appointments || appointments.length === 0) return 0;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    return appointments.filter(app => {
+      const appDate = new Date(app.date || app.slotDate || app.createdAt);
+      return appDate >= today && appDate < tomorrow && !app.cancelled;
+    }).length;
+  };
+
+  // Calculate monthly revenue
+  const calculateMonthlyRevenue = () => {
+    if (!appointments || appointments.length === 0) return 0;
+    
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const firstDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    
+    return appointments.reduce((total, appointment) => {
+      if (appointment.amount && !appointment.cancelled) {
+        const appDate = new Date(appointment.date || appointment.slotDate || appointment.createdAt);
+        if (appDate >= firstDayOfMonth && appDate < firstDayOfNextMonth) {
+          return total + Number(appointment.amount);
+        }
+      }
+      return total;
+    }, 0);
+  };
+
+  // Calculate appointment completion rate
+  const calculateCompletionRate = () => {
+    if (!appointments || appointments.length === 0) return 0;
+    
+    const completedCount = appointments.filter(app => 
+      app.isCompleted && !app.cancelled
+    ).length;
+    
+    const totalValidCount = appointments.filter(app => 
+      !app.cancelled
+    ).length;
+    
+    return totalValidCount ? Math.round((completedCount / totalValidCount) * 100) : 0;
+  };
 
   // Calculate stylist performance
   const processStylistPerformance = () => {
@@ -316,35 +319,37 @@ const calculateCompletionRate = () => {
     }).format(amount || 0);
   };
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE'];
+  const RETENTION_COLORS = ['#ff8042', '#ffc658', '#82ca9d', '#8884d8'];
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="flex flex-col items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
-          <p className="text-gray-500">Loading dashboard data...</p>
+          <p className="text-gray-500">Loading salon dashboard data...</p>
         </div>
       </div>
     );
   }
 
   return dashData && (
-    <div className='p-6 max-w-7xl mx-auto bg-gray-50 min-h-screen'>
+    <div className='max-w-7xl mx-auto bg-gray-50 min-h-screen'>
       {/* Header */}
       <div className='mb-8'>
         <h1 className='text-2xl md:text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2'>
-          Salon Dashboard
+          <Scissors className="text-primary" size={28} />
+          StyleStudio Dashboard
         </h1>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <p className='text-gray-600'>Welcome to your StyleStudio management portal</p>
+          <p className='text-gray-600'>Manage your salon performance and appointments</p>
           <button 
             onClick={() => {
               setIsLoading(true);
               Promise.all([getDashData(), getAllAppointments()])
                 .finally(() => setIsLoading(false));
             }}
-            className="flex items-center gap-1 text-sm text-gray-600 hover:text-primary"
+            className="flex items-center gap-1 text-sm text-gray-600 hover:text-primary transition-colors"
           >
             <RefreshCw size={14} />
             <span>Refresh Data</span>
@@ -352,173 +357,173 @@ const calculateCompletionRate = () => {
         </div>
       </div>
 
-     {/* Stats Cards */}
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-  {/* Stylists Card */}
-  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-    <div className="flex justify-between items-center">
-      <div>
-        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-          Stylists
-        </h3>
-        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-          {dashData.stylists || dashData.doctors || 0}
-        </p>
-        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-          Active team members
-        </p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {/* Stylists Card */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+                Stylists
+              </h3>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+                {dashData.stylists || dashData.doctors || 0}
+              </p>
+              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+                Expert hair professionals
+              </p>
+            </div>
+
+            <div className="p-2.5 sm:p-3 rounded-lg bg-blue-50 text-blue-500">
+              <Scissors size={22} className="sm:hidden" />
+              <Scissors size={26} className="hidden sm:block" />
+            </div>
+          </div>
+        </div>
+
+        {/* Total Bookings Card */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+                Total Bookings
+              </h3>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+                {dashData.appointments || 0}
+              </p>
+              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+                Styling sessions booked
+              </p>
+            </div>
+
+            <div className="p-2.5 sm:p-3 rounded-lg bg-purple-50 text-purple-500">
+              <Calendar size={22} className="sm:hidden" />
+              <Calendar size={26} className="hidden sm:block" />
+            </div>
+          </div>
+        </div>
+
+        {/* Customers Card */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+                Customers
+              </h3>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+                {dashData.clients || dashData.patients || 0}
+              </p>
+              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+                Salon clientele
+              </p>
+            </div>
+
+            <div className="p-2.5 sm:p-3 rounded-lg bg-green-50 text-green-500">
+              <UserCircle size={22} className="sm:hidden" />
+              <UserCircle size={26} className="hidden sm:block" />
+            </div>
+          </div>
+        </div>
+
+        {/* Revenue Card */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+                Overall Revenue
+              </h3>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+                {formatCurrency(dashData.revenue || calculateTotalRevenue() || 0)}
+              </p>
+              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+                Total salon earnings
+              </p>
+            </div>
+
+            <div className="p-2.5 sm:p-3 rounded-lg bg-amber-50 text-amber-500">
+              <IndianRupee size={22} className="sm:hidden" />
+              <IndianRupee size={26} className="hidden sm:block" />
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="p-2.5 sm:p-3 rounded-lg bg-blue-50 text-blue-500">
-        <Users size={22} className="sm:hidden" />
-        <Users size={26} className="hidden sm:block" />
-      </div>
-    </div>
-  </div>
+      {/* Additional Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 mt-5">
+        {/* Today's Appointments */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+                Today's Styling Sessions
+              </h3>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+                {dashData.todaysAppointments || countTodayAppointments() || 0}
+              </p>
+              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+                Sessions scheduled for today
+              </p>
+            </div>
 
-  {/* Total Bookings Card */}
-  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-    <div className="flex justify-between items-center">
-      <div>
-        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-          Total Bookings
-        </h3>
-        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-          {dashData.appointments || 0}
-        </p>
-        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-          All time appointments
-        </p>
-      </div>
+            <div className="p-2.5 sm:p-3 rounded-lg bg-pink-50 text-pink-500">
+              <Sparkles size={22} className="sm:hidden" />
+              <Sparkles size={26} className="hidden sm:block" />
+            </div>
+          </div>
+        </div>
 
-      <div className="p-2.5 sm:p-3 rounded-lg bg-purple-50 text-purple-500">
-        <Calendar size={22} className="sm:hidden" />
-        <Calendar size={26} className="hidden sm:block" />
-      </div>
-    </div>
-  </div>
+        {/* Monthly Revenue */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+                This Month's Revenue
+              </h3>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+                {formatCurrency(calculateMonthlyRevenue() || 0)}
+              </p>
+              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+                Revenue for {new Date().toLocaleString('default', { month: 'long' })}
+              </p>
+            </div>
 
-  {/* Customers Card */}
-  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-    <div className="flex justify-between items-center">
-      <div>
-        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-          Customers
-        </h3>
-        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-          {dashData.clients || dashData.patients || 0}
-        </p>
-        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-          Registered customers
-        </p>
-      </div>
+            <div className="p-2.5 sm:p-3 rounded-lg bg-purple-50 text-purple-500">
+              <TrendingUp size={22} className="sm:hidden" />
+              <TrendingUp size={26} className="hidden sm:block" />
+            </div>
+          </div>
+        </div>
+        
+        {/* Completion Rate */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xs sm:text-sm font-medium text-gray-500">
+                Service Completion Rate
+              </h3>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
+                {calculateCompletionRate()}%
+              </p>
+              <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
+                Styling sessions completed
+              </p>
+            </div>
 
-      <div className="p-2.5 sm:p-3 rounded-lg bg-green-50 text-green-500">
-        <UserCircle size={22} className="sm:hidden" />
-        <UserCircle size={26} className="hidden sm:block" />
+            <div className="p-2.5 sm:p-3 rounded-lg bg-blue-50 text-blue-500">
+              <Award size={22} className="sm:hidden" />
+              <Award size={26} className="hidden sm:block" />
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-
-  {/* Revenue Card - Updated for Clarity */}
-  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-    <div className="flex justify-between items-center">
-      <div>
-        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-          Overall Revenue
-        </h3>
-        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-          {formatCurrency(dashData.revenue || calculateTotalRevenue() || 0)}
-        </p>
-        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-          Total earnings
-        </p>
-      </div>
-
-      <div className="p-2.5 sm:p-3 rounded-lg bg-amber-50 text-amber-500">
-        <IndianRupee size={22} className="sm:hidden" />
-        <IndianRupee size={26} className="hidden sm:block" />
-      </div>
-    </div>
-  </div>
-</div>
-
-{/* Additional Stats Cards - for better insight */}
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 mt-5">
-  {/* Today's Appointments */}
-  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-    <div className="flex justify-between items-center">
-      <div>
-        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-          Today's Bookings
-        </h3>
-        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-          {dashData.todaysAppointments || countTodayAppointments() || 0}
-        </p>
-        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-          Appointments scheduled for today
-        </p>
-      </div>
-
-      <div className="p-2.5 sm:p-3 rounded-lg bg-green-50 text-green-500">
-        <Calendar size={22} className="sm:hidden" />
-        <Calendar size={26} className="hidden sm:block" />
-      </div>
-    </div>
-  </div>
-
-  {/* Monthly Revenue */}
-  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-    <div className="flex justify-between items-center">
-      <div>
-        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-          This Month's Revenue
-        </h3>
-        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-          {formatCurrency(calculateMonthlyRevenue() || 0)}
-        </p>
-        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-          Revenue for {new Date().toLocaleString('default', { month: 'long' })}
-        </p>
-      </div>
-
-      <div className="p-2.5 sm:p-3 rounded-lg bg-purple-50 text-purple-500">
-        <IndianRupee size={22} className="sm:hidden" />
-        <IndianRupee size={26} className="hidden sm:block" />
-      </div>
-    </div>
-  </div>
-  
-  {/* Completion Rate */}
-  <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-gray-100">
-    <div className="flex justify-between items-center">
-      <div>
-        <h3 className="text-xs sm:text-sm font-medium text-gray-500">
-          Completion Rate
-        </h3>
-        <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1 sm:mt-2">
-          {calculateCompletionRate()}%
-        </p>
-        <p className="text-[11px] sm:text-xs text-gray-400 mt-1">
-          Appointments completed successfully
-        </p>
-      </div>
-
-      <div className="p-2.5 sm:p-3 rounded-lg bg-blue-50 text-blue-500">
-        <CheckCircle size={22} className="sm:hidden" />
-        <CheckCircle size={26} className="hidden sm:block" />
-      </div>
-    </div>
-  </div>
-</div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Booking Trends Chart */}
-        <div className="bg-white p-4 rounded-xl shadow-sm">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
             <TrendingUp size={20} className="mr-2 text-blue-500" />
-            Booking Trends
+            Salon Booking Trends
           </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -526,67 +531,88 @@ const calculateCompletionRate = () => {
                 data={bookingTrends}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="bookings" stroke="#8884d8" activeDot={{ r: 8 }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="bookings" 
+                  stroke="#8884d8" 
+                  strokeWidth={2}
+                  name="Salon Appointments"
+                  activeDot={{ r: 8 }} 
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Service Popularity */}
-        <div className="bg-white p-4 rounded-xl shadow-sm">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
             <Scissors size={20} className="mr-2 text-green-500" />
-            Service Popularity
+            Most Popular Services
           </h3>
-          <div className="h-80 flex">
-            <ResponsiveContainer width="60%" height="100%">
-              <BarChart
-                data={servicePopularity}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={80} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="count" fill="#82ca9d" />
-              </BarChart>
-            </ResponsiveContainer>
-            
-            <ResponsiveContainer width="40%" height="100%">
-              <PieChart>
-                <Pie
+
+          {/* Responsive Chart Container */}
+          <div className="flex flex-col gap-6 lg:flex-row lg:gap-4 h-auto lg:h-80">
+
+            {/* Bar Chart */}
+            <div className="w-full lg:w-[60%] h-64 sm:h-72 md:h-80 lg:h-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
                   data={servicePopularity}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  paddingAngle={5}
-                  dataKey="count"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  layout="vertical"
+                  margin={{ top: 5, right: 20, left: 60, bottom: 5 }}
                 >
-                  {servicePopularity.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis type="number" />
+                  <YAxis dataKey="name" type="category" width={100} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="count" name="Number of Bookings" fill="#82ca9d" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Pie Chart */}
+            <div className="w-full lg:w-[40%] h-64 sm:h-72 md:h-80 lg:h-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={servicePopularity}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="55%"
+                    outerRadius="75%"
+                    paddingAngle={5}
+                    dataKey="count"
+                    labelLine={false}
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
+                  >
+                    {servicePopularity.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value}`, 'Bookings']} />
+                  <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
           </div>
         </div>
+
         
         {/* Revenue Analytics */}
-        <div className="bg-white p-4 rounded-xl shadow-sm">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
             <IndianRupee size={20} className="mr-2 text-amber-500" />
-            Revenue Analytics
+            Salon Revenue Analytics
           </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -594,20 +620,28 @@ const calculateCompletionRate = () => {
                 data={revenueData}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip formatter={(value) => formatCurrency(value)} />
                 <Legend />
-                <Bar dataKey="revenue" fill="#8884d8" name="Total Revenue" />
-                <Bar dataKey="completedRevenue" fill="#82ca9d" name="Completed Appointments" />
+                <Bar 
+                  dataKey="revenue" 
+                  fill="#8884d8" 
+                  name="Total Revenue" 
+                />
+                <Bar 
+                  dataKey="completedRevenue" 
+                  fill="#82ca9d" 
+                  name="Revenue from Completed Services" 
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
         
         {/* Stylist Performance */}
-        <div className="bg-white p-4 rounded-xl shadow-sm">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
             <Users size={20} className="mr-2 text-blue-500" />
             Stylist Performance
@@ -618,18 +652,97 @@ const calculateCompletionRate = () => {
                 data={stylistPerformance}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="appointments" fill="#8884d8" name="Total Appointments" />
-                <Bar dataKey="completed" fill="#82ca9d" name="Completed" />
+                <Bar 
+                  dataKey="appointments" 
+                  fill="#8884d8" 
+                  name="Total Styling Sessions" 
+                />
+                <Bar 
+                  dataKey="completed" 
+                  fill="#82ca9d" 
+                  name="Completed Sessions" 
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
+
+        {/* Customer Retention */}
+        {/* <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <Heart size={20} className="mr-2 text-red-500" />
+            Client Loyalty Analysis
+          </h3>
+          <div className="h-80 flex flex-col lg:flex-row">
+            <ResponsiveContainer width="100%" height="100%" className="lg:w-[50%]">
+              <BarChart
+                data={customerRetention}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar 
+                  dataKey="value" 
+                  name="Number of Clients" 
+                  fill="#ff7c43" 
+                >
+                  {customerRetention.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={RETENTION_COLORS[index % RETENTION_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            
+            <ResponsiveContainer width="100%" height="100%" className="mt-6 lg:mt-0 lg:w-[50%]">
+              <PieChart>
+                <Pie
+                  data={customerRetention}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {customerRetention.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={RETENTION_COLORS[index % RETENTION_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value, name, props) => [value, 'Clients']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div> */}
+        
+        {/* Top Products */}
+        {/* <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <ShoppingBag size={20} className="mr-2 text-teal-500" />
+            Salon Product Sales
+          </h3>
+          <div className="flex flex-col h-80">
+            <div className="flex flex-col items-center justify-center h-full">
+              <Gem size={48} className="text-gray-300 mb-4" />
+              <p className="text-gray-500 mb-2">Product sales data coming soon</p>
+              <p className="text-sm text-gray-400 max-w-md text-center">
+                Track your retail products performance and inventory in upcoming updates
+              </p>
+            </div>
+          </div>
+        </div> */}
       </div>
+
+      
     </div>
   );
 };
