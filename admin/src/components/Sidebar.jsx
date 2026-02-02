@@ -221,7 +221,7 @@ const Sidebar = () => {
                 ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
               }>
                 <User className={iconClass} />
-                {!collapsed && <p>Profile</p>}
+                {!collapsed && <p>My Profile</p>}
               </NavLink>
             </li>
           </ul>
