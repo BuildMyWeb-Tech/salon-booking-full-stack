@@ -15,7 +15,7 @@ import {
   ImagePlus, 
   Search, 
   FileText, 
-  DollarSign, 
+  IndianRupee, 
   Star,
   ChevronLeft,
   Loader,
@@ -259,7 +259,7 @@ const ServiceCategory = () => {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center text-gray-900 font-medium">
-                                                    {/* <DollarSign size={16} className="text-gray-400 mr-1" />  */}
+                                                    {/* <IndianRupee size={16} className="text-gray-400 mr-1" />  */}
                                                     {service.basePrice}
                                                 </div>
                                                 {/* <div className="text-xs text-gray-500 mt-1">Base price</div> */}
@@ -427,7 +427,7 @@ const ServiceCategory = () => {
                                         Base Price <span className="text-red-500">*</span>
                                     </label>
                                     <div className="relative">
-                                        <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                        <IndianRupee size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                                         <input
                                             type="number"
                                             value={basePrice}

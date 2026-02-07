@@ -3,13 +3,27 @@ import { DoctorContext } from '../../context/DoctorContext'
 import { AppContext } from '../../context/AppContext'
 import { toast } from 'react-toastify'
 import axios from 'axios'
+import { 
+  User, 
+  Mail, 
+  Phone, 
+  Award, 
+  Clock, 
+  IndianRupee, 
+  MapPin, 
+  CheckCircle, 
+  Edit, 
+  Save, 
+  X,
+  Instagram
+} from 'lucide-react'
 
 const DoctorProfile = () => {
-
     const { dToken, profileData, setProfileData, getProfileData, backendUrl } = useContext(DoctorContext)
     const { currency } = useContext(AppContext)
     const [isEdit, setIsEdit] = useState(false)
     const [services, setServices] = useState([])
+    const [isLoading, setIsLoading] = useState(false)
 
     // Fetch all services for specialty dropdown
     const fetchServices = async () => {
@@ -24,11 +38,14 @@ const DoctorProfile = () => {
     }
 
     const updateProfile = async () => {
+        setIsLoading(true)
         try {
             const updateData = {
-                address: profileData.address,
+                
                 fees: profileData.price || profileData.fees,
-                available: profileData.available
+                available: profileData.available,
+                specialty: profileData.specialty,
+                about: profileData.about
             }
 
             const { data } = await axios.post(
@@ -48,6 +65,8 @@ const DoctorProfile = () => {
         } catch (error) {
             toast.error(error.message)
             console.log(error)
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -79,48 +98,204 @@ const DoctorProfile = () => {
         }
     }, [dToken])
 
-    return profileData && (
+    if (!profileData) {
+        return (
+            <div className="flex justify-center items-center min-h-[50vh]">
+                <div className="animate-pulse flex flex-col items-center">
+                    <div className="rounded-full bg-gray-200 h-24 w-24 mb-4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-48 mb-4"></div>
+                    <div className="h-3 bg-gray-200 rounded w-40"></div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
         <div className='max-w-6xl mx-auto'>
-            <div className='flex flex-col gap-4 m-5'>
+            <div className='flex flex-col md:flex-row gap-6 m-5'>
                 
-                {/* Profile Image */}
-                <div>
-                    <img 
-                        className='bg-primary/80 w-full sm:max-w-64 rounded-lg object-cover' 
-                        src={profileData.image} 
-                        alt={profileData.name} 
-                    />
+                {/* Profile Image and Quick Info Card */}
+                <div className="flex flex-col gap-4 md:w-1/3">
+                    <div className="bg-white rounded-xl shadow-sm p-3 flex flex-col items-center">
+                        <div className="relative mb-3">
+                            <img 
+                                className='w-40 h-40 rounded-full object-cover border-4 border-white shadow-md' 
+                                src={profileData.image || 'https://via.placeholder.com/200?text=Doctor'} 
+                                alt={profileData.name} 
+                            />
+                            {profileData.available && (
+                                <div className="absolute bottom-2 right-2 bg-green-500 p-1 rounded-full border-2 border-white">
+                                    <CheckCircle className="h-4 w-4 text-white" />
+                                </div>
+                            )}
+                        </div>
+
+                        <h2 className='text-xl font-semibold text-gray-800 text-center'>
+                            {profileData.name}
+                        </h2>
+                        
+                        <div className='flex items-center gap-1 mt-1 text-gray-600 text-sm'>
+                            <Mail className="h-3.5 w-3.5" />
+                            <p className="truncate max-w-full">{profileData.email}</p>
+                        </div>
+
+                        {profileData.phone && (
+                            <div className='flex items-center gap-1 mt-1 text-gray-600 text-sm'>
+                                <Phone className="h-3.5 w-3.5" />
+                                <p>{profileData.phone}</p>
+                            </div>
+                        )}
+
+                        <div className='flex justify-center gap-1.5 mt-3'>
+                            <span className='py-1 px-3 bg-primary/10 text-primary rounded-full text-xs font-medium'>
+                                {profileData.certification || 'Certified'}
+                            </span>
+                            <span className='py-1 px-3 bg-purple-100 text-purple-700 rounded-full text-xs font-medium'>
+                                {profileData.experience}
+                            </span>
+                        </div>
+
+                        {/* Service Fee Card */}
+                        <div className='mt-5 w-full p-3 bg-gray-50 rounded-lg flex justify-between items-center'>
+                            <div className='flex items-center'>
+                                <IndianRupee className="h-4 w-4 text-gray-600 mr-1" />
+                                <span className='text-gray-700 font-medium'>Service Fee</span>
+                            </div>
+                            <div className='text-gray-900 font-semibold'>
+                                {isEdit ? (
+                                    <div className="flex items-center">
+                                        <span className="mr-1">{currency}</span>
+                                        <input 
+                                            type='number' 
+                                            onChange={(e) => setProfileData(prev => ({ 
+                                                ...prev, 
+                                                fees: e.target.value, 
+                                                price: e.target.value 
+                                            }))} 
+                                            value={profileData.fees || profileData.price}
+                                            className='border rounded px-2 py-1 w-24 text-right'
+                                        />
+                                    </div>
+                                ) : (
+                                    `${currency} ${profileData.fees || profileData.price}`
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Availability Toggle */}
+                        <div className='flex items-center gap-2 mt-5 w-full'>
+                            <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${profileData.available ? 'bg-green-500' : 'bg-gray-200'} ${!isEdit && 'opacity-70'}`}>
+                                <span 
+                                    aria-hidden="true" 
+                                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${profileData.available ? 'translate-x-5' : 'translate-x-0'}`} 
+                                />
+                                <input 
+                                    type="checkbox" 
+                                    id="available"
+                                    onChange={() => isEdit && setProfileData(prev => ({ ...prev, available: !prev.available }))} 
+                                    checked={profileData.available}
+                                    disabled={!isEdit}
+                                    className='sr-only'
+                                />
+                            </div>
+                            <label htmlFor="available" className={`text-sm ${isEdit ? 'cursor-pointer' : ''}`}>
+                                {profileData.available ? 'Available for appointments' : 'Not available'}
+                            </label>
+                        </div>
+
+                        {/* Instagram Handle */}
+                        {profileData.instagram && (
+                            <a 
+                                href={`https://instagram.com/${profileData.instagram.replace('@', '')}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className='mt-5 flex items-center gap-2 text-pink-600 hover:text-pink-700 transition-colors py-2 px-4 bg-pink-50 rounded-full text-sm'
+                            >
+                                <Instagram className="h-4 w-4" />
+                                {profileData.instagram}
+                            </a>
+                        )}
+                    </div>
                 </div>
 
-                <div className='flex-1 border border-stone-100 rounded-lg p-8 py-7 bg-white'>
-
-                    {/* Stylist Info: name, specialty, experience */}
-                    <p className='flex items-center gap-2 text-3xl font-medium text-gray-700'>
-                        {profileData.name}
-                    </p>
-                    
-                    <div className='flex items-center gap-2 mt-1 text-gray-600'>
-                        <p>{profileData.email}</p>
+                {/* Main Profile Content */}
+                <div className='flex-1 border border-stone-100 rounded-xl p-3 bg-white shadow-sm md:w-2/3'>
+                    <div className="flex justify-between items-center mb-6">
+                        <h1 className="text-xl font-semibold text-gray-800">Professional Profile</h1>
+                        
+                        {/* Edit/Save Button */}
+                        {isEdit ? (
+                            <div className='flex gap-2'>
+                                <button 
+                                    onClick={updateProfile} 
+                                    disabled={isLoading}
+                                    className='px-4 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-all flex items-center gap-1 shadow-sm disabled:opacity-70'
+                                >
+                                    <Save className="h-4 w-4" />
+                                    {isLoading ? 'Saving...' : 'Save'}
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setIsEdit(false)
+                                        getProfileData() // Reset to original data
+                                    }} 
+                                    className='px-4 py-1.5 bg-white border border-gray-300 text-sm rounded-lg hover:bg-gray-50 transition-all flex items-center gap-1'
+                                >
+                                    <X className="h-4 w-4" />
+                                    Cancel
+                                </button>
+                            </div>
+                        ) : (
+                            <button 
+                                onClick={() => setIsEdit(true)} 
+                                className='px-4 py-1.5 border border-primary text-primary text-sm rounded-lg hover:bg-primary hover:text-white transition-all flex items-center gap-1'
+                            >
+                                <Edit className="h-4 w-4" />
+                                Edit Profile
+                            </button>
+                        )}
                     </div>
 
-                    {/* Phone Number */}
-                    {profileData.phone && (
-                        <div className='mt-2 text-gray-600'>
-                            <span className='font-medium'>Phone:</span> {profileData.phone}
+                    {/* About Section */}
+                    <div className='mb-6'>
+                        <h3 className='flex items-center gap-2 text-gray-700 font-medium mb-3'>
+                            <User className="h-4 w-4" />
+                            About Me
+                        </h3>
+                        {isEdit ? (
+                            <textarea 
+                                onChange={(e) => setProfileData(prev => ({ ...prev, about: e.target.value }))} 
+                                className='w-full outline-primary p-3 border rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-primary' 
+                                rows={6} 
+                                value={profileData.about}
+                                placeholder="Tell your patients about yourself, your experience and expertise..."
+                            />
+                        ) : (
+                            <p className='text-gray-600 text-sm leading-relaxed bg-gray-50 p-4 rounded-lg'>
+                                {profileData.about || 'No information provided.'}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Working Hours */}
+                    {profileData.workingHours && (
+                        <div className='mb-6'>
+                            <h3 className='flex items-center gap-2 text-gray-700 font-medium mb-3'>
+                                <Clock className="h-4 w-4" />
+                                Working Hours
+                            </h3>
+                            <div className='text-gray-600 text-sm bg-gray-50 p-4 rounded-lg'>
+                                {profileData.workingHours}
+                            </div>
                         </div>
                     )}
 
-                    {/* Certification & Experience */}
-                    <div className='flex items-center gap-2 mt-3 text-gray-600'>
-                        <p className='font-medium'>{profileData.certification || 'Certified'}</p>
-                        <button className='py-0.5 px-2 border text-xs rounded-full'>
-                            {profileData.experience}
-                        </button>
-                    </div>
-
                     {/* Specialization / Services */}
-                    <div className='mt-4'>
-                        <p className='font-medium text-gray-700 mb-2'>Specialization:</p>
+                    <div className='mb-6'>
+                        <h3 className='flex items-center gap-2 text-gray-700 font-medium mb-3'>
+                            <Award className="h-4 w-4" />
+                            Specialization
+                        </h3>
                         {isEdit ? (
                             <div className='flex flex-wrap gap-2'>
                                 {services.map((service) => {
@@ -132,7 +307,7 @@ const DoctorProfile = () => {
                                             onClick={() => toggleSpecialty(service.name)}
                                             className={`px-3 py-1.5 rounded-full text-sm transition-all ${
                                                 isSelected 
-                                                    ? 'bg-primary text-white border-primary' 
+                                                    ? 'bg-primary text-white border-primary shadow-sm' 
                                                     : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
                                             } border`}
                                         >
@@ -143,14 +318,14 @@ const DoctorProfile = () => {
                             </div>
                         ) : (
                             <div className='flex flex-wrap gap-2'>
-                                {Array.isArray(profileData.specialty) ? (
+                                {Array.isArray(profileData.specialty) && profileData.specialty.length > 0 ? (
                                     profileData.specialty.map((spec, idx) => (
-                                        <span key={idx} className='px-3 py-1 bg-primary/10 text-primary rounded-full text-sm'>
+                                        <span key={idx} className='px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm'>
                                             {spec}
                                         </span>
                                     ))
                                 ) : (
-                                    <span className='px-3 py-1 bg-primary/10 text-primary rounded-full text-sm'>
+                                    <span className='px-3 py-1.5 bg-gray-100 text-gray-600 rounded-full text-sm'>
                                         {profileData.specialty || profileData.speciality || 'Not specified'}
                                     </span>
                                 )}
@@ -158,145 +333,9 @@ const DoctorProfile = () => {
                         )}
                     </div>
 
-                    {/* Instagram Handle */}
-                    {profileData.instagram && (
-                        <div className='mt-3'>
-                            <a 
-                                href={`https://instagram.com/${profileData.instagram.replace('@', '')}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className='text-primary hover:underline flex items-center gap-1'
-                            >
-                                <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 24 24'>
-                                    <path d='M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z'/>
-                                </svg>
-                                {profileData.instagram}
-                            </a>
-                        </div>
-                    )}
+                    
 
-                    {/* Working Hours */}
-                    {profileData.workingHours && (
-                        <div className='mt-3 text-gray-600'>
-                            <span className='font-medium'>Working Hours:</span> {profileData.workingHours}
-                        </div>
-                    )}
-
-                    {/* About Section */}
-                    <div className='mt-4'>
-                        <p className='flex items-center gap-1 text-sm font-medium text-[#262626] mb-1'>About:</p>
-                        {isEdit ? (
-                            <textarea 
-                                onChange={(e) => setProfileData(prev => ({ ...prev, about: e.target.value }))} 
-                                className='w-full outline-primary p-2 border rounded' 
-                                rows={8} 
-                                value={profileData.about}
-                            />
-                        ) : (
-                            <p className='text-sm text-gray-600 max-w-[700px]'>
-                                {profileData.about}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Service Fee */}
-                    <p className='text-gray-600 font-medium mt-4'>
-                        Service fee: <span className='text-gray-800'>
-                            {currency} {isEdit ? (
-                                <input 
-                                    type='number' 
-                                    onChange={(e) => setProfileData(prev => ({ 
-                                        ...prev, 
-                                        fees: e.target.value, 
-                                        price: e.target.value 
-                                    }))} 
-                                    value={profileData.fees || profileData.price}
-                                    className='border rounded px-2 py-1 w-24'
-                                />
-                            ) : (
-                                profileData.fees || profileData.price
-                            )}
-                        </span>
-                    </p>
-
-                    {/* Address */}
-                    <div className='flex gap-2 py-2 mt-2'>
-                        <p className='font-medium'>Address:</p>
-                        <p className='text-sm'>
-                            {isEdit ? (
-                                <>
-                                    <input 
-                                        type='text' 
-                                        onChange={(e) => setProfileData(prev => ({ 
-                                            ...prev, 
-                                            address: { ...prev.address, line1: e.target.value } 
-                                        }))} 
-                                        value={profileData.address?.line1 || ''}
-                                        className='border rounded px-2 py-1 w-full mb-2'
-                                        placeholder='Address Line 1'
-                                    />
-                                    <input 
-                                        type='text' 
-                                        onChange={(e) => setProfileData(prev => ({ 
-                                            ...prev, 
-                                            address: { ...prev.address, line2: e.target.value } 
-                                        }))} 
-                                        value={profileData.address?.line2 || ''}
-                                        className='border rounded px-2 py-1 w-full'
-                                        placeholder='Address Line 2'
-                                    />
-                                </>
-                            ) : (
-                                <>
-                                    {profileData.address?.line1}
-                                    <br />
-                                    {profileData.address?.line2}
-                                </>
-                            )}
-                        </p>
-                    </div>
-
-                    {/* Availability Toggle */}
-                    <div className='flex gap-2 items-center pt-2'>
-                        <input 
-                            type="checkbox" 
-                            id="available"
-                            onChange={() => isEdit && setProfileData(prev => ({ ...prev, available: !prev.available }))} 
-                            checked={profileData.available}
-                            disabled={!isEdit}
-                            className='cursor-pointer'
-                        />
-                        <label htmlFor="available" className='cursor-pointer'>Available for appointments</label>
-                    </div>
-
-                    {/* Edit/Save Button */}
-                    {isEdit ? (
-                        <div className='flex gap-2 mt-5'>
-                            <button 
-                                onClick={updateProfile} 
-                                className='px-6 py-2 bg-primary text-white text-sm rounded-full hover:bg-primary/90 transition-all'
-                            >
-                                Save Changes
-                            </button>
-                            <button 
-                                onClick={() => {
-                                    setIsEdit(false)
-                                    getProfileData() // Reset to original data
-                                }} 
-                                className='px-6 py-2 border border-gray-300 text-sm rounded-full hover:bg-gray-50 transition-all'
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    ) : (
-                        <button 
-                            onClick={() => setIsEdit(true)} 
-                            className='px-6 py-2 border border-primary text-sm rounded-full mt-5 hover:bg-primary hover:text-white transition-all'
-                        >
-                            Edit Profile
-                        </button>
-                    )}
-
+                    {/* Maybe add more sections like Education, Certifications, etc. */}
                 </div>
             </div>
         </div>

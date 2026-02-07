@@ -64,7 +64,7 @@ const TopDoctors = () => {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-2 text-sm text-primary font-medium">
                     <Scissors size={16} />
-                    {stylist.speciality || 'Hair Styling Specialist'}
+                    {stylist.specialty.join(' • ')}
                   </div>
 
                   <div className="flex items-center gap-2 text-sm text-gray-600">

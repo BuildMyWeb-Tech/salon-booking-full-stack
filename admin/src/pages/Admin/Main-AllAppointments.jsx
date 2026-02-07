@@ -11,7 +11,7 @@ import {
   CheckCircle,
   RotateCcw,
   AlertTriangle,
-  DollarSign,
+  IndianRupee,
   X,
   Check,
   AlertCircle,
@@ -345,7 +345,7 @@ const parseDateString = (dateStr) => {
     if (appointment.payment) {
       return (
         <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
-          <DollarSign size={12} />
+          <IndianRupee size={12} />
           Paid
         </span>
       )
@@ -487,7 +487,7 @@ const parseDateString = (dateStr) => {
             {/* Payment Filter */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-600 mr-1 flex items-center">
-                <DollarSign size={15} className="mr-1" /> Payment:
+                <IndianRupee size={15} className="mr-1" /> Payment:
               </span>
               <div className="flex items-center space-x-1">
                 <button 

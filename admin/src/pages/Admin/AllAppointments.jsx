@@ -11,7 +11,7 @@ import {
   CheckCircle,
   RotateCcw,
   AlertTriangle,
-  DollarSign,
+  IndianRupee,
   X,
   Check,
   AlertCircle,
