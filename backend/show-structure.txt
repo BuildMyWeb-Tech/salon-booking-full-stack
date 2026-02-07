@@ -45,7 +45,7 @@
             📄 Dashboard.jsx
             📄 DoctorsList.jsx
          📁 Doctor
-            📄 DoctorAppointments.jsx
+            📄 StylistAppointments.jsx
             📄 DoctorDashboard.jsx
             📄 DoctorProfile.jsx
          📄 Login.jsx

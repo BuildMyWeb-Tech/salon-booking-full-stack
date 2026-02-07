@@ -40,7 +40,7 @@ C:\Users\ajaik\Desktop\salon-booking-full-stack>node show-structure.js
             📄 SlotManagement copy.jsx
             📄 SlotManagement.jsx
          📁 Doctor
-            📄 DoctorAppointments.jsx
+            📄 StylistAppointments.jsx
             📄 DoctorDashboard.jsx
             📄 DoctorProfile.jsx
          📄 Login.jsx

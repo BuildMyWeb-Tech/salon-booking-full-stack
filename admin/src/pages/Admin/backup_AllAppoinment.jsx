@@ -10,7 +10,7 @@ import {
   CheckCircle,
   RotateCcw,
   AlertTriangle,
-  DollarSign,
+  IndianRupee,
   X,
   Check,
   AlertCircle,
@@ -516,7 +516,7 @@ const AllAppointments = () => {
         <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
           darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
         }`}>
-          <DollarSign size={12} />
+          <IndianRupee size={12} />
           Paid
         </span>
       )
@@ -637,7 +637,7 @@ const AllAppointments = () => {
             
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-1.5">
-                <DollarSign size={16} className={appointment.payment ? 'text-green-500' : 'text-amber-500'} />
+                <IndianRupee size={16} className={appointment.payment ? 'text-green-500' : 'text-amber-500'} />
                 <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   {currency}{appointment.amount || appointment.price || 0}
                 </span>

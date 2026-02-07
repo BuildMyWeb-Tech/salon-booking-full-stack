@@ -27,7 +27,7 @@ import {
     CalendarX,
     RefreshCw,
     Sparkles,
-    DollarSign
+    IndianRupee
 } from 'lucide-react';
 
 const MyAppointments = () => {
@@ -647,7 +647,7 @@ const MyAppointments = () => {
                                                 {/* Payment Information Section */}
                                                 <div className="mb-4 bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border border-blue-100">
                                                     <div className="flex items-center gap-2 mb-3">
-                                                        {/* <DollarSign size={18} className="text-blue-600" /> */}
+                                                        {/* <IndianRupee size={18} className="text-blue-600" /> */}
                                                         <h4 className="font-semibold text-gray-800">Payment Details</h4>
                                                     </div>
 

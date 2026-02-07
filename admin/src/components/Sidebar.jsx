@@ -25,7 +25,7 @@ import {
   ClipboardList,
   ImagePlus,
   BookOpen,
-  DollarSign,
+  IndianRupee,
   BarChart3,
   Store,
   UserCog
@@ -175,7 +175,7 @@ const Sidebar = () => {
               </NavLink>
             </li>
 
-            <li>
+            {/* <li>
               <NavLink to="/stylist-services" className={({ isActive }) =>
                 `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
                 ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
@@ -203,14 +203,14 @@ const Sidebar = () => {
                 <Users className={iconClass} />
                 {!collapsed && <p>My Clients</p>}
               </NavLink>
-            </li>
+            </li> */}
 
             <li>
               <NavLink to="/stylist-earnings" className={({ isActive }) =>
                 `flex items-center gap-3 py-3.5 px-5 ${collapsed ? "justify-center" : ""}
                 ${isActive ? 'bg-blue-50 text-primary font-semibold border-l-4 border-primary' : 'hover:bg-gray-50'}`
               }>
-                <DollarSign className={iconClass} />
+                <IndianRupee className={iconClass} />
                 {!collapsed && <p>Earnings</p>}
               </NavLink>
             </li>
@@ -372,7 +372,7 @@ const Sidebar = () => {
                   </NavLink>
                 </li>
 
-                <li>
+                {/* <li>
                   <NavLink 
                     to="/stylist-services" 
                     className={({ isActive }) =>
@@ -412,7 +412,7 @@ const Sidebar = () => {
                     <Users className={iconClass} />
                     <p>My Clients</p>
                   </NavLink>
-                </li>
+                </li> */}
 
                 <li>
                   <NavLink 
@@ -423,7 +423,7 @@ const Sidebar = () => {
                     }
                     onClick={() => setMobileOpen(false)}
                   >
-                    <DollarSign className={iconClass} />
+                    <IndianRupee className={iconClass} />
                     <p>Earnings</p>
                   </NavLink>
                 </li>
@@ -532,7 +532,7 @@ const Sidebar = () => {
               <span>Appointments</span>
             </NavLink>
 
-            <NavLink 
+            {/* <NavLink 
               to="/stylist-services" 
               className={({ isActive }) => 
                 `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
@@ -540,16 +540,16 @@ const Sidebar = () => {
             >
               <Scissors className="w-5 h-5 mb-1" />
               <span>Services</span>
-            </NavLink>
+            </NavLink> */}
 
             <NavLink 
-              to="/stylist-portfolio" 
+              to="/stylist-earnings" 
               className={({ isActive }) => 
                 `flex flex-col items-center text-xs p-2 ${isActive ? 'text-primary' : 'text-gray-500'}`
               }
             >
-              <Palette className="w-5 h-5 mb-1" />
-              <span>Portfolio</span>
+              <IndianRupee className="w-5 h-5 mb-1" />
+              <span>Earnings</span>
             </NavLink>
 
             <NavLink 
