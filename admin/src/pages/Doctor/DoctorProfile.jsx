@@ -10,61 +10,66 @@ import {
   Award, 
   Clock, 
   IndianRupee, 
-  MapPin, 
   CheckCircle, 
   Edit, 
   Save, 
   X,
-  Instagram
+  Instagram,
+  Scissors
 } from 'lucide-react'
 
-const DoctorProfile = () => {
+const StylistProfile = () => {
     const { dToken, profileData, setProfileData, getProfileData, backendUrl } = useContext(DoctorContext)
     const { currency } = useContext(AppContext)
     const [isEdit, setIsEdit] = useState(false)
     const [services, setServices] = useState([])
     const [isLoading, setIsLoading] = useState(false)
+    const [loadingServices, setLoadingServices] = useState(false)
 
     // Fetch all services for specialty dropdown
     const fetchServices = async () => {
+        setLoadingServices(true)
         try {
-            const { data } = await axios.get(backendUrl + '/api/user/services')
+            const { data } = await axios.get(`${backendUrl}/api/user/services`)
             if (data.success) {
                 setServices(data.services)
             }
         } catch (error) {
-            console.log('Error fetching services:', error)
+            console.error('Error fetching services:', error)
+        } finally {
+            setLoadingServices(false)
         }
     }
 
+    // Update profile function
     const updateProfile = async () => {
         setIsLoading(true)
         try {
             const updateData = {
-                
-                fees: profileData.price || profileData.fees,
+                // Use consistent field names
+                price: profileData.price || profileData.fees,
                 available: profileData.available,
                 specialty: profileData.specialty,
                 about: profileData.about
             }
 
             const { data } = await axios.post(
-                backendUrl + '/api/doctor/update-profile', 
+                `${backendUrl}/api/doctor/update-profile`, 
                 updateData, 
                 { headers: { dToken } }
             )
 
             if (data.success) {
-                toast.success(data.message)
+                toast.success(data.message || 'Profile updated successfully')
                 setIsEdit(false)
+                // Refresh profile data to show the latest changes
                 getProfileData()
             } else {
-                toast.error(data.message)
+                toast.error(data.message || 'Failed to update profile')
             }
-
         } catch (error) {
-            toast.error(error.message)
-            console.log(error)
+            toast.error(error.response?.data?.message || error.message || 'Error updating profile')
+            console.error('Update profile error:', error)
         } finally {
             setIsLoading(false)
         }
@@ -75,6 +80,7 @@ const DoctorProfile = () => {
         if (!isEdit) return
 
         setProfileData(prev => {
+            // Ensure specialty is always an array
             const currentSpecialty = Array.isArray(prev.specialty) ? prev.specialty : []
             
             if (currentSpecialty.includes(serviceName)) {
@@ -91,6 +97,7 @@ const DoctorProfile = () => {
         })
     }
 
+    // Load stylist data and services on component mount
     useEffect(() => {
         if (dToken) {
             getProfileData()
@@ -116,11 +123,11 @@ const DoctorProfile = () => {
                 
                 {/* Profile Image and Quick Info Card */}
                 <div className="flex flex-col gap-4 md:w-1/3">
-                    <div className="bg-white rounded-xl shadow-sm p-3 flex flex-col items-center">
-                        <div className="relative mb-3">
+                    <div className="bg-white rounded-xl shadow-sm p-5 flex flex-col items-center">
+                        <div className="relative mb-4">
                             <img 
                                 className='w-40 h-40 rounded-full object-cover border-4 border-white shadow-md' 
-                                src={profileData.image || 'https://via.placeholder.com/200?text=Doctor'} 
+                                src={profileData.image || 'https://via.placeholder.com/200?text=Stylist'} 
                                 alt={profileData.name} 
                             />
                             {profileData.available && (
@@ -148,10 +155,10 @@ const DoctorProfile = () => {
 
                         <div className='flex justify-center gap-1.5 mt-3'>
                             <span className='py-1 px-3 bg-primary/10 text-primary rounded-full text-xs font-medium'>
-                                {profileData.certification || 'Certified'}
+                                {profileData.certification || 'Certified Stylist'}
                             </span>
                             <span className='py-1 px-3 bg-purple-100 text-purple-700 rounded-full text-xs font-medium'>
-                                {profileData.experience}
+                                {profileData.experience || 'Experienced'}
                             </span>
                         </div>
 
@@ -169,22 +176,22 @@ const DoctorProfile = () => {
                                             type='number' 
                                             onChange={(e) => setProfileData(prev => ({ 
                                                 ...prev, 
-                                                fees: e.target.value, 
-                                                price: e.target.value 
+                                                price: e.target.value,
+                                                fees: e.target.value 
                                             }))} 
-                                            value={profileData.fees || profileData.price}
+                                            value={profileData.price || profileData.fees || ''}
                                             className='border rounded px-2 py-1 w-24 text-right'
                                         />
                                     </div>
                                 ) : (
-                                    `${currency} ${profileData.fees || profileData.price}`
+                                    `${currency} ${profileData.price || profileData.fees || 0}`
                                 )}
                             </div>
                         </div>
 
                         {/* Availability Toggle */}
                         <div className='flex items-center gap-2 mt-5 w-full'>
-                            <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${profileData.available ? 'bg-green-500' : 'bg-gray-200'} ${!isEdit && 'opacity-70'}`}>
+                            <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${profileData.available ? 'bg-green-500' : 'bg-gray-200'} ${!isEdit && 'opacity-80 cursor-not-allowed'}`}>
                                 <span 
                                     aria-hidden="true" 
                                     className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${profileData.available ? 'translate-x-5' : 'translate-x-0'}`} 
@@ -219,7 +226,7 @@ const DoctorProfile = () => {
                 </div>
 
                 {/* Main Profile Content */}
-                <div className='flex-1 border border-stone-100 rounded-xl p-3 bg-white shadow-sm md:w-2/3'>
+                <div className='flex-1 border border-stone-100 rounded-xl p-5 bg-white shadow-sm md:w-2/3'>
                     <div className="flex justify-between items-center mb-6">
                         <h1 className="text-xl font-semibold text-gray-800">Professional Profile</h1>
                         
@@ -267,8 +274,8 @@ const DoctorProfile = () => {
                                 onChange={(e) => setProfileData(prev => ({ ...prev, about: e.target.value }))} 
                                 className='w-full outline-primary p-3 border rounded-lg text-sm text-gray-700 focus:ring-1 focus:ring-primary' 
                                 rows={6} 
-                                value={profileData.about}
-                                placeholder="Tell your patients about yourself, your experience and expertise..."
+                                value={profileData.about || ''}
+                                placeholder="Tell your clients about yourself, your experience and expertise..."
                             />
                         ) : (
                             <p className='text-gray-600 text-sm leading-relaxed bg-gray-50 p-4 rounded-lg'>
@@ -278,31 +285,35 @@ const DoctorProfile = () => {
                     </div>
 
                     {/* Working Hours */}
-                    {profileData.workingHours && (
-                        <div className='mb-6'>
-                            <h3 className='flex items-center gap-2 text-gray-700 font-medium mb-3'>
-                                <Clock className="h-4 w-4" />
-                                Working Hours
-                            </h3>
-                            <div className='text-gray-600 text-sm bg-gray-50 p-4 rounded-lg'>
-                                {profileData.workingHours}
-                            </div>
+                    <div className='mb-6'>
+                        <h3 className='flex items-center gap-2 text-gray-700 font-medium mb-3'>
+                            <Clock className="h-4 w-4" />
+                            Working Hours
+                        </h3>
+                        <div className='text-gray-600 text-sm bg-gray-50 p-4 rounded-lg'>
+                            {profileData.workingHours || 'Not specified'}
                         </div>
-                    )}
+                    </div>
 
                     {/* Specialization / Services */}
                     <div className='mb-6'>
                         <h3 className='flex items-center gap-2 text-gray-700 font-medium mb-3'>
-                            <Award className="h-4 w-4" />
+                            <Scissors className="h-4 w-4" />
                             Specialization
                         </h3>
                         {isEdit ? (
                             <div className='flex flex-wrap gap-2'>
-                                {services.map((service) => {
+                                {loadingServices ? (
+                                    <div className="flex items-center gap-2 text-gray-400">
+                                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                        <span>Loading services...</span>
+                                    </div>
+                                ) : services.map((service) => {
                                     const isSelected = Array.isArray(profileData.specialty) && 
-                                                      profileData.specialty.includes(service.name)
+                                                     profileData.specialty.includes(service.name)
                                     return (
                                         <button
+                                            type="button"
                                             key={service._id}
                                             onClick={() => toggleSpecialty(service.name)}
                                             className={`px-3 py-1.5 rounded-full text-sm transition-all ${
@@ -326,20 +337,27 @@ const DoctorProfile = () => {
                                     ))
                                 ) : (
                                     <span className='px-3 py-1.5 bg-gray-100 text-gray-600 rounded-full text-sm'>
-                                        {profileData.specialty || profileData.speciality || 'Not specified'}
+                                        No specialties specified
                                     </span>
                                 )}
                             </div>
                         )}
                     </div>
 
-                    
-
-                    {/* Maybe add more sections like Education, Certifications, etc. */}
+                    {/* Certification Information */}
+                    <div className='mb-6'>
+                        <h3 className='flex items-center gap-2 text-gray-700 font-medium mb-3'>
+                            <Award className="h-4 w-4" />
+                            Certification
+                        </h3>
+                        <div className='text-gray-600 text-sm bg-gray-50 p-4 rounded-lg'>
+                            {profileData.certification || 'No certification information provided'}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     )
 }
 
-export default DoctorProfile
+export default StylistProfile

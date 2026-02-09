@@ -1,11 +1,10 @@
-// src/pages/Admin/EditStylist.jsx
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { AdminContext } from '../../context/AdminContext';
 import { AppContext } from '../../context/AppContext';
-import { Pencil, Eye, EyeOff, User, Mail, Phone, Award, Hash, Instagram, Clock, FileText, ArrowLeft, Scissors } from 'lucide-react';
+import { Pencil, User, Mail, Phone, Award, Hash, Instagram, Clock, FileText, ArrowLeft, Scissors } from 'lucide-react';
 
 const EditStylist = () => {
     const { id } = useParams();
@@ -29,6 +28,7 @@ const EditStylist = () => {
     const [certification, setCertification] = useState('');
     const [instagram, setInstagram] = useState('');
     const [workingHours, setWorkingHours] = useState('');
+    const [available, setAvailable] = useState(true); // Added availability state
     
     // UI state
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,57 +37,51 @@ const EditStylist = () => {
     const [loadingCategories, setLoadingCategories] = useState(true);
 
     // Load stylist data
-useEffect(() => {
-    const fetchStylistData = async () => {
-        try {
-            setLoading(true);
-            const stylist = await getDoctorById(id);
-            
-            console.log('Loaded stylist data:', stylist); // Debug log
-            
-            if (stylist) {
-                // Set form fields - with explicit phone handling
-                setName(stylist.name || '');
-                setEmail(stylist.email || '');
+    useEffect(() => {
+        const fetchStylistData = async () => {
+            try {
+                setLoading(true);
+                const stylist = await getDoctorById(id);
                 
-                // ✅ FIXED: Explicitly handle phone field
-                const phoneValue = stylist.phone || stylist.phoneNumber || '';
-                console.log('Phone value being set:', phoneValue); // Debug log
-                setPhone(phoneValue);
-                
-                setExperience(stylist.experience || '1 Year');
-                setPrice(stylist.price?.toString() || '');
-                setAbout(stylist.about || '');
-                
-                // Handle specialty as array or string
-                if (Array.isArray(stylist.specialty)) {
-                    setSpecialty(stylist.specialty);
-                } else if (stylist.specialty) {
-                    setSpecialty([stylist.specialty]);
+                if (stylist) {
+                    // Set form fields with consistent field names
+                    setName(stylist.name || '');
+                    setEmail(stylist.email || '');
+                    setPhone(stylist.phone || '');
+                    setExperience(stylist.experience || '1 Year');
+                    setPrice(stylist.price?.toString() || '');
+                    setAbout(stylist.about || '');
+                    
+                    // Handle specialty as array
+                    if (Array.isArray(stylist.specialty)) {
+                        setSpecialty(stylist.specialty);
+                    } else if (stylist.specialty) {
+                        setSpecialty([stylist.specialty]);
+                    }
+                    
+                    setCertification(stylist.certification || '');
+                    setInstagram(stylist.instagram || '');
+                    setWorkingHours(stylist.workingHours || '');
+                    setImagePreview(stylist.image || '');
+                    setAvailable(stylist.available || false);
+                } else {
+                    toast.error('Could not find stylist data');
+                    navigate('/stylist-list');
                 }
-                
-                setCertification(stylist.certification || '');
-                setInstagram(stylist.instagram || '');
-                setWorkingHours(stylist.workingHours || '');
-                setImagePreview(stylist.image || '');
-            } else {
-                toast.error('Could not find stylist data');
+            } catch (error) {
+                console.error('Error loading stylist:', error);
+                toast.error('Failed to load stylist data');
                 navigate('/stylist-list');
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error('Error loading stylist:', error);
-            toast.error('Failed to load stylist data');
-            navigate('/stylist-list');
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
 
-    fetchServiceCategories();
-    if (id) {
-        fetchStylistData();
-    }
-}, [id, getDoctorById, navigate]);
+        fetchServiceCategories();
+        if (id) {
+            fetchStylistData();
+        }
+    }, [id, getDoctorById, navigate]);
 
     // Fetch service categories
     const fetchServiceCategories = async () => {
@@ -148,6 +142,7 @@ useEffect(() => {
             formData.append('experience', experience);
             formData.append('price', price);
             formData.append('about', about);
+            formData.append('available', available); // Added availability
             
             // Convert specialty array to string for backend processing
             formData.append('specialty', JSON.stringify(specialty));
@@ -159,7 +154,7 @@ useEffect(() => {
             const updatedStylist = await updateDoctor(id, formData);
             
             if (updatedStylist) {
-                // toast.success('Stylist updated successfully');
+                toast.success('Stylist updated successfully');
                 navigate('/stylist-list');
             }
         } catch (error) {
@@ -179,19 +174,17 @@ useEffect(() => {
         }
     };
 
-    // Specialty options
-    const fallbackSpecialtyOptions = [
-        'Hair Styling Specialist',
-        'Beard & Grooming Specialist',
-        'Hair Coloring Specialist',
-        'Hair Treatment Specialist',
-        'Bridal Hairstylist',
-        'Unisex Hairstylist'
-    ];
-
+    // Get specialty options from service categories
     const specialtyOptions = serviceCategories.length > 0 
         ? serviceCategories.map(service => service.name) 
-        : fallbackSpecialtyOptions;
+        : [
+            'Hair Styling Specialist',
+            'Beard & Grooming Specialist',
+            'Hair Coloring Specialist',
+            'Hair Treatment Specialist',
+            'Bridal Hairstylist',
+            'Unisex Hairstylist'
+        ];
 
     if (loading) {
         return (
@@ -315,11 +308,35 @@ useEffect(() => {
                                     onChange={e => setPrice(e.target.value)} 
                                     value={price} 
                                     className='border rounded-md pl-7 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
-                                    type="number" 
+                                                                        type="number" 
                                     placeholder='Starting price for services' 
                                     required 
                                 />
                             </div>
+                        </div>
+                        
+                        {/* Availability Toggle */}
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Clock size={16} className="mr-1.5" /> Availability Status
+                            </label>
+                            <div className="flex items-center gap-3">
+                                <label className="relative inline-flex cursor-pointer items-center">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={available}
+                                        onChange={() => setAvailable(!available)}
+                                        className="peer sr-only" 
+                                    />
+                                    <div className="h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-focus:ring-4 peer-focus:ring-primary/20"></div>
+                                </label>
+                                <span className="text-sm text-gray-700">
+                                    {available ? 'Available for bookings' : 'Not available'}
+                                </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Toggle to control whether clients can book appointments with this stylist
+                            </p>
                         </div>
                     </div>
 
@@ -334,8 +351,11 @@ useEffect(() => {
                                 value={workingHours} 
                                 className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
                                 type="text" 
-                                placeholder='e.g.  10AM-7PM' 
+                                placeholder='e.g. 10AM-7PM' 
                             />
+                            <p className="text-xs text-gray-500">
+                                Working hours will be displayed to clients when booking
+                            </p>
                         </div>
 
                         <div className='flex flex-col gap-1.5'>

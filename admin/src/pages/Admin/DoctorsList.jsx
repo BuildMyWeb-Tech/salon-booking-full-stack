@@ -2,23 +2,9 @@ import React, { useContext, useEffect, useState } from 'react'
 import { AdminContext } from '../../context/AdminContext'
 import axios from 'axios';
 import {
-  Scissors,
-  Search,
-  Filter,
-  Plus,
-  Phone,
-  Mail,
-  Award,
-  ArrowUpDown,
-  Pencil,
-  Trash2,
-  X,
-  AlertTriangle,
-  Check,
-  Clock,
-  UserCheck,
-  ChevronLeft,
-  ChevronRight
+  Scissors, Search, Filter, Plus, Phone, Mail, Award, ArrowUpDown, 
+  Pencil, Trash2, X, AlertTriangle, Check, Clock, UserCheck,
+  ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -79,7 +65,8 @@ const StylistsList = () => {
     const specialtySets = new Set()
     
     stylists.forEach(stylist => {
-      const specialtyArray = stylist.specialty || stylist.speciality || []
+      // Always use specialty (not speciality) for consistency
+      const specialtyArray = stylist.specialty || []
       
       // Handle both string and array formats
       if (Array.isArray(specialtyArray)) {
@@ -104,17 +91,12 @@ const StylistsList = () => {
         stylist.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (Array.isArray(stylist.specialty) && stylist.specialty.some(s => 
           s.toLowerCase().includes(searchTerm.toLowerCase())
-        )) || 
-        (Array.isArray(stylist.speciality) && stylist.speciality.some(s => 
-          s.toLowerCase().includes(searchTerm.toLowerCase())
         ))
 
       // Check if stylist has the selected specialty
       const stylistSpecialties = Array.isArray(stylist.specialty) 
         ? stylist.specialty 
-        : Array.isArray(stylist.speciality)
-          ? stylist.speciality
-          : []
+        : []
 
       const matchesSpecialty =
         filterSpecialty === 'all' || 
@@ -132,15 +114,11 @@ const StylistsList = () => {
       if (sortBy === 'specialty') {
         const aSpecialty = Array.isArray(a.specialty) 
           ? a.specialty.join(', ') 
-          : Array.isArray(a.speciality) 
-            ? a.speciality.join(', ')
-            : ''
+          : ''
             
         const bSpecialty = Array.isArray(b.specialty) 
           ? b.specialty.join(', ') 
-          : Array.isArray(b.speciality)
-            ? b.speciality.join(', ')
-            : ''
+          : ''
             
         result = aSpecialty.localeCompare(bSpecialty)
       }
@@ -357,9 +335,7 @@ const StylistsList = () => {
                       <p className="text-primary text-sm font-medium">
                         {Array.isArray(stylist.specialty) 
                           ? stylist.specialty.join(', ') 
-                          : Array.isArray(stylist.speciality)
-                            ? stylist.speciality.join(', ')
-                            : 'General Stylist'}
+                          : 'General Stylist'}
                       </p>
                     </div>
 
