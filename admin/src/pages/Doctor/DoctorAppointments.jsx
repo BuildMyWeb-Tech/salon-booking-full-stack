@@ -22,14 +22,14 @@ import {
   ChevronsLeft,
   ChevronsRight,
   X,
-  ExternalLink,
   RotateCcw,
   CheckCircle,
   Scissors
 } from 'lucide-react'
 import { toast } from 'react-toastify'
-import { jsPDF } from 'jspdf'
-import 'jspdf-autotable'
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 import * as XLSX from 'xlsx'
 
 const DoctorAppointments = () => {
@@ -193,101 +193,120 @@ const DoctorAppointments = () => {
     }
   };
   
-  // Export functionality
+  const getFileDate = () => {
+    const d = new Date();
+    return d.toISOString().split("T")[0]; // 2026-02-10
+  };
+
+  const getFullDateTime = () => {
+    return new Date().toLocaleString();
+  };
+
+
   const exportToPDF = () => {
     try {
-      toast.info(`Generating PDF export...`);
-      
-      const doc = new jsPDF();
-      
-      // Add title
-      doc.setFontSize(20);
-      doc.text('Stylist Appointments', 14, 22);
-      
-      // Add date of export
+      toast.info("Generating PDF export...");
+
+      const doc = new jsPDF("l", "pt", "A4");
+
+      const downloadDate = getFullDateTime();
+
+      // Title
+      doc.setFontSize(18);
+      doc.text("Stylist Appointments Report", 40, 40);
+
+      // Download Date
       doc.setFontSize(10);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
-      
-      // Prepare table data
+      doc.text(`Downloaded on: ${downloadDate}`, 40, 60);
+
+      // Table Columns
       const tableColumn = ["#", "Customer", "Phone", "Date & Time", "Amount", "Status"];
+
+      // Table Rows
       const tableRows = appointments.map((item, index) => [
         index + 1,
-        item.userData?.name || 'N/A',
-        item.userData?.phone || 'N/A',
-        `${slotDateFormat(item.slotDate) || 'N/A'} ${item.slotTime || ''}`,
+        item.userData?.name || "N/A",
+        item.userData?.phone || "N/A",
+        `${slotDateFormat(item.slotDate)} ${item.slotTime}`,
         `${currency}${item.amount || 0}`,
-        item.cancelled ? 'Cancelled' : (item.isCompleted ? 'Completed' : 'Upcoming')
+        item.cancelled ? "Cancelled" : item.isCompleted ? "Completed" : "Upcoming"
       ]);
-      
-      // Add table to document
-      doc.autoTable({
+
+      // Add Table
+      autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
-        startY: 35,
-        theme: 'grid',
+        startY: 80,
+        theme: "grid",
         styles: { fontSize: 9 },
-        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        headStyles: { fillColor: [0, 102, 204], textColor: 255 },
         alternateRowStyles: { fillColor: [240, 240, 240] },
-        margin: { top: 35 }
       });
-      
-      // Save PDF
-      doc.save(`stylist-appointments-${new Date().getTime()}.pdf`);
-      
-      toast.success('PDF exported successfully!');
-    } catch (error) {
-      console.error("Error exporting to PDF:", error);
-      toast.error('Failed to export PDF');
+
+      // Save PDF with date filename
+      doc.save(`stylist-appointments-${getFileDate()}.pdf`);
+
+      toast.success("PDF exported successfully!");
+    } catch (err) {
+      console.error("PDF Export Error:", err);
+      toast.error("Failed to export PDF");
     }
   };
-  
+
   const exportToExcel = () => {
     try {
-      toast.info(`Generating Excel export...`);
-      
-      // Prepare data
+      toast.info("Generating Excel export...");
+
+      const downloadDate = getFullDateTime();
+
       const excelData = appointments.map((item, index) => ({
         "#": index + 1,
-        "Customer Name": item.userData?.name || 'N/A',
-        "Phone Number": item.userData?.phone || 'N/A',
-        "Date": slotDateFormat(item.slotDate) || 'N/A',
-        "Time": item.slotTime || 'N/A',
-        "Age": item.userData?.dob ? `${calculateAge(item.userData.dob)} yrs` : 'N/A',
+        "Customer Name": item.userData?.name || "N/A",
+        "Phone Number": item.userData?.phone || "N/A",
+        "Date": slotDateFormat(item.slotDate) || "N/A",
+        "Time": item.slotTime || "N/A",
+        "Age": item.userData?.dob ? `${calculateAge(item.userData.dob)} yrs` : "N/A",
         "Amount": `${currency}${item.amount || 0}`,
-        "Payment Status": item.payment ? 'Paid' : 'Pending',
-        "Appointment Status": item.cancelled ? 'Cancelled' : (item.isCompleted ? 'Completed' : 'Upcoming')
+        "Payment Status": item.payment ? "Paid" : "Pending",
+        "Appointment Status": item.cancelled ? "Cancelled" : item.isCompleted ? "Completed" : "Upcoming"
       }));
-      
-      // Create worksheet
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      
-      // Create workbook
+
+      // Add top row date
+      const worksheet = XLSX.utils.aoa_to_sheet([
+        [`Downloaded on: ${downloadDate}`],
+        [],
+        Object.keys(excelData[0]), // headers
+        ...excelData.map(Object.values)
+      ]);
+
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments");
-      
-      // Apply column widths
-      const columnWidths = [
-        { wch: 5 },  // #
-        { wch: 20 }, // Customer Name
-        { wch: 15 }, // Phone Number
-        { wch: 12 }, // Date
-        { wch: 10 }, // Time
-        { wch: 8 },  // Age
-        { wch: 10 }, // Amount
-        { wch: 15 }, // Payment Status
-        { wch: 15 }  // Appointment Status
+
+      // Column Widths
+      worksheet["!cols"] = [
+        { wch: 5 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 8 },
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 18 }
       ];
-      worksheet['!cols'] = columnWidths;
-      
-      // Save file
-      XLSX.writeFile(workbook, `stylist-appointments-${new Date().getTime()}.xlsx`);
-      
-      toast.success('Excel file exported successfully!');
+
+      // Save Excel
+      XLSX.writeFile(workbook, `stylist-appointments-${getFileDate()}.xlsx`);
+
+      toast.success("Excel file exported successfully!");
     } catch (error) {
-      console.error("Error exporting to Excel:", error);
-      toast.error('Failed to export Excel file');
+      console.error("Excel Export Error:", error);
+      toast.error("Failed to export Excel file");
     }
   };
+
+
+
   
   const handleExport = (format) => {
     if (format === 'PDF') {
@@ -892,7 +911,7 @@ const DoctorAppointments = () => {
                       className='text-xs text-gray-500 flex items-center gap-1 cursor-pointer hover:text-blue-600 transition-all group'
                       onClick={() => callPhoneNumber(item.userData?.phone)}
                     >
-                      <ExternalLink className='w-3 h-3 group-hover:text-blue-600' />
+                      <Phone className='w-3 h-3 group-hover:text-blue-600' />
                       {item.userData?.phone || 'No phone'}
                     </p>
                   </div>

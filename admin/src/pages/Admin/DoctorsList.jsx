@@ -3,10 +3,11 @@ import { AdminContext } from '../../context/AdminContext'
 import axios from 'axios';
 import {
   Scissors, Search, Filter, Plus, Phone, Mail, Award, ArrowUpDown, 
-  Pencil, Trash2, X, AlertTriangle, Check, Clock, UserCheck,
-  ChevronLeft, ChevronRight
+  Pencil, Trash2, X, AlertTriangle, Clock, UserCheck,
+  ChevronLeft, ChevronRight, Loader2
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 const StylistsList = () => {
   const {
@@ -14,7 +15,8 @@ const StylistsList = () => {
     changeAvailability,
     aToken,
     getAllDoctors: getAllStylists,
-    deleteDoctor: deleteStylist
+    deleteDoctor: deleteStylist,
+    backendUrl
   } = useContext(AdminContext)
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -46,7 +48,6 @@ const StylistsList = () => {
   // Function to fetch service categories
   const fetchServiceCategories = async () => {
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL
       const { data } = await axios.get(
         `${backendUrl}/api/admin/services`,
         { headers: { aToken } }
@@ -57,6 +58,7 @@ const StylistsList = () => {
       }
     } catch (error) {
       console.error("Error fetching service categories:", error)
+      toast.error("Failed to load service categories")
     }
   }
 
@@ -65,10 +67,8 @@ const StylistsList = () => {
     const specialtySets = new Set()
     
     stylists.forEach(stylist => {
-      // Always use specialty (not speciality) for consistency
       const specialtyArray = stylist.specialty || []
       
-      // Handle both string and array formats
       if (Array.isArray(specialtyArray)) {
         specialtyArray.forEach(s => specialtySets.add(s))
       } else if (typeof specialtyArray === 'string') {
@@ -79,7 +79,7 @@ const StylistsList = () => {
     return ['all', ...Array.from(specialtySets)]
   }
 
-  /* ===== GET SPECIALTIES FROM SERVICE CATEGORIES OR FALLBACK TO STYLIST DATA ===== */
+  /* ===== GET SPECIALTIES FROM SERVICE CATEGORIES OR FALLBACK ===== */
   const specialties = serviceCategories.length > 0 
     ? ['all', ...serviceCategories.map(category => category.name)] 
     : extractUniqueSpecialties()
@@ -93,7 +93,6 @@ const StylistsList = () => {
           s.toLowerCase().includes(searchTerm.toLowerCase())
         ))
 
-      // Check if stylist has the selected specialty
       const stylistSpecialties = Array.isArray(stylist.specialty) 
         ? stylist.specialty 
         : []
@@ -152,8 +151,10 @@ const StylistsList = () => {
       await deleteStylist(stylistToDelete._id)
       setShowDeleteModal(false)
       setStylistToDelete(null)
+      toast.success('Stylist deleted successfully')
     } catch (error) {
       console.error("Error deleting stylist:", error)
+      toast.error('Failed to delete stylist')
     } finally {
       setIsDeleting(false)
     }
@@ -206,7 +207,7 @@ const StylistsList = () => {
                 value={filterSpecialty}
                 onChange={e => {
                   setFilterSpecialty(e.target.value)
-                  setCurrentPage(1) // Reset to first page when filter changes
+                  setCurrentPage(1)
                 }}
                 className="appearance-none pl-9 pr-8 py-2.5 w-full border rounded-lg focus:ring-2 focus:ring-primary/30 focus:outline-none shadow-sm"
               >
@@ -270,7 +271,7 @@ const StylistsList = () => {
         {/* CONTENT */}
         {loading ? (
           <div className="flex flex-col justify-center items-center h-64">
-            <div className="animate-spin h-12 w-12 border-4 border-t-primary border-gray-200 rounded-full mb-4"></div>
+            <Loader2 className="animate-spin h-12 w-12 text-primary mb-4" />
             <p className="text-gray-500">Loading stylists...</p>
           </div>
         ) : filteredStylists.length === 0 ? (
@@ -402,7 +403,7 @@ const StylistsList = () => {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="p-2 rounded-md border bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 rounded-md border bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                   >
                     <ChevronLeft size={16} />
                   </button>
@@ -424,7 +425,7 @@ const StylistsList = () => {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="p-2 rounded-md border bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 rounded-md border bg-white text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                   >
                     <ChevronRight size={16} />
                   </button>
@@ -475,7 +476,7 @@ const StylistsList = () => {
               >
                 {isDeleting ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Deleting...</span>
                   </>
                 ) : (
@@ -493,7 +494,7 @@ const StylistsList = () => {
   )
 }
 
-// Adding missing ChevronDown and ChevronUp components
+// ChevronDown and ChevronUp components
 const ChevronDown = ({ size, className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="m6 9 6 6 6-6"/>
