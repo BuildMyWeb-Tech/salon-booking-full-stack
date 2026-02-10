@@ -13,7 +13,7 @@
     "axios": "^1.7.2",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.27.0",
-    "jspdf": "^4.0.0",
+    "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.562.0",
     "react": "^18.3.1",

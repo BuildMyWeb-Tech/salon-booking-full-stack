@@ -23,12 +23,14 @@ import {
   ChevronsRight,
   RefreshCcw,
   FileText,
+  Phone ,
   FileSpreadsheet
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { AnimatePresence, motion } from 'framer-motion'
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { toast } from "react-toastify";
 
 
 const AllAppointments = () => {
@@ -173,6 +175,16 @@ const AllAppointments = () => {
     setSelectedQuickFilter(null);
     setTodayFilter(false);
   }
+
+  const callPhoneNumber = (phone) => {
+  if (!phone || phone === "-") {
+    toast.error("Phone number not available");
+    return;
+  }
+
+  window.location.href = `tel:${phone}`;
+  toast.info(`Calling ${phone}...`);
+};
   
   // Open calendar modal
   const openCalendarModal = () => {
@@ -652,9 +664,17 @@ const AllAppointments = () => {
     }
   }
 
-  const formatDateForExport = (dateStr) => {
-    return slotDateFormat(dateStr) || dateStr;
-  }
+  const getFileDate = () => {
+    return new Date().toISOString().split("T")[0]; // 2026-02-10
+  };
+
+  const getFullDateTime = () => {
+    return new Date().toLocaleString();
+  };
+
+const formatDateForExport = (dateStr) => {
+  return slotDateFormat(dateStr) || dateStr;
+};
 
   const exportToPDF = () => {
     if (!sortedAppointments || sortedAppointments.length === 0) {
@@ -662,20 +682,18 @@ const AllAppointments = () => {
       return;
     }
 
-    const doc = new jsPDF("landscape"); // landscape = better table fit
+    const doc = new jsPDF("landscape");
+
+    const downloadDate = getFullDateTime();
 
     // Title
     doc.setFontSize(18);
     doc.text("Salon Appointments Report", 14, 20);
 
-    // Date
+    // Download Date inside PDF
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(
-      `Generated on: ${new Date().toLocaleString()}`,
-      14,
-      28
-    );
+    doc.text(`Downloaded on: ${downloadDate}`, 14, 28);
 
     const tableData = sortedAppointments.map((item, index) => [
       index + 1,
@@ -696,7 +714,6 @@ const AllAppointments = () => {
       `${currency}${item.amount || 0}`,
     ]);
 
-    // ⬅️ THIS is the key line most people miss
     autoTable(doc, {
       startY: 35,
       head: [
@@ -719,7 +736,7 @@ const AllAppointments = () => {
         cellPadding: 3,
       },
       headStyles: {
-        fillColor: [239, 68, 68], // red
+        fillColor: [239, 68, 68],
         textColor: 255,
         fontStyle: "bold",
       },
@@ -728,41 +745,72 @@ const AllAppointments = () => {
       },
     });
 
-    // FORCE DOWNLOAD
-    doc.save(`Salon_Appointments_${Date.now()}.pdf`);
+    // ✅ Date in file name
+    doc.save(`Salon_Appointments_${getFileDate()}.pdf`);
 
     setShowExportMenu(false);
   };
-
 
   const exportToExcel = () => {
     if (!sortedAppointments || sortedAppointments.length === 0) {
-      alert('No appointment data available');
+      alert("No appointment data available");
       return;
     }
 
-    const worksheet = XLSX.utils.json_to_sheet(
-      sortedAppointments.map((item, index) => ({
-        'S.No': index + 1,
-        'Customer Name': item.userData?.name || '',
-        'Phone Number': item.userData?.phone || '',
-        'Stylist Name': item.docData?.name || '',
-        'Service': item.service || item.docData?.specialty || item.docData?.speciality || '',
-        'Date': formatDateForExport(item.slotDate) || '',
-        'Time': item.slotTime || '',
-        'Status': item.cancelled ? 'Cancelled' : 
-                 item.isCompleted ? 'Completed' : 
-                 isAppointmentTimePast(item) ? 'Overdue' : 'Upcoming',
-        'Payment Status': item.payment ? 'Paid' : 'Unpaid',
-        'Amount': item.amount ? `${currency}${item.amount}` : '0'
-      }))
-    );
+    const downloadDate = getFullDateTime();
+
+    const excelData = sortedAppointments.map((item, index) => ({
+      "S.No": index + 1,
+      "Customer Name": item.userData?.name || "",
+      "Phone Number": item.userData?.phone || "",
+      "Stylist Name": item.docData?.name || "",
+      "Service": item.service || item.docData?.specialty || item.docData?.speciality || "",
+      "Date": formatDateForExport(item.slotDate) || "",
+      "Time": item.slotTime || "",
+      "Status":
+        item.cancelled
+          ? "Cancelled"
+          : item.isCompleted
+          ? "Completed"
+          : isAppointmentTimePast(item)
+          ? "Overdue"
+          : "Upcoming",
+      "Payment Status": item.payment ? "Paid" : "Unpaid",
+      "Amount": item.amount ? `${currency}${item.amount}` : "0",
+    }));
+
+    // Add download date row in Excel
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      [`Downloaded on: ${downloadDate}`],
+      [],
+      Object.keys(excelData[0]),
+      ...excelData.map(Object.values),
+    ]);
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Appointments');
-    XLSX.writeFile(workbook, 'Salon_Appointments.xlsx');
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments");
+
+    // Column width
+    worksheet["!cols"] = [
+      { wch: 5 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 18 },
+      { wch: 20 },
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 10 },
+    ];
+
+    // ✅ Date in filename
+    XLSX.writeFile(workbook, `Salon_Appointments_${getFileDate()}.xlsx`);
+
     setShowExportMenu(false);
   };
+
+
 
   // Modified to reload the entire page
   const manualRefresh = () => {
@@ -1015,9 +1063,10 @@ const AllAppointments = () => {
               <tbody className="bg-white divide-y divide-gray-100">
                 {paginatedAppointments.map((appointment, index) => (
                   <tr key={index} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200">
-                    {/* Customer Details */}
                     <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
+                        
+                        {/* Avatar */}
                         <div className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12">
                           {appointment.userData?.image ? (
                             <img 
@@ -1027,20 +1076,30 @@ const AllAppointments = () => {
                             />
                           ) : (
                             <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-md">
-                              {appointment.userData?.name?.charAt(0) || '?'}
+                              {appointment.userData?.name?.charAt(0) || "?"}
                             </div>
                           )}
                         </div>
+
+                        {/* Name + Phone */}
                         <div className="ml-3 sm:ml-4">
                           <div className="text-sm sm:text-base font-semibold text-gray-900">
                             {appointment.userData?.name || "N/A"}
                           </div>
-                          <div className="text-xs sm:text-sm text-gray-600 font-medium mt-0.5">
+
+                          {/* Clickable Phone */}
+                          <div
+                            onClick={() => callPhoneNumber(appointment.userData?.phone)}
+                            className="text-xs sm:text-sm text-gray-600 font-medium mt-0.5 flex items-center gap-1 cursor-pointer hover:text-blue-600 transition-all"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
                             {appointment.userData?.phone || "N/A"}
                           </div>
                         </div>
+
                       </div>
                     </td>
+
 
                     {/* Stylist & Service */}
                     <td className="px-3 sm:px-4 md:px-6 py-4">

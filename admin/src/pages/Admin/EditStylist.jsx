@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import { AdminContext } from '../../context/AdminContext';
 import { AppContext } from '../../context/AppContext';
-import { Pencil, User, Mail, Phone, Award, Hash, Instagram, Clock, FileText, ArrowLeft, Scissors } from 'lucide-react';
+import { Pencil, User, Mail, Phone, Award, Hash, Instagram, Clock, FileText, ArrowLeft, Scissors, Loader2, Upload } from 'lucide-react';
 
 const EditStylist = () => {
     const { id } = useParams();
@@ -28,28 +28,54 @@ const EditStylist = () => {
     const [certification, setCertification] = useState('');
     const [instagram, setInstagram] = useState('');
     const [workingHours, setWorkingHours] = useState('');
-    const [available, setAvailable] = useState(true); // Added availability state
+    const [available, setAvailable] = useState(true);
     
     // UI state
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [serviceCategories, setServiceCategories] = useState([]);
-    const [loadingCategories, setLoadingCategories] = useState(true);
+    const [categoriesLoaded, setCategoriesLoaded] = useState(false);
 
-    // Load stylist data
+    // Fetch service categories
+    const fetchServiceCategories = async () => {
+        try {
+            const { data } = await axios.get(`${backendUrl}/api/admin/services`, {
+                headers: { aToken }
+            });
+            
+            if (data.success && data.services.length > 0) {
+                setServiceCategories(data.services);
+            }
+        } catch (error) {
+            console.error("Failed to fetch service categories:", error);
+            // Don't show error toast here, just log it
+        } finally {
+            setCategoriesLoaded(true);
+        }
+    };
+
+    // Load stylist data and service categories in parallel
     useEffect(() => {
-        const fetchStylistData = async () => {
+        const fetchData = async () => {
+            if (!id || !aToken) {
+                setInitialLoading(false);
+                return;
+            }
+
             try {
-                setLoading(true);
-                const stylist = await getDoctorById(id);
+                // Fetch both in parallel
+                const [stylist] = await Promise.all([
+                    getDoctorById(id),
+                    fetchServiceCategories()
+                ]);
                 
                 if (stylist) {
-                    // Set form fields with consistent field names
+                    // Populate form fields
                     setName(stylist.name || '');
                     setEmail(stylist.email || '');
                     setPhone(stylist.phone || '');
                     setExperience(stylist.experience || '1 Year');
-                    setPrice(stylist.price?.toString() || '');
+                    setPrice(stylist.price?.toString() || stylist.fees?.toString() || '');
                     setAbout(stylist.about || '');
                     
                     // Handle specialty as array
@@ -63,44 +89,22 @@ const EditStylist = () => {
                     setInstagram(stylist.instagram || '');
                     setWorkingHours(stylist.workingHours || '');
                     setImagePreview(stylist.image || '');
-                    setAvailable(stylist.available || false);
+                    setAvailable(stylist.available !== undefined ? stylist.available : true);
                 } else {
                     toast.error('Could not find stylist data');
                     navigate('/stylist-list');
                 }
             } catch (error) {
-                console.error('Error loading stylist:', error);
+                console.error('Error loading data:', error);
                 toast.error('Failed to load stylist data');
                 navigate('/stylist-list');
             } finally {
-                setLoading(false);
+                setInitialLoading(false);
             }
         };
 
-        fetchServiceCategories();
-        if (id) {
-            fetchStylistData();
-        }
-    }, [id, getDoctorById, navigate]);
-
-    // Fetch service categories
-    const fetchServiceCategories = async () => {
-        setLoadingCategories(true);
-        try {
-            const { data } = await axios.get(`${backendUrl}/api/admin/services`, {
-                headers: { aToken }
-            });
-            
-            if (data.success && data.services.length > 0) {
-                setServiceCategories(data.services);
-            }
-        } catch (error) {
-            console.error("Failed to fetch service categories:", error);
-            toast.error("Failed to load service categories");
-        } finally {
-            setLoadingCategories(false);
-        }
-    };
+        fetchData();
+    }, [id, aToken]);
 
     // Handle dropdown clicks outside
     useEffect(() => {
@@ -142,9 +146,9 @@ const EditStylist = () => {
             formData.append('experience', experience);
             formData.append('price', price);
             formData.append('about', about);
-            formData.append('available', available); // Added availability
+            formData.append('available', available);
             
-            // Convert specialty array to string for backend processing
+            // Convert specialty array to JSON string
             formData.append('specialty', JSON.stringify(specialty));
             
             formData.append('certification', certification);
@@ -186,11 +190,53 @@ const EditStylist = () => {
             'Unisex Hairstylist'
         ];
 
-    if (loading) {
+    // Show skeleton loader during initial load
+    if (initialLoading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-                <p className="ml-3 text-gray-600">Loading stylist data...</p>
+            <div className='m-5 w-full'>
+                <div className='flex justify-between items-center mb-5'>
+                    <div className="flex items-center gap-3">
+                        <div className="w-5 h-5 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                </div>
+
+                <div className='bg-white px-6 py-8 sm:p-8 border rounded-lg shadow-sm w-full max-w-5xl'>
+                    {/* Profile Image Skeleton */}
+                    <div className='flex flex-col items-center justify-center mb-8 p-4'>
+                        <div className='w-32 h-32 rounded-full bg-gray-200 animate-pulse mb-3'></div>
+                        <div className='h-4 w-40 bg-gray-200 rounded animate-pulse mb-2'></div>
+                        <div className='h-3 w-32 bg-gray-200 rounded animate-pulse'></div>
+                    </div>
+
+                    {/* Form Fields Skeleton */}
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className='space-y-2'>
+                                <div className='h-4 w-24 bg-gray-200 rounded animate-pulse'></div>
+                                <div className='h-11 w-full bg-gray-200 rounded animate-pulse'></div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Specialty Dropdown Skeleton */}
+                    <div className='mt-6 space-y-2'>
+                        <div className='h-4 w-32 bg-gray-200 rounded animate-pulse'></div>
+                        <div className='h-11 w-full bg-gray-200 rounded animate-pulse'></div>
+                    </div>
+
+                    {/* About Textarea Skeleton */}
+                    <div className='mt-6 space-y-2'>
+                        <div className='h-4 w-36 bg-gray-200 rounded animate-pulse'></div>
+                        <div className='h-24 w-full bg-gray-200 rounded animate-pulse'></div>
+                    </div>
+
+                    {/* Buttons Skeleton */}
+                    <div className='mt-6 pt-4 border-t flex justify-end gap-3'>
+                        <div className='h-11 w-24 bg-gray-200 rounded-lg animate-pulse'></div>
+                        <div className='h-11 w-32 bg-gray-200 rounded-lg animate-pulse'></div>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -202,11 +248,14 @@ const EditStylist = () => {
                     <button 
                         type="button" 
                         onClick={() => navigate('/stylist-list')}
-                        className="text-gray-600 hover:text-primary"
+                        className="text-gray-600 hover:text-primary transition-colors"
                     >
                         <ArrowLeft size={20} />
                     </button>
-                    <h1 className='text-2xl font-bold text-gray-800'>Edit Stylist</h1>
+                    <h1 className='text-2xl font-bold text-gray-800 flex items-center gap-2'>
+                        <Scissors className="text-primary" size={24} />
+                        Edit Stylist
+                    </h1>
                 </div>
             </div>
 
@@ -229,7 +278,7 @@ const EditStylist = () => {
                             htmlFor="stylist-img" 
                             className='absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-colors'
                         >
-                            <Pencil size={16} />
+                            <Upload size={16} />
                         </label>
                         <input 
                             onChange={handleImageChange} 
@@ -307,8 +356,8 @@ const EditStylist = () => {
                                 <input 
                                     onChange={e => setPrice(e.target.value)} 
                                     value={price} 
-                                    className='border rounded-md pl-7 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
-                                                                        type="number" 
+                                    className='border rounded-md pl-7 pr-3 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
+                                    type="number" 
                                     placeholder='Starting price for services' 
                                     required 
                                 />
@@ -351,7 +400,7 @@ const EditStylist = () => {
                                 value={workingHours} 
                                 className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
                                 type="text" 
-                                placeholder='e.g. 10AM-7PM' 
+                                placeholder='e.g. Mon-Fri: 10AM-7PM' 
                             />
                             <p className="text-xs text-gray-500">
                                 Working hours will be displayed to clients when booking
@@ -407,7 +456,7 @@ const EditStylist = () => {
                     </div>
                 </div>
 
-                {/* Dropdown Multi-Select */}
+                {/* Dropdown Multi-Select for Specialties */}
                 <div ref={dropdownRef} className="mt-6 w-full relative">
                     <label className="text-sm font-medium text-gray-700 flex items-center mb-1">
                         <Scissors size={16} className="mr-1.5" />
@@ -423,11 +472,11 @@ const EditStylist = () => {
                                 focus-within:ring-2 focus-within:ring-primary/50
                                 bg-white"
                     >
-                        {loadingCategories && (
-                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
+                        {!categoriesLoaded && (
+                            <Loader2 className="w-4 h-4 animate-spin text-primary mr-2" />
                         )}
                         
-                        {specialty.length === 0 && !loadingCategories && (
+                        {specialty.length === 0 && categoriesLoaded && (
                             <span className="text-gray-400 text-sm">
                                 Select service specialties
                             </span>
@@ -457,9 +506,9 @@ const EditStylist = () => {
                     {/* Dropdown */}
                     {open && (
                         <div className="absolute z-30 mt-2 w-full bg-white border rounded-md shadow-lg max-h-56 overflow-y-auto">
-                            {loadingCategories ? (
+                            {!categoriesLoaded ? (
                                 <div className="flex justify-center items-center py-4">
-                                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
                                 </div>
                             ) : specialtyOptions.length > 0 ? (
                                 specialtyOptions.map(option => {
@@ -513,7 +562,7 @@ const EditStylist = () => {
                     </p>
                 </div>
 
-                <div className="mt-2 pt-4 border-t border-gray-100">
+                <div className="mt-6 pt-4 border-t border-gray-100">
                     <p className="text-xs text-gray-500 mb-4">
                         <span className="text-red-500 mr-1">*</span> Required fields
                     </p>
@@ -521,7 +570,8 @@ const EditStylist = () => {
                         <button
                             type="button"
                             onClick={() => navigate('/stylist-list')}
-                            className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                            disabled={isSubmitting}
+                            className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Cancel
                         </button>
@@ -532,11 +582,14 @@ const EditStylist = () => {
                         >
                             {isSubmitting ? (
                                 <>
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
                                     <span>Updating Stylist...</span>
                                 </>
                             ) : (
-                                <>Save Changes</>
+                                <>
+                                    <Pencil size={16} />
+                                    <span>Save Changes</span>
+                                </>
                             )}
                         </button>
                     </div>
