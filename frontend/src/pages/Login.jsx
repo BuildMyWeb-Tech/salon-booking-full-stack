@@ -1,3 +1,4 @@
+// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\frontend\src\pages\Login.jsx
 import React, { useContext, useEffect, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import axios from 'axios';
@@ -81,7 +82,7 @@ const Login = () => {
   return (
     <div className='min-h-[80vh] flex items-center justify-center'>
       <div className='w-full max-w-5xl flex flex-col md:flex-row shadow-xl rounded-xl overflow-hidden'>
-        
+
         {/* Left Image */}
         <div className='w-full md:w-1/2 hidden md:block'>
           <img src={RegisterImage} alt="Register" className='w-full h-full object-cover' />
@@ -117,7 +118,6 @@ const Login = () => {
                     onChange={handlePhoneChange}
                     className='border rounded w-full p-2'
                     type="tel"
-                    
                     maxLength={10}
                     pattern="[0-9]{10}"
                     required
@@ -157,6 +157,18 @@ const Login = () => {
               </button>
             </div>
 
+            {/* ✅ Forgot Password link — only shown on Login tab */}
+            {state === 'Login' && (
+              <div className='text-right -mt-2'>
+                <span
+                  className='text-sm text-primary cursor-pointer hover:underline'
+                  onClick={() => navigate('/forgot-password')}
+                >
+                  Forgot Password?
+                </span>
+              </div>
+            )}
+
             {/* Submit */}
             <button className='bg-primary text-white p-2 rounded'>
               {state === 'Sign Up' ? 'Create Account' : 'Login'}
@@ -168,8 +180,8 @@ const Login = () => {
               onClick={handleGoogleLogin}
               className='border p-2 rounded flex items-center justify-center gap-2'
             >
-              <img src={GoogleImage} className='w-6' />
-              Google Login
+              <img src={GoogleImage} className='w-6' alt="Google" />
+              Continue with Google
             </button>
 
             {/* Toggle */}
