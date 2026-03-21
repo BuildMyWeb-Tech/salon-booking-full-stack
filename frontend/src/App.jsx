@@ -17,6 +17,10 @@ import MyProfile from './pages/MyProfile'
 import Verify from './pages/Verify'
 import Services from './pages/Services'
 
+import ForgotPassword from './pages/ForgotPassword';
+import AuthCallback from './pages/AuthCallback';
+
+
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -81,6 +85,9 @@ const App = () => {
           <Route path="/my-appointments" element={<MyAppointments />} />
           <Route path="/my-profile" element={<MyProfile />} />
           <Route path="/verify" element={<Verify />} />
+          {/* // Inside <Routes>: */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
         </Routes>
       </main>
 

@@ -1,37 +1,37 @@
+// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\backend\routes\userRoute.js
 import express from 'express';
-import { 
-    loginUser, 
-    registerUser, 
-    getProfile, 
-    updateProfile, 
-    listAppointment, 
-    cancelAppointment, 
-    paymentRazorpay, 
-    verifyRazorpay, 
-    paymentStripe, 
-    verifyStripe 
+import {
+    loginUser,
+    registerUser,
+    getProfile,
+    updateProfile,
+    listAppointment,
+    cancelAppointment,
+    paymentRazorpay,
+    verifyRazorpay,
+    paymentStripe,
+    verifyStripe
 } from '../controllers/userController.js';
-
-import { 
-    getAvailableSlots, 
+import {
+    getAvailableSlots,
     getAvailableDates,
-    bookAppointment, 
-    rescheduleAppointment 
+    bookAppointment,
+    rescheduleAppointment
 } from '../controllers/bookingController.js';
-
 import { getAllServices } from '../controllers/serviceCategoryController.js';
-
+import {
+    sendPasswordResetOtp,
+    verifyPasswordResetOtp,
+    resetPassword
+} from '../controllers/userPasswordController.js'; // ← NEW
 import upload from '../middleware/multer.js';
 import authUser from '../middleware/authUser.js';
 
 const userRouter = express.Router();
 
 userRouter.post("/register", registerUser)
-
 userRouter.post("/login", loginUser)
-
 userRouter.get("/get-profile", authUser, getProfile)
-
 userRouter.post("/update-profile", upload.single('image'), authUser, updateProfile)
 
 // Booking/appointment routes
@@ -39,17 +39,22 @@ userRouter.post("/book-appointment", authUser, bookAppointment);
 userRouter.get("/appointments", authUser, listAppointment);
 userRouter.post("/cancel-appointment", authUser, cancelAppointment);
 
-// New slot management routes
-userRouter.get('/available-dates/:docId',authUser,getAvailableDates);
+// Slot management routes
+userRouter.get('/available-dates/:docId', authUser, getAvailableDates);
 userRouter.get("/available-slots", authUser, getAvailableSlots);
 userRouter.post("/reschedule-appointment", authUser, rescheduleAppointment);
-userRouter.post("/payment-razorpay", authUser, paymentRazorpay)
 
+userRouter.post("/payment-razorpay", authUser, paymentRazorpay)
 userRouter.post("/verifyRazorpay", authUser, verifyRazorpay)
 userRouter.post("/payment-stripe", authUser, paymentStripe)
 userRouter.post("/verifyStripe", authUser, verifyStripe)
 
 // Public route to get all service categories
 userRouter.get('/services', getAllServices);
+
+// ── Forgot Password / OTP routes (no auth needed) ──   ← NEW
+userRouter.post('/send-reset-otp', sendPasswordResetOtp);
+userRouter.post('/verify-reset-otp', verifyPasswordResetOtp);
+userRouter.post('/reset-password', resetPassword);
 
 export default userRouter;
