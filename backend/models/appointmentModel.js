@@ -1,134 +1,139 @@
 // backend/models/appointmentModel.js
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const appointmentSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
-      required: true
+      ref: 'user',
+      required: true,
     },
 
     doctorId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "doctor",
-      required: true
+      ref: 'doctor',
+      required: true,
     },
 
     slotDate: {
       type: String,
-      required: true
+      required: true,
     },
 
     slotTime: {
       type: String,
-      required: true
+      required: true,
     },
 
     slotDateTime: {
       type: Date,
       required: true,
-      index: true
+      index: true,
     },
 
     amount: {
       type: Number,
-      required: true
+      required: true,
     },
 
     // ✅ NEW: Track partial payment
     paidAmount: {
       type: Number,
-      default: 0
+      default: 0,
     },
 
     remainingAmount: {
       type: Number,
-      default: 0
+      default: 0,
     },
 
     // ✅ NEW: Payment percentage used
     paymentPercentage: {
       type: Number,
-      default: 100
+      default: 100,
     },
 
     // Backward compatibility - combined service names
     service: {
       type: String,
-      default: "Hair Styling"
+      default: 'Hair Styling',
     },
 
     // Array of services with individual prices
-    services: [{
-      name: {
-        type: String,
-        required: true
+    services: [
+      {
+        name: {
+          type: String,
+          required: true,
+        },
+        price: {
+          type: Number,
+          required: true,
+        },
       },
-      price: {
-        type: Number,
-        required: true
-      }
-    }],
+    ],
 
     payment: {
       type: Boolean,
-      default: false
+      default: false,
     },
 
     paymentMethod: {
       type: String,
       enum: ['razorpay', 'stripe', 'cash', null],
-      default: null
+      default: null,
     },
 
     cancelled: {
       type: Boolean,
-      default: false
+      default: false,
     },
 
     cancelledBy: {
       type: String,
-      enum: ['user', 'admin', null],
-      default: null
+      enum: ['user', 'admin', 'system', null],
+      default: null,
     },
 
     isCompleted: {
       type: Boolean,
-      default: false
+      default: false,
     },
 
     rescheduled: {
       type: Boolean,
-      default: false
+      default: false,
     },
+
+    // ✅ Prevents duplicate 24-hour reminder notifications from cron
+    reminderSent: { type: Boolean, default: false },
+
+    // ✅ Human-readable cancellation reason shown to the user
+    cancellationReason: { type: String, default: null },
 
     userData: {
       name: String,
       phone: String,
       email: String,
-      image: String
+      image: String,
     },
 
     docData: {
       name: String,
       image: String,
       speciality: String,
-      price: Number
-    }
+      price: Number,
+    },
   },
   { timestamps: true }
 );
 
 // Prevent double booking
-appointmentSchema.index(
-  { doctorId: 1, slotDateTime: 1 },
-  { unique: true }
-);
+appointmentSchema.index({ doctorId: 1, slotDateTime: 1 }, { unique: true });
 
 // Indexes for efficient querying
 appointmentSchema.index({ userId: 1, isCompleted: 1 });
 appointmentSchema.index({ doctorId: 1, isCompleted: 1 });
 appointmentSchema.index({ slotDateTime: 1 });
 
-export default mongoose.model("appointment", appointmentSchema);
+export default mongoose.model('appointment', appointmentSchema);

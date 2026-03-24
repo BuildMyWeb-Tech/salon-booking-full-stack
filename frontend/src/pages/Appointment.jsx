@@ -1,3 +1,4 @@
+// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\frontend\src\pages\Appointment.jsx
 import React, { useCallback, useContext, useEffect, useState, useMemo, memo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';

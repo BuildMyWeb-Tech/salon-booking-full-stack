@@ -1,60 +1,59 @@
 // C:\Users\Siddharathan\Desktop\salon-booking-full-stack\backend\routes\userRoute.js
 import express from 'express';
 import {
-    loginUser,
-    registerUser,
-    getProfile,
-    updateProfile,
-    listAppointment,
-    cancelAppointment,
-    paymentRazorpay,
-    verifyRazorpay,
-    paymentStripe,
-    verifyStripe
+  loginUser,
+  registerUser,
+  getProfile,
+  updateProfile,
+  listAppointment,
+  paymentRazorpay,
+  verifyRazorpay,
+  paymentStripe,
+  verifyStripe,
+  cancelAppointment,
+  bookAppointment,
+  getAvailableDates,
+  getAvailableSlots,
+  getServices,
+  getNotifications,
+  markNotificationsRead,
 } from '../controllers/userController.js';
-import {
-    getAvailableSlots,
-    getAvailableDates,
-    bookAppointment,
-    rescheduleAppointment
-} from '../controllers/bookingController.js';
-import { getAllServices } from '../controllers/serviceCategoryController.js';
-import {
-    sendPasswordResetOtp,
-    verifyPasswordResetOtp,
-    resetPassword
-} from '../controllers/userPasswordController.js'; // ← NEW
-import upload from '../middleware/multer.js';
+
 import authUser from '../middleware/authUser.js';
+import upload from '../middleware/multer.js';
 
 const userRouter = express.Router();
 
-userRouter.post("/register", registerUser)
-userRouter.post("/login", loginUser)
-userRouter.get("/get-profile", authUser, getProfile)
-userRouter.post("/update-profile", upload.single('image'), authUser, updateProfile)
+/* ===================== AUTH ===================== */
+userRouter.post('/register', registerUser);
+userRouter.post('/login', loginUser);
 
-// Booking/appointment routes
-userRouter.post("/book-appointment", authUser, bookAppointment);
-userRouter.get("/appointments", authUser, listAppointment);
-userRouter.post("/cancel-appointment", authUser, cancelAppointment);
+/* ===================== PROFILE ===================== */
+userRouter.get('/get-profile', authUser, getProfile);
+userRouter.post('/update-profile', authUser, upload.single('image'), updateProfile);
 
-// Slot management routes
+/* ===================== APPOINTMENTS ===================== */
+userRouter.post('/book-appointment', authUser, bookAppointment);
+userRouter.get('/appointments', authUser, listAppointment);
+userRouter.post('/cancel-appointment', authUser, cancelAppointment);
+
+/* ===================== SLOTS ===================== */
 userRouter.get('/available-dates/:docId', authUser, getAvailableDates);
-userRouter.get("/available-slots", authUser, getAvailableSlots);
-userRouter.post("/reschedule-appointment", authUser, rescheduleAppointment);
+userRouter.get('/available-slots', authUser, getAvailableSlots);
 
-userRouter.post("/payment-razorpay", authUser, paymentRazorpay)
-userRouter.post("/verifyRazorpay", authUser, verifyRazorpay)
-userRouter.post("/payment-stripe", authUser, paymentStripe)
-userRouter.post("/verifyStripe", authUser, verifyStripe)
+/* ===================== SERVICES ===================== */
+userRouter.get('/services', getServices);
 
-// Public route to get all service categories
-userRouter.get('/services', getAllServices);
+/* ===================== NOTIFICATIONS ✅ NEW ===================== */
+// GET  /api/user/notifications        — fetch all notifications for logged-in user
+userRouter.get('/notifications', authUser, getNotifications);
+// POST /api/user/notifications/mark-read  — mark all (or specific) as read
+userRouter.post('/notifications/mark-read', authUser, markNotificationsRead);
 
-// ── Forgot Password / OTP routes (no auth needed) ──   ← NEW
-userRouter.post('/send-reset-otp', sendPasswordResetOtp);
-userRouter.post('/verify-reset-otp', verifyPasswordResetOtp);
-userRouter.post('/reset-password', resetPassword);
+/* ===================== PAYMENTS ===================== */
+userRouter.post('/payment-razorpay', authUser, paymentRazorpay);
+userRouter.post('/verify-razorpay', authUser, verifyRazorpay);
+userRouter.post('/payment-stripe', authUser, paymentStripe);
+userRouter.post('/verify-stripe', authUser, verifyStripe);
 
 export default userRouter;

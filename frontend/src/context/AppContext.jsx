@@ -1,81 +1,103 @@
-import { createContext, useEffect, useState } from "react";
-import { toast } from "react-toastify";
-import axios from 'axios'
+// frontend/src/context/AppContext.jsx
+// ✅ FIXED: loadUserProfileData now uses Authorization Bearer header format
+// This matches standard JWT middleware (authUser.js checks req.headers.token OR Bearer)
+// Also accepts token as parameter so AuthCallback can call it immediately after Google login
 
-export const AppContext = createContext()
+import { createContext, useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
+import axios from 'axios';
+
+export const AppContext = createContext();
 
 const AppContextProvider = (props) => {
+  const currencySymbol = '₹';
 
-    const currencySymbol = '₹'
-    const backendUrl = import.meta.env.VITE_BACKEND_URL
+  // ✅ Read backend URL from env — never hardcode localhost
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-    const [doctors, setDoctors] = useState([])
-    const [token, setToken] = useState(localStorage.getItem('token') ? localStorage.getItem('token') : '')
-    const [userData, setUserData] = useState(false)
+  const [doctors, setDoctors] = useState([]);
+  const [token, setToken] = useState(localStorage.getItem('token') || '');
+  const [userData, setUserData] = useState(false);
 
-    // Getting Doctors using API
-    const getDoctosData = async () => {
-
-        try {
-
-            const { data } = await axios.get(backendUrl + '/api/doctor/list')
-            if (data.success) {
-                setDoctors(data.doctors)
-            } else {
-                toast.error(data.message)
-            }
-
-        } catch (error) {
-            console.log(error)
-            toast.error(error.message)
-        }
-
+  // ── Get all doctors ─────────────────────────────────────────────────────
+  const getDoctosData = async () => {
+    try {
+      const { data } = await axios.get(backendUrl + '/api/doctor/list');
+      if (data.success) {
+        setDoctors(data.doctors);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error('getDoctosData error:', error);
+      toast.error(error.message);
     }
+  };
 
-    // Getting User Profile using API
-    const loadUserProfileData = async () => {
+  // ── Load user profile ────────────────────────────────────────────────────
+  // ✅ FIXED: Accepts optional tokenParam so AuthCallback.jsx can call it
+  //           immediately after Google login without waiting for state update
+  const loadUserProfileData = async (tokenParam) => {
+    const activeToken = tokenParam || token;
 
-        try {
+    if (!activeToken) return;
 
-            const { data } = await axios.get(backendUrl + '/api/user/get-profile', { headers: { token } })
+    try {
+      const { data } = await axios.get(backendUrl + '/api/user/get-profile', {
+        headers: {
+          // ✅ Send token both ways — works with old middleware (token header)
+          // and any future middleware that uses Authorization Bearer
+          token: activeToken,
+          Authorization: `Bearer ${activeToken}`,
+        },
+      });
 
-            if (data.success) {
-                setUserData(data.userData)
-            } else {
-                toast.error(data.message)
-            }
-
-        } catch (error) {
-            console.log(error)
-            toast.error(error.message)
-        }
-
+      if (data.success) {
+        setUserData(data.userData);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error('loadUserProfileData error:', error);
+      // ✅ If token is invalid/expired, clear it so user is prompted to login
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        setToken('');
+        setUserData(false);
+        toast.error('Session expired. Please login again.');
+      } else {
+        toast.error(error.message);
+      }
     }
+  };
 
-    useEffect(() => {
-        getDoctosData()
-    }, [])
+  // ── On mount: load doctors ───────────────────────────────────────────────
+  useEffect(() => {
+    getDoctosData();
+  }, []);
 
-    useEffect(() => {
-        if (token) {
-            loadUserProfileData()
-        }
-    }, [token])
-
-    const value = {
-        doctors, getDoctosData,
-        currencySymbol,
-        backendUrl,
-        token, setToken,
-        userData, setUserData, loadUserProfileData
+  // ── Whenever token changes: load user profile ────────────────────────────
+  useEffect(() => {
+    if (token) {
+      loadUserProfileData(token);
+    } else {
+      setUserData(false);
     }
+  }, [token]);
 
-    return (
-        <AppContext.Provider value={value}>
-            {props.children}
-        </AppContext.Provider>
-    )
+  const value = {
+    doctors,
+    getDoctosData,
+    currencySymbol,
+    backendUrl,
+    token,
+    setToken,
+    userData,
+    setUserData,
+    loadUserProfileData,
+  };
 
-}
+  return <AppContext.Provider value={value}>{props.children}</AppContext.Provider>;
+};
 
-export default AppContextProvider
+export default AppContextProvider;

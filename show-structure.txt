@@ -2,127 +2,335 @@ C:\Users\ajaik\Desktop\salon-booking-full-stack>node show-structure.js
 📁 .git
 📄 .gitattributes
 📄 .gitignore
+
 📁 admin
-   📄 .env
-   📄 .eslintrc.cjs
-   📄 .gitignore
-   📄 index.html
-   📄 package-lock.json
-   📄 package.json
-   📄 postcss.config.js
-   📁 public
-      📄 favicon.svg
-      📄 vite.svg
-   📄 README.md
-   📁 src
-      📄 App.jsx
-      📁 assets
-      📁 components
-         📄 Navbar.jsx
-         📄 Sidebar.jsx
-         📄 StylistPanel.jsx
-      📁 context
-         📄 AdminContext.jsx
-         📄 AppContext.jsx
-         📄 DoctorContext.jsx
-         📄 SlotManagementContext.jsx
-      📄 index.css
-      📄 main.jsx
-      📁 pages
-         📁 Admin
-            📄 AddDoctor.jsx
-            📄 AllAppointments.jsx
-            📄 Dashboard.jsx
-            📄 DoctorsList.jsx
-            📄 EditStylist.jsx
-            📄 MyProfile.jsx
-            📄 ServicesCategory.jsx
-            📄 SlotManagement copy.jsx
-            📄 SlotManagement.jsx
-         📁 Doctor
-            📄 StylistAppointments.jsx
-            📄 DoctorDashboard.jsx
-            📄 DoctorProfile.jsx
-         📄 Login.jsx
-   📄 tailwind.config.js
-   📄 vercel.json
-   📄 vite.config.js
-📁 backend
-   📄 .env
-   📄 .gitignore
-   📁 config
-      📄 cloudinary.js
-      📄 mongodb.js
-   📁 controllers
-      📄 adminController.js
-      📄 bookingController.js
-      📄 doctorController.js
-      📄 serviceCategoryController.js
-      📄 userController original.js
-      📄 userController.js
-   📁 middleware
-      📄 authAdmin.js
-      📄 authDoctor.js
-      📄 authUser.js
-      📄 multer.js
-   📁 models
-      📄 appointmentModel.js
-      📄 BlockedDate.js
-      📄 Booking.js
-      📄 doctorModel.js
-      📄 RecurringHoliday.js
-      📄 ServiceCategory.js
-      📄 SlotSettings.js
-      📄 SpecialWorkingDay.js
-      📄 userModel.js
-   📄 package-lock.json
-   📄 package.json
-   📁 routes
-      📄 adminRoute.js
-      📄 doctorRoute.js
-      📄 userRoute.js
-   📄 server.js
-   📄 show-structure.txt
-   📁 utils
-      📄 slotUtils.js
-📁 frontend
-   📄 .env
-   📄 .eslintrc.cjs
-   📄 .gitignore
-   📄 index.html
-   📄 package-lock.json
-   📄 package.json
-   📄 postcss.config.js
-   📁 public
-   📁 src
-      📄 App.jsx
-      📁 assets
-      📁 components
-         📄 Banner.jsx
-         📄 Footer.jsx
-         📄 Header.jsx
-         📄 Navbar.jsx
-         📄 RelatedDoctors.jsx
-         📄 ScrollToTop.jsx
-         📄 SpecialityMenu.jsx
-         📄 TopDoctors.jsx
-      📁 context
-         📄 AppContext.jsx
-      📄 index.css
-      📄 main.jsx
-      📁 pages
-         📄 About.jsx
-         📄 Appointment.jsx
-         📄 before dynamic slot Appointment .jsx
-         📄 Contact.jsx
-         📄 Doctors.jsx
-         📄 Home.jsx
-         📄 Login.jsx
-         📄 MyAppointments.jsx
+📄 .env
+📄 .eslintrc.cjs
+📄 .gitignore
+📄 index.html
+📄 package-lock.json
+📄 package.json
+📄 postcss.config.js
+📁 public
+   📄 favicon.svg
+   📄 vite.svg
+📄 README.md
+📄 show-structure.js
+📁 src
+   📄 App.jsx
+   📁 assets
+      📄 1.png
+      📄 add_icon.svg
+      📄 admin_logo.svg
+      📄 appointments_icon.svg
+      📄 appointment_icon.svg
+      📄 assets.js
+      📄 cancel_icon.svg
+      📄 doctor_icon.svg
+      📄 earning_icon.svg
+      📄 home_icon.svg
+      📄 image.jpeg
+      📄 list_icon.svg
+      📄 patients_icon.svg
+      📄 patient_icon.svg
+      📄 people_icon.svg
+      📄 scissors-solid.svg
+      📄 specializations_icon.jpg
+      📄 specializations_icon.svg
+      📄 tick_icon.svg
+      📄 upload_area.svg
+   📁 components
+      📄 Navbar.jsx
+      📄 Sidebar.jsx
+      📄 StylistPanel.jsx
+   📁 context
+      📄 AdminContext.jsx
+      📄 AppContext.jsx
+      📄 DoctorContext.jsx
+      📄 SlotManagementContext.jsx
+      📄 StylistContext.jsx
+   📄 index.css
+   📄 main.jsx
+   📁 pages
+      📁 Admin
+         📄 AddDoctor.jsx
+         📄 AllAppointments.jsx
+         📄 backup_AllAppoinment.jsx
+         📄 Dashboard.jsx
+         📄 DoctorsList.jsx
+         📄 EditStylist.jsx
+         📄 Main-AllAppointments.jsx
          📄 MyProfile.jsx
-         📄 Services.jsx
-         📄 Verify.jsx
-   📄 tailwind.config.js
-   📄 vercel.json
-   📄 vite.config.js
+         📄 ServicesCategory.jsx
+         📄 SlotManagement copy.jsx
+         📄 SlotManagement.jsx
+      📁 Doctor
+         📄 DoctorAppointments.jsx
+         📄 DoctorDashboard.jsx
+         📄 DoctorEarnings.jsx
+         📄 DoctorProfile.jsx
+      📄 Login.jsx
+📄 tailwind.config.js
+📄 vercel.json
+📄 vite.config.js
+
+
+📁 backend
+📄 .env
+📄 .gitignore
+📁 config
+   📄 cloudinary.js
+   📄 mongodb.js
+   📄 passport.js
+📁 controllers
+   📄 adminController.js
+   📄 authController.js
+   📄 Before slot booked changing bookingController.js
+   📄 Before slot booked changing userController.js
+   📄 bookingController.js
+   📄 doctorController.js
+   📄 serviceCategoryController.js
+   📄 userController.js
+   📄 userPasswordController.js
+📄 demo.js
+📁 middleware
+   📄 authAdmin.js
+   📄 authDoctor.js
+   📄 authUser.js
+   📄 multer.js
+📁 models
+   📄 AdminNotification.js
+   📄 appointmentModel.js
+   📄 BlockedDate.js
+   📄 Booking.js
+   📄 doctorModel.js
+   📄 RecurringHoliday.js
+   📄 ServiceCategory.js
+   📄 SlotSettings.js
+   📄 SpecialWorkingDay.js
+   📄 userModel.js
+📄 package-lock.json
+📄 package.json
+📁 routes
+   📄 adminRoute.js
+   📄 authRoutes.js
+   📄 doctorRoute.js
+   📄 userRoute.js
+📄 server.js
+📄 show-structure.js
+📄 show-structure.txt
+📁 utils
+   📄 appointmentCron.js
+   📄 Local Work Prod Not Have Block Special Code slotUtils copy.js
+   📄 sendOtp.js
+   📄 slotUtils.js
+
+
+
+📁 frontend
+📄 .env
+📄 .eslintrc.cjs
+📄 .gitignore
+📁 android
+   📁 app
+      📁 build
+         📄 .npmkeep
+      📁 src
+         📁 androidTest
+            📁 java
+               📁 com
+                  📁 getcapacitor
+                     📁 myapp
+         📁 main
+            📁 assets
+               📁 public
+                  📁 assets
+            📁 java
+               📁 com
+                  📁 uniquesalon
+                     📁 app
+            📁 res
+               📁 drawable
+               📁 drawable-land-hdpi
+               📁 drawable-land-mdpi
+               📁 drawable-land-xhdpi
+               📁 drawable-land-xxhdpi
+               📁 drawable-land-xxxhdpi
+               📁 drawable-port-hdpi
+               📁 drawable-port-mdpi
+               📁 drawable-port-xhdpi
+               📁 drawable-port-xxhdpi
+               📁 drawable-port-xxxhdpi
+               📁 drawable-v24
+               📁 layout
+               📁 mipmap-anydpi-v26
+               📁 mipmap-hdpi
+               📁 mipmap-mdpi
+               📁 mipmap-xhdpi
+               📁 mipmap-xxhdpi
+               📁 mipmap-xxxhdpi
+               📁 values
+               📁 xml
+         📁 test
+            📁 java
+               📁 com
+                  📁 getcapacitor
+                     📁 myapp
+   📁 capacitor-cordova-android-plugins
+      📁 src
+         📁 main
+            📁 java
+            📁 res
+   📁 gradle
+      📁 wrapper
+📄 backup status dynmic MyAppointments.jsx
+📄 demo.jsx
+📁 dist
+   📁 assets
+      📄 about_image-6lHCM0SA.png
+      📄 appointment_img-DzbZlMsi.png
+      📄 banner_img-BLLjJE-E.png
+      📄 beard-grooming-BNCMfKPh.jpeg
+      📄 bridal_hairstylist-CssZmVVW.jpeg
+      📄 contact_image-IJu_19v_.png
+      📄 doc1-DpAa9vNj.png
+      📄 doc10-CAm4njsj.png
+      📄 doc11-Dhd97DEN.png
+      📄 doc12-DnN3-E9a.png
+      📄 doc13-iluopkgH.png
+      📄 doc14-DFAA3xQf.png
+      📄 doc15-wRQogShG.png
+      📄 doc2-Y_tw-_wb.png
+      📄 doc3-D46sSx07.png
+      📄 doc4-BJ7TwJ-q.png
+      📄 doc5-DMyOgDQL.png
+      📄 doc6-BBgIGkd-.png
+      📄 doc7-Jj6FmILj.png
+      📄 doc8-IA4IHo5Z.png
+      📄 doc9-DFlzAwfe.png
+      📄 Gastroenterologist-CTgzRFeY.svg
+      📄 google-icon-BLE1e77o.png
+      📄 group_profiles-BCL6AVF5.png
+      📄 Gynecologist-Av1zZu4d.svg
+      📄 hair-coloring_specialist-CfOZrXWu.jpeg
+      📄 hair-styling-Dp2VeJ_L.jpeg
+      📄 hair_treatment_specialist-B1QuFYKE.jpeg
+      📄 hero_img-XposRj94.png
+      📄 image-E3p1CqDM.jpeg
+      📄 index-BgB5PLQU.css
+      📄 index-DRsv1FY7.js
+      📄 logo-BMnVSKcq.svg
+      📄 Neurologist-CuaLxNpX.svg
+      📄 Pediatricians-C6nmx5n8.svg
+      📄 profile_pic-D58ifz71.png
+      📄 razorpay_logo-C6aP63br.png
+      📄 unisex_hairstylist-CRdtk43t.jpeg
+   📄 favicon.svg
+   📄 icon-192.png
+   📄 icon-512.png
+   📄 index.html
+   📄 manifest.json
+   📄 vite.svg
+📄 index.html
+📄 package-lock.json
+📄 package.json
+📄 postcss.config.js
+📁 public
+   📄 favicon.svg
+   📄 icon-192.png
+   📄 icon-512.png
+   📄 manifest.json
+   📄 vite.svg
+📄 README.md
+📄 show-structure.js
+📁 src
+   📄 App.jsx
+   📁 assets
+      📄 1.png
+      📄 1.svg
+      📄 2.png
+      📄 about.png
+      📄 about_image.png
+      📄 appointment_img.png
+      📄 arrow_icon.svg
+      📄 assets.js
+      📄 banner_img.png
+      📄 beard-grooming.jpeg
+      📄 bridal_hairstylist.jpeg
+      📄 chats_icon.svg
+      📄 contact_image.png
+      📄 cross_icon.png
+      📄 Dermatologist.svg
+      📄 doc1.png
+      📄 doc10.png
+      📄 doc11.png
+      📄 doc12.png
+      📄 doc13.png
+      📄 doc14.png
+      📄 doc15.png
+      📄 doc2.png
+      📄 doc3.png
+      📄 doc4.png
+      📄 doc5.png
+      📄 doc6.png
+      📄 doc7.png
+      📄 doc8.png
+      📄 doc9.png
+      📄 dropdown_icon.svg
+      📄 Gastroenterologist.svg
+      📄 General_physician.svg
+      📄 google-icon.png
+      📄 group_profiles.png
+      📄 Gynecologist.svg
+      📄 hair-coloring_specialist.jpeg
+      📄 hair-styling.jpeg
+      📄 hair_treatment_specialist.jpeg
+      📄 header.png
+      📄 hero_img.png
+      📄 image.jpeg
+      📄 img.png
+      📄 info_icon.svg
+      📄 logo.svg
+      📄 logo1.svg
+      📄 menu_icon.svg
+      📄 Neurologist.svg
+      📄 Pediatricians.svg
+      📄 profile_pic.png
+      📄 razorpay_logo.png
+      📄 stripe_logo.png
+      📄 unisex_hairstylist.jpeg
+      📄 upload_area.png
+      📄 upload_icon.png
+      📄 verified_icon.svg
+   📁 components
+      📄 Banner.jsx
+      📄 Footer.jsx
+      📄 Header.jsx
+      📄 Navbar.jsx
+      📄 RelatedDoctors.jsx
+      📄 ScrollToTop.jsx
+      📄 SpecialityMenu.jsx
+      📄 TopDoctors.jsx
+   📁 context
+      📄 AppContext.jsx
+   📄 index.css
+   📄 main.jsx
+   📁 pages
+      📄 About.jsx
+      📄 Appointment.jsx
+      📄 AuthCallback.jsx
+      📄 before multiple change MyAppointments.jsx
+      📄 Contact.jsx
+      📄 Doctors.jsx
+      📄 ForgotPassword.jsx
+      📄 Home.jsx
+      📄 Local Work Prod Not Work Appointment copy.jsx
+      📄 Login.jsx
+      📄 MyAppointments.jsx
+      📄 MyProfile.jsx
+      📄 Services.jsx
+      📄 Verify.jsx
+📄 tailwind.config.js
+📄 vercel.json
+📄 vite.config.js
 
