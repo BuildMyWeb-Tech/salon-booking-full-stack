@@ -1,39 +1,47 @@
-// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\backend\routes\authRoutes.js
-import express from "express";
-import passport from "../config/passport.js";
-import jwt from "jsonwebtoken";
-import { sendOTP, verifyOTP, resetPassword } from "../controllers/authController.js";
+// backend/routes/authRoutes.js
+import express from 'express';
+import passport from '../config/passport.js';
+import { googleAuthCallback } from '../controllers/authController.js';
+import {
+  sendPasswordResetOtp,
+  verifyPasswordResetOtp,
+  resetPassword,
+} from '../controllers/userPasswordController.js';
 
 const router = express.Router();
 
-// ---- Forgot Password Routes ----
-router.post("/forgot-password/send-otp", sendOTP);
-router.post("/forgot-password/verify-otp", verifyOTP);
-router.post("/forgot-password/reset-password", resetPassword);
+// ────────────────────────────────────────────
+// Forgot Password Routes (Twilio OTP flow)
+// ────────────────────────────────────────────
+// POST /api/auth/forgot-password/send-otp
+router.post('/forgot-password/send-otp', sendPasswordResetOtp);
 
-// ---- Google OAuth Routes ----
+// POST /api/auth/forgot-password/verify-otp
+router.post('/forgot-password/verify-otp', verifyPasswordResetOtp);
+
+// POST /api/auth/forgot-password/reset-password
+router.post('/forgot-password/reset-password', resetPassword);
+
+// ────────────────────────────────────────────
+// Google OAuth Routes
+// ────────────────────────────────────────────
+// GET /api/auth/google  → redirect to Google consent screen
 router.get(
-    "/google",
-    passport.authenticate("google", {
-        scope: ["profile", "email"],
-        session: false,
-    })
+  '/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    session: false,
+  })
 );
 
+// GET /api/auth/google/callback  → Google redirects here after login
 router.get(
-    "/google/callback",
-    passport.authenticate("google", {
-        session: false,
-        failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed`,
-    }),
-    (req, res) => {
-        // Generate JWT for the user
-        const token = jwt.sign({ userId: req.user._id, name: req.user.name },
-            process.env.JWT_SECRET, { expiresIn: "7d" }
-        );
-        // Redirect to frontend with token
-        res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
-    }
+  '/google/callback',
+  passport.authenticate('google', {
+    session: false,
+    failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed`,
+  }),
+  googleAuthCallback // ✅ FIXED: uses dedicated handler in authController.js
 );
 
 export default router;

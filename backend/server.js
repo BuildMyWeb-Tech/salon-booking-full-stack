@@ -1,118 +1,125 @@
-import express from "express";
-import cors from "cors";
-import "dotenv/config";
-import swaggerJsdoc from "swagger-jsdoc";
-import swaggerUi from "swagger-ui-express";
+// backend/server.js
+import express from 'express';
+import cors from 'cors';
+import 'dotenv/config';
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
 
-import connectDB from "./config/mongodb.js";
-import connectCloudinary from "./config/cloudinary.js";
+import connectDB from './config/mongodb.js';
+import connectCloudinary from './config/cloudinary.js';
 
-import userRouter from "./routes/userRoute.js";
-import doctorRouter from "./routes/doctorRoute.js";
-import adminRouter from "./routes/adminRoute.js";
+import userRouter from './routes/userRoute.js';
+import doctorRouter from './routes/doctorRoute.js';
+import adminRouter from './routes/adminRoute.js';
 
-// ✅ FIXED: Changed from require() to import
-import passport from "./config/passport.js";
-import authRouter from "./routes/authRoutes.js";
+import passport from './config/passport.js';
+import authRouter from './routes/authRoutes.js';
 
 import {
-    startAppointmentCompletionCron,
-    completePastAppointments,
-} from "./utils/appointmentCron.js";
+  startAppointmentCompletionCron,
+  completePastAppointments,
+} from './utils/appointmentCron.js';
 
-// 🔥 APP CONFIG
+// ── APP CONFIG ──────────────────────────────────────────────────────────────
 const app = express();
 const port = process.env.PORT || 4000;
 
-// 🔥 CONNECT DATABASE
-connectDB().then(async() => {
-    console.log("✅ Database connected successfully");
-    await completePastAppointments();
-    startAppointmentCompletionCron();
+// ── DATABASE ────────────────────────────────────────────────────────────────
+connectDB().then(async () => {
+  console.log('✅ Database connected successfully');
+  await completePastAppointments();
+  startAppointmentCompletionCron();
 });
 
-// 🔥 CONNECT CLOUDINARY
+// ── CLOUDINARY ──────────────────────────────────────────────────────────────
 connectCloudinary();
 
-// 🔥 DEBUG ENV (REMOVE AFTER TESTING)
-console.log("TWILIO SID:", process.env.TWILIO_ACCOUNT_SID);
-console.log("TWILIO TOKEN:", process.env.TWILIO_AUTH_TOKEN ? "Loaded ✅" : "Missing ❌");
-console.log("TWILIO PHONE:", process.env.TWILIO_PHONE_NUMBER);
+// ── STARTUP ENV CHECK (safe — no secrets printed) ───────────────────────────
+console.log('TWILIO SID present    :', !!process.env.TWILIO_ACCOUNT_SID);
+console.log('TWILIO TOKEN present  :', !!process.env.TWILIO_AUTH_TOKEN);
+console.log('TWILIO PHONE present  :', !!process.env.TWILIO_PHONE_NUMBER);
+console.log('GOOGLE CLIENT ID      :', !!process.env.GOOGLE_CLIENT_ID);
+console.log('GOOGLE CALLBACK URL   :', process.env.GOOGLE_CALLBACK_URL);
+console.log('CLIENT URL            :', process.env.CLIENT_URL);
 
-// 🔥 SWAGGER SETUP
+// ── SWAGGER ──────────────────────────────────────────────────────────────────
 const swaggerOptions = {
-    definition: {
-        openapi: "3.0.0",
-        info: {
-            title: "Doctor Booking API",
-            version: "1.0.0",
-            description: "API documentation for Doctor Booking Application",
-        },
-        servers: [{
-            url: process.env.NODE_ENV === "production" ?
-                process.env.BACKEND_URL :
-                `http://localhost:${port}`,
-        }, ],
-        components: {
-            securitySchemes: {
-                bearerAuth: {
-                    type: "http",
-                    scheme: "bearer",
-                    bearerFormat: "JWT",
-                },
-            },
-        },
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Salon Booking API',
+      version: '1.0.0',
+      description: 'API documentation for Salon Booking Application',
     },
-    apis: ["./routes/*.js", "./server.js"],
+    servers: [
+      {
+        url:
+          process.env.NODE_ENV === 'production'
+            ? process.env.BACKEND_URL
+            : `http://localhost:${port}`,
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+  },
+  apis: ['./routes/*.js', './server.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// 🔥 MIDDLEWARES
+// ── MIDDLEWARES ──────────────────────────────────────────────────────────────
 app.use(express.json());
 
+// ✅ FIXED: Use env var for allowed origins — easy to extend for new deployments
 const allowedOrigins = [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "https://salon-booking-frontend-nu.vercel.app",
-    "https://salon-booking-admin.vercel.app",
-];
+  'http://localhost:5173',
+  'http://localhost:5174',
+  process.env.CLIENT_URL, // frontend (prod)
+  process.env.ADMIN_CLIENT_URL, // admin panel (prod) — add to .env
+].filter(Boolean); // removes undefined if env vars not set
 
 app.use(
-    cors({
-        origin: function(origin, callback) {
-            if (!origin) return callback(null, true);
-            if (allowedOrigins.indexOf(origin) === -1) {
-                return callback(new Error("CORS blocked ❌"), false);
-            }
-            return callback(null, true);
-        },
-        credentials: true,
-    })
+  cors({
+    origin: function (origin, callback) {
+      // Allow server-to-server calls (no origin) and whitelisted origins
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      console.warn('CORS blocked for origin:', origin);
+      return callback(new Error('CORS blocked'), false);
+    },
+    credentials: true,
+  })
 );
 
-app.set("trust proxy", 1);
+// ✅ Required for Vercel/Render — trust proxy headers
+app.set('trust proxy', 1);
 
-// ✅ Passport middleware — must be AFTER express.json() and cors
+// ✅ Passport — must be AFTER express.json() and cors
 app.use(passport.initialize());
 
-// 🔥 SWAGGER ROUTE
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// ── SWAGGER ROUTE ────────────────────────────────────────────────────────────
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// 🔥 API ROUTES
-app.use("/api/user", userRouter);
-app.use("/api/admin", adminRouter);
-app.use("/api/doctor", doctorRouter);
+// ── API ROUTES ───────────────────────────────────────────────────────────────
+app.use('/api/user', userRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/doctor', doctorRouter);
+app.use('/api/auth', authRouter); // Google OAuth + Forgot Password OTP
 
-// ✅ Auth routes (Google OAuth + Forgot Password OTP)
-app.use("/api/auth", authRouter);
-
-// 🔥 HEALTH CHECK
-app.get("/", (req, res) => {
-    res.send("API Working");
+// ── HEALTH CHECK ─────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.send('✅ Salon Booking API is running');
 });
 
-// 🔥 START SERVER
+// ── START SERVER ─────────────────────────────────────────────────────────────
 app.listen(port, () => {
-    console.log(`🚀 Server started on PORT: ${port}`);
+  console.log(`🚀 Server started on PORT: ${port}`);
 });

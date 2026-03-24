@@ -1,349 +1,444 @@
-import axios from "axios";
-import { createContext, useState, useEffect } from "react";
-import { toast } from "react-toastify";
+// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\admin\src\context\AdminContext.jsx
+import axios from 'axios';
+import { createContext, useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 
 export const AdminContext = createContext();
 
 const AdminContextProvider = (props) => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-    const [aToken, setAToken] = useState(localStorage.getItem('aToken') || '');
-    const [appointments, setAppointments] = useState([]);
-    const [appointmentsLoading, setAppointmentsLoading] = useState(false);
-    const [doctors, setDoctors] = useState([]);
-    const [dashData, setDashData] = useState(false);
-    const [loading, setLoading] = useState(false);
+  const [aToken, setAToken] = useState(localStorage.getItem('aToken') || '');
+  const [appointments, setAppointments] = useState([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+  const [doctors, setDoctors] = useState([]);
+  const [dashData, setDashData] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        if (aToken) {
-            getAllAppointments();
+  // ✅ Admin notification state
+  const [adminNotifications, setAdminNotifications] = useState([]);
+  const [adminUnreadCount, setAdminUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (aToken) {
+      getAllAppointments();
+      getAdminNotifications();
+      // Poll for new notifications every 60 seconds
+      const interval = setInterval(getAdminNotifications, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [aToken]);
+
+  // Getting all Doctors data from Database using API
+  const getAllDoctors = async () => {
+    setLoading(true);
+    try {
+      const { data } = await axios.get(backendUrl + '/api/admin/all-doctors', {
+        headers: { aToken },
+      });
+
+      if (data.success) {
+        setDoctors(data.doctors);
+        return data.doctors;
+      } else {
+        toast.error(data.message);
+        return [];
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to fetch stylists');
+      console.error('Error fetching stylists:', error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to get a single doctor/stylist by ID
+  const getDoctorById = async (id) => {
+    setLoading(true);
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/admin/doctor/${id}`, {
+        headers: { aToken },
+      });
+
+      if (data.success) {
+        const stylist = data.stylist;
+
+        // Ensure specialty is always an array
+        if (stylist.speciality && !stylist.specialty) {
+          stylist.specialty = Array.isArray(stylist.speciality)
+            ? stylist.speciality
+            : [stylist.speciality];
+        } else if (stylist.specialty && !Array.isArray(stylist.specialty)) {
+          stylist.specialty = [stylist.specialty];
         }
-    }, [aToken]);
 
-    // Getting all Doctors data from Database using API
-    const getAllDoctors = async () => {
-        setLoading(true);
-        try {
-            const { data } = await axios.get(
-                backendUrl + '/api/admin/all-doctors', 
-                { headers: { aToken } }
-            );
-            
-            if (data.success) {
-                setDoctors(data.doctors);
-                return data.doctors;
-            } else {
-                toast.error(data.message);
-                return [];
-            }
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to fetch stylists");
-            console.error("Error fetching stylists:", error);
-            return [];
-        } finally {
-            setLoading(false);
+        // Ensure phone field is consistent
+        if (stylist.phoneNumber && !stylist.phone) {
+          stylist.phone = stylist.phoneNumber;
         }
-    };
 
-    // Function to get a single doctor/stylist by ID
-    const getDoctorById = async (id) => {
-        setLoading(true);
-        try {
-            const { data } = await axios.get(
-                `${backendUrl}/api/admin/doctor/${id}`,
-                { headers: { aToken } }
-            );
-            
-            if (data.success) {
-                // Normalize data to ensure consistent field names
-                const stylist = data.stylist;
-                
-                // Ensure specialty is always an array
-                if (stylist.speciality && !stylist.specialty) {
-                    stylist.specialty = Array.isArray(stylist.speciality) ? 
-                        stylist.speciality : [stylist.speciality];
-                } else if (stylist.specialty && !Array.isArray(stylist.specialty)) {
-                    stylist.specialty = [stylist.specialty];
-                }
-
-                // Ensure phone field is consistent
-                if (stylist.phoneNumber && !stylist.phone) {
-                    stylist.phone = stylist.phoneNumber;
-                }
-                
-                // Ensure price field is consistent
-                if (stylist.fees && !stylist.price) {
-                    stylist.price = stylist.fees;
-                }
-                
-                return stylist;
-            } else {
-                toast.error(data.message);
-                return null;
-            }
-        } catch (error) {
-            const errorMsg = error.response?.data?.message || error.message || "Failed to fetch stylist details";
-            toast.error(errorMsg);
-            console.error("Error fetching stylist:", error);
-            return null;
-        } finally {
-            setLoading(false);
+        // Ensure price field is consistent
+        if (stylist.fees && !stylist.price) {
+          stylist.price = stylist.fees;
         }
-    };
 
-    // Function to update a doctor/stylist
-    const updateDoctor = async (id, formData) => {
-        setLoading(true);
-        try {
-            const { data } = await axios.put(
-                `${backendUrl}/api/admin/doctor/${id}`,
-                formData,
-                { 
-                    headers: { 
-                        aToken,
-                        'Content-Type': 'multipart/form-data'
-                    } 
-                }
-            );
-            
-            if (data.success) {
-                toast.success(data.message || "Stylist updated successfully");
-                // Update the doctors array to reflect changes
-                setDoctors(prevDoctors => 
-                    prevDoctors.map(doc => 
-                        doc._id === id ? data.stylist : doc
-                    )
-                );
-                return data.stylist;
-            } else {
-                toast.error(data.message);
-                return null;
-            }
-        } catch (error) {
-            const errorMsg = error.response?.data?.message || error.message || "Failed to update stylist";
-            toast.error(errorMsg);
-            console.error("Error updating stylist:", error);
-            return null;
-        } finally {
-            setLoading(false);
+        // Ensure leaveDates is always an array
+        if (!stylist.leaveDates) {
+          stylist.leaveDates = [];
         }
-    };
 
-    // Function to delete a doctor/stylist
-    const deleteDoctor = async (id) => {
-        setLoading(true);
-        try {
-            const { data } = await axios.delete(
-                `${backendUrl}/api/admin/doctor/${id}`,
-                { headers: { aToken } }
-            );
-            
-            if (data.success) {
-                toast.success(data.message);
-                // Remove the deleted doctor from the doctors array
-                setDoctors(prevDoctors => 
-                    prevDoctors.filter(doc => doc._id !== id)
-                );
-                return true;
-            } else {
-                toast.error(data.message);
-                return false;
-            }
-        } catch (error) {
-            const errorMsg = error.response?.data?.message || error.message || "Failed to delete stylist";
-            toast.error(errorMsg);
-            console.error("Error deleting stylist:", error);
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    };
+        return stylist;
+      } else {
+        toast.error(data.message);
+        return null;
+      }
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || error.message || 'Failed to fetch stylist details';
+      toast.error(errorMsg);
+      console.error('Error fetching stylist:', error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Function to change doctor availability using API
-    const changeAvailability = async (docId) => {
-        try {
-            const { data } = await axios.post(
-                backendUrl + '/api/admin/change-availability', 
-                { docId }, 
-                { headers: { aToken } }
-            );
-            
-            if (data.success) {
-                toast.success(data.message);
-                
-                // Update the doctors array locally
-                setDoctors(prevDoctors => 
-                    prevDoctors.map(doc => 
-                        doc._id === docId 
-                            ? { ...doc, available: !doc.available } 
-                            : doc
-                    )
-                );
-                return true;
-            } else {
-                toast.error(data.message);
-                return false;
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || error.message || "Failed to update availability");
-            return false;
-        }
-    };
+  // Function to update a doctor/stylist
+  const updateDoctor = async (id, formData) => {
+    setLoading(true);
+    try {
+      const { data } = await axios.put(`${backendUrl}/api/admin/doctor/${id}`, formData, {
+        headers: {
+          aToken,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-    // Getting all appointment data from Database using API
-    const getAllAppointments = async () => {
-        setAppointmentsLoading(true);
-        try {
-            const { data } = await axios.get(
-                backendUrl + "/api/admin/appointments",
-                { headers: { aToken } }
-            );
-            
-            if (data.success) {
-                setAppointments(data.appointments);
-                return data.appointments;
-            } else {
-                toast.error(data.message);
-                return [];
-            }
-        } catch (error) {
-            console.error("Error fetching appointments:", error);
-            toast.error("Failed to load appointments: " + (error.response?.data?.message || error.message || "Unknown error"));
-            return [];
-        } finally {
-            setAppointmentsLoading(false);
-        }
-    };
+      if (data.success) {
+        toast.success(data.message || 'Stylist updated successfully');
+        setDoctors((prevDoctors) =>
+          prevDoctors.map((doc) => (doc._id === id ? data.stylist : doc))
+        );
+        return data.stylist;
+      } else {
+        toast.error(data.message);
+        return null;
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to update stylist';
+      toast.error(errorMsg);
+      console.error('Error updating stylist:', error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Function to cancel appointment using API
-    const cancelAppointment = async (appointmentId) => {
-        try {
-            const { data } = await axios.post(
-                backendUrl + '/api/admin/cancel-appointment', 
-                { appointmentId }, 
-                { headers: { aToken } }
-            );
+  // Function to delete a doctor/stylist
+  const deleteDoctor = async (id) => {
+    setLoading(true);
+    try {
+      const { data } = await axios.delete(`${backendUrl}/api/admin/doctor/${id}`, {
+        headers: { aToken },
+      });
 
-            if (data.success) {
-                toast.success(data.message);
-                await getAllAppointments();
-                return true;
-            } else {
-                toast.error(data.message);
-                return false;
-            }
-        } catch (error) {
-            toast.error(error.response?.data?.message || error.message || "Failed to cancel appointment");
-            console.error("Error cancelling appointment:", error);
-            return false;
-        }
-    };
+      if (data.success) {
+        toast.success(data.message);
+        setDoctors((prevDoctors) => prevDoctors.filter((doc) => doc._id !== id));
+        return true;
+      } else {
+        toast.error(data.message);
+        return false;
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to delete stylist';
+      toast.error(errorMsg);
+      console.error('Error deleting stylist:', error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Functions for marking appointments complete/incomplete
-    const markAppointmentCompleted = async (id) => {
-        try {
-            const { data } = await axios.post(
-                backendUrl + '/api/admin/mark-appointment-completed', 
-                { appointmentId: id }, 
-                { headers: { aToken } }
-            );
-            
-            if (data.success) {
-                toast.success(data.message || "Appointment marked as completed");
-                // Update locally to avoid needing a full refresh
-                setAppointments(prev => 
-                    prev.map(app => app._id === id ? {...app, isCompleted: true} : app)
-                );
-                return true;
-            } else {
-                toast.error(data.message || "Failed to update appointment");
-                return false;
-            }
-        } catch (error) {
-            console.error("Error marking appointment complete:", error);
-            toast.error("Failed to update: " + (error.response?.data?.message || error.message || "Unknown error"));
-            return false;
-        }
-    };
-    
-    const markAppointmentIncomplete = async (id) => {
-        try {
-            const { data } = await axios.post(
-                backendUrl + '/api/admin/mark-appointment-incomplete', 
-                { appointmentId: id }, 
-                { headers: { aToken } }
-            );
-            
-            if (data.success) {
-                toast.success(data.message || "Appointment marked as incomplete");
-                // Update locally to avoid needing a full refresh
-                setAppointments(prev => 
-                    prev.map(app => app._id === id ? {...app, isCompleted: false} : app)
-                );
-                return true;
-            } else {
-                toast.error(data.message || "Failed to update appointment");
-                return false;
-            }
-        } catch (error) {
-            console.error("Error marking appointment incomplete:", error);
-            toast.error("Failed to update: " + (error.response?.data?.message || error.message || "Unknown error"));
-            return false;
-        }
-    };
+  // ✅ NEW: Get leave dates for a specific stylist
+  const getStylistLeaveDates = async (id) => {
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/admin/doctor/${id}/leave-dates`, {
+        headers: { aToken },
+      });
 
-    // Getting Admin Dashboard data from Database using API
-    const getDashData = async () => {
-        setLoading(true);
-        try {
-            const { data } = await axios.get(
-                backendUrl + '/api/admin/dashboard', 
-                { headers: { aToken } }
-            );
+      if (data.success) {
+        return data.leaveDates || [];
+      } else {
+        toast.error(data.message || 'Failed to fetch leave dates');
+        return [];
+      }
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || error.message || 'Failed to fetch leave dates';
+      toast.error(errorMsg);
+      console.error('Error fetching leave dates:', error);
+      return [];
+    }
+  };
 
-            if (data.success) {
-                console.log('Dashboard data received:', data.dashData); // Debug log
-                setDashData(data.dashData);
-                return data.dashData;
-            } else {
-                toast.error(data.message);
-                return null;
-            }
-        } catch (error) {
-            console.error("Error fetching dashboard data:", error);
-            toast.error(error.response?.data?.message || error.message || "Failed to load dashboard data");
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+  // ✅ NEW: Update leave dates for a specific stylist
+  const updateStylistLeaveDates = async (id, leaveDates) => {
+    try {
+      const { data } = await axios.put(
+        `${backendUrl}/api/admin/doctor/${id}/leave-dates`,
+        { leaveDates },
+        { headers: { aToken } }
+      );
 
-    const value = {
-        aToken, 
-        setAToken,
-        doctors,
-        loading,
-        getAllDoctors,
-        getDoctorById,
-        updateDoctor,
-        deleteDoctor,
-        changeAvailability,
-        appointments,
-        appointmentsLoading,
-        getAllAppointments,
-        getDashData,
-        cancelAppointment,
-        markAppointmentCompleted,
-        markAppointmentIncomplete,
-        dashData
-    };
+      if (data.success) {
+        // Update the local doctors array to reflect the new leave dates
+        setDoctors((prevDoctors) =>
+          prevDoctors.map((doc) => (doc._id === id ? { ...doc, leaveDates: data.leaveDates } : doc))
+        );
+        return { success: true, leaveDates: data.leaveDates };
+      } else {
+        toast.error(data.message || 'Failed to update leave dates');
+        return { success: false };
+      }
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || error.message || 'Failed to update leave dates';
+      toast.error(errorMsg);
+      console.error('Error updating leave dates:', error);
+      return { success: false };
+    }
+  };
 
-    return (
-        <AdminContext.Provider value={value}>
-            {props.children}
-        </AdminContext.Provider>
-    );
+  // Function to change doctor availability using API
+  const changeAvailability = async (docId) => {
+    try {
+      const { data } = await axios.post(
+        backendUrl + '/api/admin/change-availability',
+        { docId },
+        { headers: { aToken } }
+      );
+
+      if (data.success) {
+        toast.success(data.message);
+        setDoctors((prevDoctors) =>
+          prevDoctors.map((doc) =>
+            doc._id === docId ? { ...doc, available: !doc.available } : doc
+          )
+        );
+        return true;
+      } else {
+        toast.error(data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error.response?.data?.message || error.message || 'Failed to update availability'
+      );
+      return false;
+    }
+  };
+
+  // Getting all appointment data from Database using API
+  const getAllAppointments = async () => {
+    setAppointmentsLoading(true);
+    try {
+      const { data } = await axios.get(backendUrl + '/api/admin/appointments', {
+        headers: { aToken },
+      });
+
+      if (data.success) {
+        setAppointments(data.appointments);
+        return data.appointments;
+      } else {
+        toast.error(data.message);
+        return [];
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      toast.error(
+        'Failed to load appointments: ' +
+          (error.response?.data?.message || error.message || 'Unknown error')
+      );
+      return [];
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
+  // Function to cancel appointment using API
+  const cancelAppointment = async (appointmentId) => {
+    try {
+      const { data } = await axios.post(
+        backendUrl + '/api/admin/cancel-appointment',
+        { appointmentId },
+        { headers: { aToken } }
+      );
+
+      if (data.success) {
+        toast.success(data.message);
+        await getAllAppointments();
+        return true;
+      } else {
+        toast.error(data.message);
+        return false;
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Failed to cancel appointment');
+      console.error('Error cancelling appointment:', error);
+      return false;
+    }
+  };
+
+  // Functions for marking appointments complete/incomplete
+  const markAppointmentCompleted = async (id) => {
+    try {
+      const { data } = await axios.post(
+        backendUrl + '/api/admin/mark-appointment-completed',
+        { appointmentId: id },
+        { headers: { aToken } }
+      );
+
+      if (data.success) {
+        toast.success(data.message || 'Appointment marked as completed');
+        setAppointments((prev) =>
+          prev.map((app) => (app._id === id ? { ...app, isCompleted: true } : app))
+        );
+        return true;
+      } else {
+        toast.error(data.message || 'Failed to update appointment');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error marking appointment complete:', error);
+      toast.error(
+        'Failed to update: ' + (error.response?.data?.message || error.message || 'Unknown error')
+      );
+      return false;
+    }
+  };
+
+  const markAppointmentIncomplete = async (id) => {
+    try {
+      const { data } = await axios.post(
+        backendUrl + '/api/admin/mark-appointment-incomplete',
+        { appointmentId: id },
+        { headers: { aToken } }
+      );
+
+      if (data.success) {
+        toast.success(data.message || 'Appointment marked as incomplete');
+        setAppointments((prev) =>
+          prev.map((app) => (app._id === id ? { ...app, isCompleted: false } : app))
+        );
+        return true;
+      } else {
+        toast.error(data.message || 'Failed to update appointment');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error marking appointment incomplete:', error);
+      toast.error(
+        'Failed to update: ' + (error.response?.data?.message || error.message || 'Unknown error')
+      );
+      return false;
+    }
+  };
+
+  // ✅ Get all admin notifications
+  const getAdminNotifications = async () => {
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/admin/notifications`, {
+        headers: { aToken },
+      });
+      if (data.success) {
+        setAdminNotifications(data.notifications || []);
+        setAdminUnreadCount(data.unreadCount || 0);
+      }
+    } catch (error) {
+      // silent — notifications are non-critical
+    }
+  };
+
+  // ✅ Mark one or all admin notifications as read
+  const markAdminNotificationsRead = async (notificationId = null) => {
+    try {
+      await axios.post(
+        `${backendUrl}/api/admin/notifications/read`,
+        notificationId ? { notificationId } : {},
+        { headers: { aToken } }
+      );
+      if (notificationId) {
+        setAdminNotifications((prev) =>
+          prev.map((n) => (n._id === notificationId ? { ...n, read: true } : n))
+        );
+        setAdminUnreadCount((prev) => Math.max(0, prev - 1));
+      } else {
+        setAdminNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        setAdminUnreadCount(0);
+      }
+    } catch (error) {
+      // silent
+    }
+  };
+
+  // Getting Admin Dashboard data from Database using API
+  const getDashData = async () => {
+    setLoading(true);
+    try {
+      const { data } = await axios.get(backendUrl + '/api/admin/dashboard', {
+        headers: { aToken },
+      });
+
+      if (data.success) {
+        setDashData(data.dashData);
+        return data.dashData;
+      } else {
+        toast.error(data.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error(
+        error.response?.data?.message || error.message || 'Failed to load dashboard data'
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const value = {
+    aToken,
+    setAToken,
+    backendUrl,
+    doctors,
+    loading,
+    getAllDoctors,
+    getDoctorById,
+    updateDoctor,
+    deleteDoctor,
+    changeAvailability,
+    getStylistLeaveDates,
+    updateStylistLeaveDates,
+    appointments,
+    appointmentsLoading,
+    getAllAppointments,
+    getDashData,
+    cancelAppointment,
+    markAppointmentCompleted,
+    markAppointmentIncomplete,
+    dashData,
+    // ✅ Admin notifications
+    adminNotifications,
+    adminUnreadCount,
+    getAdminNotifications,
+    markAdminNotificationsRead,
+  };
+
+  return <AdminContext.Provider value={value}>{props.children}</AdminContext.Provider>;
 };
 
 export default AdminContextProvider;
