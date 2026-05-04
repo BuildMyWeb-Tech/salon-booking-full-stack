@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import { AdminContext } from '../../context/AdminContext';
 import { AppContext } from '../../context/AppContext';
-import { Pencil, User, Mail, Phone, Award, Hash, Instagram, Clock, FileText, ArrowLeft, Scissors, Loader2, Upload } from 'lucide-react';
+import { Pencil, User, Mail, Phone, Award, Hash, Instagram, Clock, FileText, ArrowLeft, Scissors, Loader2, Upload, Lock } from 'lucide-react';
 
 const EditStylist = () => {
     const { id } = useParams();
@@ -18,6 +18,7 @@ const EditStylist = () => {
     const [imagePreview, setImagePreview] = useState('');
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [phone, setPhone] = useState('');
     const [experience, setExperience] = useState('1 Year');
     const [price, setPrice] = useState('');
@@ -42,13 +43,11 @@ const EditStylist = () => {
             const { data } = await axios.get(`${backendUrl}/api/admin/services`, {
                 headers: { aToken }
             });
-            
             if (data.success && data.services.length > 0) {
                 setServiceCategories(data.services);
             }
         } catch (error) {
             console.error("Failed to fetch service categories:", error);
-            // Don't show error toast here, just log it
         } finally {
             setCategoriesLoaded(true);
         }
@@ -63,14 +62,12 @@ const EditStylist = () => {
             }
 
             try {
-                // Fetch both in parallel
                 const [stylist] = await Promise.all([
                     getDoctorById(id),
                     fetchServiceCategories()
                 ]);
                 
                 if (stylist) {
-                    // Populate form fields
                     setName(stylist.name || '');
                     setEmail(stylist.email || '');
                     setPhone(stylist.phone || '');
@@ -78,7 +75,6 @@ const EditStylist = () => {
                     setPrice(stylist.price?.toString() || stylist.fees?.toString() || '');
                     setAbout(stylist.about || '');
                     
-                    // Handle specialty as array
                     if (Array.isArray(stylist.specialty)) {
                         setSpecialty(stylist.specialty);
                     } else if (stylist.specialty) {
@@ -147,18 +143,19 @@ const EditStylist = () => {
             formData.append('price', price);
             formData.append('about', about);
             formData.append('available', available);
-            
-            // Convert specialty array to JSON string
             formData.append('specialty', JSON.stringify(specialty));
-            
             formData.append('certification', certification);
             formData.append('instagram', instagram);
             formData.append('workingHours', workingHours);
 
+            // ✅ Only send password if user typed a new one
+            if (password) {
+                formData.append('password', password);
+            }
+
             const updatedStylist = await updateDoctor(id, formData);
             
             if (updatedStylist) {
-                toast.success('Stylist updated successfully');
                 navigate('/stylist-list');
             }
         } catch (error) {
@@ -202,14 +199,12 @@ const EditStylist = () => {
                 </div>
 
                 <div className='bg-white px-6 py-8 sm:p-8 border rounded-lg shadow-sm w-full max-w-5xl'>
-                    {/* Profile Image Skeleton */}
                     <div className='flex flex-col items-center justify-center mb-8 p-4'>
                         <div className='w-32 h-32 rounded-full bg-gray-200 animate-pulse mb-3'></div>
                         <div className='h-4 w-40 bg-gray-200 rounded animate-pulse mb-2'></div>
                         <div className='h-3 w-32 bg-gray-200 rounded animate-pulse'></div>
                     </div>
 
-                    {/* Form Fields Skeleton */}
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                         {[...Array(8)].map((_, i) => (
                             <div key={i} className='space-y-2'>
@@ -219,19 +214,16 @@ const EditStylist = () => {
                         ))}
                     </div>
 
-                    {/* Specialty Dropdown Skeleton */}
                     <div className='mt-6 space-y-2'>
                         <div className='h-4 w-32 bg-gray-200 rounded animate-pulse'></div>
                         <div className='h-11 w-full bg-gray-200 rounded animate-pulse'></div>
                     </div>
 
-                    {/* About Textarea Skeleton */}
                     <div className='mt-6 space-y-2'>
                         <div className='h-4 w-36 bg-gray-200 rounded animate-pulse'></div>
                         <div className='h-24 w-full bg-gray-200 rounded animate-pulse'></div>
                     </div>
 
-                    {/* Buttons Skeleton */}
                     <div className='mt-6 pt-4 border-t flex justify-end gap-3'>
                         <div className='h-11 w-24 bg-gray-200 rounded-lg animate-pulse'></div>
                         <div className='h-11 w-32 bg-gray-200 rounded-lg animate-pulse'></div>
@@ -260,6 +252,7 @@ const EditStylist = () => {
             </div>
 
             <div className='bg-white px-6 py-8 sm:p-8 border rounded-lg shadow-sm w-full max-w-5xl max-h-[85vh] overflow-y-auto'>
+                
                 {/* Profile Image Upload Section */}
                 <div className='flex flex-col items-center justify-center mb-8 p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50'>
                     <div className='relative mb-3'>
@@ -295,6 +288,8 @@ const EditStylist = () => {
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-600'>
                     {/* Left Column */}
                     <div className='space-y-5'>
+                        
+                        {/* Full Name */}
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <User size={16} className="mr-1.5" /> Full Name
@@ -310,6 +305,7 @@ const EditStylist = () => {
                             />
                         </div>
 
+                        {/* Email */}
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <Mail size={16} className="mr-1.5" /> Email Address
@@ -325,6 +321,22 @@ const EditStylist = () => {
                             />
                         </div>
 
+                        {/* ✅ NEW Password Field */}
+                        <div className='flex flex-col gap-1.5'>
+                            <label className='text-sm font-medium text-gray-700 flex items-center'>
+                                <Lock size={16} className="mr-1.5" /> New Password
+                            </label>
+                            <input
+                                onChange={e => setPassword(e.target.value)}
+                                value={password}
+                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary'
+                                type="password"
+                                placeholder='Leave empty to keep current password'
+                            />
+                            <p className="text-xs text-gray-500">Only fill this if you want to change the password</p>
+                        </div>
+
+                        {/* Experience */}
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <Award size={16} className="mr-1.5" /> Experience
@@ -346,6 +358,7 @@ const EditStylist = () => {
                             </select>
                         </div>
 
+                        {/* Base Price */}
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <Hash size={16} className="mr-1.5" /> Base Price
@@ -391,6 +404,8 @@ const EditStylist = () => {
 
                     {/* Right Column */}
                     <div className='space-y-5'>
+
+                        {/* Working Hours */}
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <Clock size={16} className="mr-1.5" /> Working Hours
@@ -407,6 +422,7 @@ const EditStylist = () => {
                             </p>
                         </div>
 
+                        {/* Certification */}
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <FileText size={16} className="mr-1.5" /> Certification
@@ -422,6 +438,7 @@ const EditStylist = () => {
                             />
                         </div>
 
+                        {/* Phone */}
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <Phone size={16} className="mr-1.5" /> Phone Number
@@ -438,6 +455,7 @@ const EditStylist = () => {
                             <p className="text-xs text-gray-500">This number will be displayed for clients to contact the stylist</p>
                         </div>
 
+                        {/* Instagram */}
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <Instagram size={16} className="mr-1.5" /> Instagram Handle
@@ -464,29 +482,22 @@ const EditStylist = () => {
                         <span className="text-red-500 ml-1">*</span>
                     </label>
 
-                    {/* Input */}
                     <div
                         onClick={() => setOpen(prev => !prev)}
-                        className="w-full min-h-[46px] border rounded-md px-3 py-2
-                                flex flex-wrap items-center gap-2 cursor-pointer
-                                focus-within:ring-2 focus-within:ring-primary/50
-                                bg-white"
+                        className="w-full min-h-[46px] border rounded-md px-3 py-2 flex flex-wrap items-center gap-2 cursor-pointer focus-within:ring-2 focus-within:ring-primary/50 bg-white"
                     >
                         {!categoriesLoaded && (
                             <Loader2 className="w-4 h-4 animate-spin text-primary mr-2" />
                         )}
                         
                         {specialty.length === 0 && categoriesLoaded && (
-                            <span className="text-gray-400 text-sm">
-                                Select service specialties
-                            </span>
+                            <span className="text-gray-400 text-sm">Select service specialties</span>
                         )}
 
                         {specialty.map(item => (
                             <span
                                 key={item}
-                                className="bg-primary/10 text-primary text-xs font-medium
-                                        px-2 py-1 rounded-full flex items-center gap-1"
+                                className="bg-primary/10 text-primary text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1"
                             >
                                 {item}
                                 <button
@@ -503,7 +514,6 @@ const EditStylist = () => {
                         ))}
                     </div>
 
-                    {/* Dropdown */}
                     {open && (
                         <div className="absolute z-30 mt-2 w-full bg-white border rounded-md shadow-lg max-h-56 overflow-y-auto">
                             {!categoriesLoaded ? (
@@ -513,7 +523,6 @@ const EditStylist = () => {
                             ) : specialtyOptions.length > 0 ? (
                                 specialtyOptions.map(option => {
                                     const selected = specialty.includes(option);
-
                                     return (
                                         <div
                                             key={option}
@@ -524,11 +533,7 @@ const EditStylist = () => {
                                                     : [...specialty, option]
                                                 )
                                             }
-                                            className={`px-4 py-2 cursor-pointer text-sm
-                                            ${selected
-                                                ? 'bg-primary/10 text-primary font-medium'
-                                                : 'hover:bg-gray-100'}
-                                            `}
+                                            className={`px-4 py-2 cursor-pointer text-sm ${selected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-gray-100'}`}
                                         >
                                             {option}
                                         </div>
@@ -543,7 +548,7 @@ const EditStylist = () => {
                     )}
                 </div>
 
-                {/* About Section - Full Width */}
+                {/* About Section */}
                 <div className="mt-6">
                     <label className='text-sm font-medium text-gray-700 flex items-center mb-1.5'>
                         <FileText size={16} className="mr-1.5" /> About The Stylist
