@@ -123,3 +123,11 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server started on PORT: ${port}`);
 });
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// Serve uploaded images statically
+app.use('/images', express.static(path.join(__dirname, 'uploads')))

@@ -1,4 +1,4 @@
-// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\backend\models\doctorModel.js
+// backend/models/doctorModel.js
 import mongoose from 'mongoose';
 
 const doctorSchema = new mongoose.Schema(
@@ -9,7 +9,7 @@ const doctorSchema = new mongoose.Schema(
     image: { type: String, required: true },
 
     specialty: {
-      type: [String], // Supports an array of strings
+      type: [String],
       required: true,
     },
 
@@ -29,21 +29,11 @@ const doctorSchema = new mongoose.Schema(
     instagram: { type: String, default: '' },
     workingHours: { type: String, default: '10AM-7PM' },
 
-    /**
-     * Leave dates for the stylist (admin-managed)
-     * Format: ["YYYY-MM-DD", "YYYY-MM-DD", ...]
-     * Users cannot book appointments on these dates
-     */
     leaveDates: {
-      type: [String], // Array of "YYYY-MM-DD" strings
+      type: [String],
       default: [],
     },
 
-    /**
-     * {
-     *   "2026-01-24": ["10:00", "11:00"]
-     * }
-     */
     slots_booked: {
       type: Map,
       of: [String],
@@ -51,6 +41,11 @@ const doctorSchema = new mongoose.Schema(
     },
 
     date: { type: Number, required: true },
+
+    // ── OTP fields for login & forgot password ──────────────────────────────
+    otp: { type: String, default: null },
+    otpExpiry: { type: Date, default: null },
+    otpVerified: { type: Boolean, default: false },
   },
   { minimize: false }
 );
