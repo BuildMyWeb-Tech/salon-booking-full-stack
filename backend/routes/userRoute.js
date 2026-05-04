@@ -1,4 +1,4 @@
-// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\backend\routes\userRoute.js
+// backend/routes/userRoute.js
 import express from 'express';
 import {
   loginUser,
@@ -19,6 +19,11 @@ import {
   markNotificationsRead,
 } from '../controllers/userController.js';
 
+import {
+  sendLoginOtp,
+  verifyLoginOtp,
+} from '../controllers/userPasswordController.js';
+
 import authUser from '../middleware/authUser.js';
 import upload from '../middleware/multer.js';
 
@@ -27,6 +32,10 @@ const userRouter = express.Router();
 /* ===================== AUTH ===================== */
 userRouter.post('/register', registerUser);
 userRouter.post('/login', loginUser);
+
+/* ===================== OTP LOGIN ===================== */
+userRouter.post('/send-login-otp', sendLoginOtp);
+userRouter.post('/verify-login-otp', verifyLoginOtp);
 
 /* ===================== PROFILE ===================== */
 userRouter.get('/get-profile', authUser, getProfile);
@@ -44,10 +53,8 @@ userRouter.get('/available-slots', authUser, getAvailableSlots);
 /* ===================== SERVICES ===================== */
 userRouter.get('/services', getServices);
 
-/* ===================== NOTIFICATIONS ✅ NEW ===================== */
-// GET  /api/user/notifications        — fetch all notifications for logged-in user
+/* ===================== NOTIFICATIONS ===================== */
 userRouter.get('/notifications', authUser, getNotifications);
-// POST /api/user/notifications/mark-read  — mark all (or specific) as read
 userRouter.post('/notifications/mark-read', authUser, markNotificationsRead);
 
 /* ===================== PAYMENTS ===================== */

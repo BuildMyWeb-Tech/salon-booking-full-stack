@@ -1,10 +1,9 @@
-// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\backend\controllers\adminController.js
 import jwt from 'jsonwebtoken';
+import { v2 as cloudinary } from 'cloudinary';
 import appointmentModel from '../models/appointmentModel.js';
 import doctorModel from '../models/doctorModel.js';
 import bcrypt from 'bcrypt';
 import validator from 'validator';
-import { v2 as cloudinary } from 'cloudinary';
 import userModel from '../models/userModel.js';
 import SlotSettings from '../models/SlotSettings.js';
 import BlockedDate from '../models/BlockedDate.js';
@@ -101,16 +100,7 @@ const addDoctor = async (req, res) => {
     } = req.body;
     const imageFile = req.file;
 
-    if (
-      !name ||
-      !email ||
-      !password ||
-      !specialty ||
-      !experience ||
-      !about ||
-      !price ||
-      !certification
-    )
+    if (!name || !email || !password || !specialty || !experience || !about || !price || !certification)
       return res.json({ success: false, message: 'Missing Details' });
     if (!validator.isEmail(email))
       return res.json({ success: false, message: 'Please enter a valid email' });
@@ -120,9 +110,16 @@ const addDoctor = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const imageUpload = await cloudinary.uploader.upload(imageFile.path, {
-      resource_type: 'image',
-    });
+    // ✅ Upload image to Cloudinary
+    let imageUrl = '';
+    if (imageFile) {
+      const imageBuffer = imageFile.buffer.toString('base64');
+      const uploadResult = await cloudinary.uploader.upload(
+        `data:${imageFile.mimetype};base64,${imageBuffer}`,
+        { folder: 'salon' }
+      );
+      imageUrl = uploadResult.secure_url;
+    }
 
     let specialtyArray;
     try {
@@ -135,7 +132,7 @@ const addDoctor = async (req, res) => {
       name,
       email,
       phone,
-      image: imageUpload.secure_url,
+      image: imageUrl,
       password: hashedPassword,
       specialty: specialtyArray,
       certification,
@@ -147,8 +144,10 @@ const addDoctor = async (req, res) => {
       leaveDates: [],
       date: Date.now(),
     });
+
     await newStylist.save();
     res.json({ success: true, message: 'Stylist Added Successfully' });
+
   } catch (error) {
     console.log(error);
     res.json({ success: false, message: error.message });
@@ -185,11 +184,6 @@ export const deleteDoctor = async (req, res) => {
 
     await doctorModel.findByIdAndDelete(id);
 
-    if (stylist.image && stylist.image.includes('cloudinary')) {
-      const publicId = stylist.image.split('/').pop().split('.')[0];
-      await cloudinary.uploader.destroy(publicId);
-    }
-
     return res.status(200).json({ success: true, message: 'Stylist deleted successfully' });
   } catch (error) {
     console.error('Delete stylist error:', error);
@@ -204,6 +198,7 @@ export const deleteDoctor = async (req, res) => {
 export const updateDoctor = async (req, res) => {
   try {
     const { id } = req.params;
+
     const {
       name,
       email,
@@ -215,15 +210,22 @@ export const updateDoctor = async (req, res) => {
       certification,
       instagram,
       workingHours,
+      password
     } = req.body;
+
     const imageFile = req.file;
 
-    if (!id) return res.status(400).json({ success: false, message: 'Stylist ID is required' });
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Stylist ID is required' });
+    }
 
     const stylist = await doctorModel.findById(id);
-    if (!stylist) return res.status(404).json({ success: false, message: 'Stylist not found' });
+    if (!stylist) {
+      return res.status(404).json({ success: false, message: 'Stylist not found' });
+    }
 
     const updateData = {};
+
     if (name) updateData.name = name;
     if (email) updateData.email = email;
     if (phone) updateData.phone = phone;
@@ -236,30 +238,48 @@ export const updateDoctor = async (req, res) => {
 
     if (specialty) {
       try {
-        updateData.specialty = typeof specialty === 'string' ? JSON.parse(specialty) : specialty;
+        updateData.specialty =
+          typeof specialty === 'string' ? JSON.parse(specialty) : specialty;
       } catch {
         updateData.specialty = [specialty];
       }
     }
 
+    // ✅ Upload image to Cloudinary
     if (imageFile) {
-      const imageUpload = await cloudinary.uploader.upload(imageFile.path, {
-        resource_type: 'image',
-      });
-      updateData.image = imageUpload.secure_url;
-      if (stylist.image && stylist.image.includes('cloudinary')) {
-        const publicId = stylist.image.split('/').pop().split('.')[0];
-        await cloudinary.uploader.destroy(publicId);
+      const imageBuffer = imageFile.buffer.toString('base64');
+      const uploadResult = await cloudinary.uploader.upload(
+        `data:${imageFile.mimetype};base64,${imageBuffer}`,
+        { folder: 'salon' }
+      );
+      updateData.image = uploadResult.secure_url;
+    }
+
+    if (password && password.trim() !== "") {
+      if (password.length < 8) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 8 characters'
+        });
       }
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      updateData.password = hashedPassword;
     }
 
     const updatedStylist = await doctorModel
-      .findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
+      .findByIdAndUpdate(id, updateData, {
+        new: true,
+        runValidators: true
+      })
       .select('-password');
 
-    return res
-      .status(200)
-      .json({ success: true, message: 'Stylist updated successfully', stylist: updatedStylist });
+    return res.status(200).json({
+      success: true,
+      message: 'Stylist updated successfully',
+      stylist: updatedStylist,
+    });
+
   } catch (error) {
     console.error('Update stylist error:', error);
     return res.status(500).json({
@@ -311,15 +331,14 @@ export const getStylistLeaveDates = async (req, res) => {
     });
   } catch (error) {
     console.error('Get leave dates error:', error);
-    return res
-      .status(500)
-      .json({ success: false, message: error.message || 'Failed to fetch leave dates' });
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch leave dates',
+    });
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UPDATE LEAVE DATES  ✅ NEW: auto-cancels bookings + sends in-app notifications
-// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE LEAVE DATES
 export const updateStylistLeaveDates = async (req, res) => {
   try {
     const { id } = req.params;
@@ -327,11 +346,8 @@ export const updateStylistLeaveDates = async (req, res) => {
 
     if (!id) return res.status(400).json({ success: false, message: 'Stylist ID is required' });
     if (!Array.isArray(leaveDates))
-      return res
-        .status(400)
-        .json({ success: false, message: 'leaveDates must be an array of date strings' });
+      return res.status(400).json({ success: false, message: 'leaveDates must be an array of date strings' });
 
-    // Validate YYYY-MM-DD format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     const invalidDates = leaveDates.filter((d) => !dateRegex.test(d));
     if (invalidDates.length > 0) {
@@ -346,21 +362,16 @@ export const updateStylistLeaveDates = async (req, res) => {
     const stylist = await doctorModel.findById(id);
     if (!stylist) return res.status(404).json({ success: false, message: 'Stylist not found' });
 
-    // ── Find NEW leave dates (ones not previously set) ────────────────────────
     const previousLeaveDates = new Set(stylist.leaveDates || []);
     const newLeaveDates = uniqueSortedDates.filter((d) => !previousLeaveDates.has(d));
 
-    // ── Save updated leave dates ──────────────────────────────────────────────
     const updatedStylist = await doctorModel
       .findByIdAndUpdate(id, { leaveDates: uniqueSortedDates }, { new: true, runValidators: true })
       .select('name leaveDates');
 
-    // ── Auto-cancel existing bookings on NEW leave dates ──────────────────────
     let cancelledCount = 0;
 
     if (newLeaveDates.length > 0) {
-      // Find all active (not already cancelled) appointments for this stylist
-      // on the newly added leave dates
       const affectedAppointments = await appointmentModel.find({
         doctorId: id,
         slotDate: { $in: newLeaveDates },
@@ -368,11 +379,7 @@ export const updateStylistLeaveDates = async (req, res) => {
         isCompleted: false,
       });
 
-      console.log(`🏖️ Leave dates set for ${stylist.name}: ${newLeaveDates.join(', ')}`);
-      console.log(`📋 Found ${affectedAppointments.length} bookings to auto-cancel`);
-
       for (const appointment of affectedAppointments) {
-        // Format the date nicely for the notification message
         const [y, m, d] = appointment.slotDate.split('-').map(Number);
         const formattedDate = new Date(y, m - 1, d).toLocaleDateString('en-IN', {
           weekday: 'long',
@@ -386,14 +393,12 @@ export const updateStylistLeaveDates = async (req, res) => {
           `has been cancelled because the stylist is on leave on that day. ` +
           `We apologise for the inconvenience. Please rebook at your convenience.`;
 
-        // Cancel the appointment
         appointment.cancelled = true;
         appointment.cancelledBy = 'system';
         appointment.cancellationReason = cancellationReason;
         await appointment.save();
         cancelledCount++;
 
-        // ── Send in-app notification to the user ──────────────────────────────
         await userModel.findByIdAndUpdate(appointment.userId, {
           $push: {
             notifications: {
@@ -407,21 +412,14 @@ export const updateStylistLeaveDates = async (req, res) => {
           },
         });
 
-        // ✅ Notify ADMIN about each auto-cancelled booking
         await AdminNotification.create({
           title: '🏖️ Booking Auto-Cancelled (Stylist Leave)',
           message: `${appointment.userData?.name || 'A user'}'s appointment with ${stylist.name} on ${formattedDate} at ${appointment.slotTime} was auto-cancelled due to leave.`,
           type: 'booking_cancelled',
           appointmentId: appointment._id,
         });
-
-        console.log(
-          `✅ Cancelled appointment ${appointment._id} — notified user ${appointment.userId}`
-        );
       }
     }
-
-    console.log(`✅ Leave dates saved. ${cancelledCount} appointment(s) auto-cancelled.`);
 
     return res.status(200).json({
       success: true,
@@ -435,9 +433,10 @@ export const updateStylistLeaveDates = async (req, res) => {
     });
   } catch (error) {
     console.error('Update leave dates error:', error);
-    return res
-      .status(500)
-      .json({ success: false, message: error.message || 'Failed to update leave dates' });
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update leave dates',
+    });
   }
 };
 
@@ -510,21 +509,11 @@ export const updateSlotSettings = async (req, res) => {
     let settings = await SlotSettings.findOne();
     if (settings) {
       Object.assign(settings, {
-        slotStartTime,
-        slotEndTime,
-        slotDuration,
-        breakTime,
-        breakStartTime,
-        breakEndTime,
-        daysOpen,
-        openSlotsFromDate,
-        openSlotsTillDate,
-        allowRescheduling,
-        rescheduleHoursBefore,
-        maxAdvanceBookingDays,
-        minBookingTimeBeforeSlot,
-        advancePaymentRequired,
-        advancePaymentPercentage,
+        slotStartTime, slotEndTime, slotDuration, breakTime,
+        breakStartTime, breakEndTime, daysOpen, openSlotsFromDate,
+        openSlotsTillDate, allowRescheduling, rescheduleHoursBefore,
+        maxAdvanceBookingDays, minBookingTimeBeforeSlot,
+        advancePaymentRequired, advancePaymentPercentage,
       });
       await settings.save();
     } else {
@@ -541,8 +530,7 @@ export const updateSlotSettings = async (req, res) => {
 export const addBlockedDate = async (req, res) => {
   try {
     const { date, reason } = req.body;
-    if (!date || !reason)
-      return res.json({ success: false, message: 'Date and reason are required' });
+    if (!date || !reason) return res.json({ success: false, message: 'Date and reason are required' });
     const blockedDate = await BlockedDate.create({ date, reason });
     res.json({ success: true, message: 'Date blocked successfully', blockedDate });
   } catch (error) {
@@ -566,14 +554,9 @@ export const removeBlockedDate = async (req, res) => {
 export const addRecurringHoliday = async (req, res) => {
   try {
     const { name, type, value } = req.body;
-    if (!name || !type || !value)
-      return res.json({ success: false, message: 'Name, type and value are required' });
+    if (!name || !type || !value) return res.json({ success: false, message: 'Name, type and value are required' });
     const holiday = await RecurringHoliday.create({ name, type, value });
-    res.json({
-      success: true,
-      message: 'Recurring holiday added successfully',
-      recurringHoliday: holiday,
-    });
+    res.json({ success: true, message: 'Recurring holiday added successfully', recurringHoliday: holiday });
   } catch (error) {
     console.error('Error adding recurring holiday:', error);
     res.json({ success: false, message: 'Failed to add recurring holiday' });
@@ -597,11 +580,7 @@ export const addSpecialWorkingDay = async (req, res) => {
     const { date } = req.body;
     if (!date) return res.json({ success: false, message: 'Date is required' });
     const specialDay = await SpecialWorkingDay.create({ date });
-    res.json({
-      success: true,
-      message: 'Special working day added successfully',
-      specialWorkingDay: specialDay,
-    });
+    res.json({ success: true, message: 'Special working day added successfully', specialWorkingDay: specialDay });
   } catch (error) {
     console.error('Error adding special working day:', error);
     res.json({ success: false, message: 'Failed to add special working day' });
@@ -647,10 +626,8 @@ export const cancelAppointment = async (req, res) => {
     const { appointmentId } = req.body;
     const appointment = await appointmentModel.findById(appointmentId);
     if (!appointment) return res.json({ success: false, message: 'Appointment not found' });
-    if (appointment.cancelled)
-      return res.json({ success: false, message: 'Appointment already cancelled' });
-    if (appointment.isCompleted)
-      return res.json({ success: false, message: 'Cannot cancel completed appointment' });
+    if (appointment.cancelled) return res.json({ success: false, message: 'Appointment already cancelled' });
+    if (appointment.isCompleted) return res.json({ success: false, message: 'Cannot cancel completed appointment' });
 
     appointment.cancelled = true;
     appointment.cancelledBy = 'admin';
@@ -661,7 +638,6 @@ export const cancelAppointment = async (req, res) => {
     const stylistName = appointment.docData?.name || 'your stylist';
     const userName = appointment.userData?.name || 'The customer';
 
-    // ✅ Notify USER — admin cancelled their appointment
     await userModel.findByIdAndUpdate(appointment.userId, {
       $push: {
         notifications: {
@@ -675,7 +651,6 @@ export const cancelAppointment = async (req, res) => {
       },
     });
 
-    // ✅ Notify ADMIN — record the action in admin notifications
     await AdminNotification.create({
       title: '🚫 Admin Cancelled Booking',
       message: `Admin cancelled ${userName}'s appointment with ${stylistName} on ${dateStr} at ${timeStr}.`,
@@ -696,8 +671,7 @@ export const markAppointmentCompleted = async (req, res) => {
 
     const appointment = await appointmentModel.findById(appointmentId);
     if (!appointment) return res.json({ success: false, message: 'Appointment not found' });
-    if (appointment.cancelled)
-      return res.json({ success: false, message: 'Cannot complete cancelled appointment' });
+    if (appointment.cancelled) return res.json({ success: false, message: 'Cannot complete cancelled appointment' });
 
     appointment.isCompleted = true;
     await appointment.save();
@@ -725,17 +699,10 @@ export const markAppointmentIncomplete = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ADMIN NOTIFICATIONS  –  GET /api/admin/notifications
-// Returns all admin notifications newest first
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const getAdminNotifications = async (req, res) => {
   try {
     const notifications = await AdminNotification.find().sort({ createdAt: -1 }).limit(100);
-
     const unreadCount = await AdminNotification.countDocuments({ read: false });
-
     res.json({ success: true, notifications, unreadCount });
   } catch (error) {
     console.error('getAdminNotifications error:', error);
@@ -743,21 +710,14 @@ export const getAdminNotifications = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK ADMIN NOTIFICATIONS READ  –  POST /api/admin/notifications/read
-// Body: { notificationId } to mark one, or empty body to mark ALL as read
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const markAdminNotificationsRead = async (req, res) => {
   try {
     const { notificationId } = req.body;
-
     if (notificationId) {
       await AdminNotification.findByIdAndUpdate(notificationId, { read: true });
     } else {
       await AdminNotification.updateMany({ read: false }, { $set: { read: true } });
     }
-
     res.json({ success: true, message: 'Admin notifications marked as read' });
   } catch (error) {
     console.error('markAdminNotificationsRead error:', error);
