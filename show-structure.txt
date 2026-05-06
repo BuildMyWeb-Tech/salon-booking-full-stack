@@ -1,5 +1,48 @@
-C:\Users\ajaik\Desktop\salon-booking-full-stack>node show-structure.js
 📁 .git
+   📄 config
+   📄 description
+   📄 FETCH_HEAD
+   📄 HEAD
+   📁 hooks
+      📄 applypatch-msg.sample
+      📄 commit-msg.sample
+      📄 fsmonitor-watchman.sample
+      📄 post-update.sample
+      📄 pre-applypatch.sample
+      📄 pre-commit.sample
+      📄 pre-merge-commit.sample
+      📄 pre-push.sample
+      📄 pre-rebase.sample
+      📄 pre-receive.sample
+      📄 prepare-commit-msg.sample
+      📄 push-to-checkout.sample
+      📄 sendemail-validate.sample
+      📄 update.sample
+   📄 index
+   📁 info
+      📄 exclude
+   📁 logs
+      📄 HEAD
+      📁 refs
+         📁 heads
+            📄 main
+         📁 remotes
+            📁 origin
+               📄 HEAD
+   📁 objects
+      📁 info
+      📁 pack
+         📄 pack-f098e8ed161c8b0c439d1cc42aa00dee0b75c665.idx
+         📄 pack-f098e8ed161c8b0c439d1cc42aa00dee0b75c665.pack
+         📄 pack-f098e8ed161c8b0c439d1cc42aa00dee0b75c665.rev
+   📄 packed-refs
+   📁 refs
+      📁 heads
+         📄 main
+      📁 remotes
+         📁 origin
+            📄 HEAD
+      📁 tags
 📄 .gitattributes
 📄 .gitignore
 📁 admin
@@ -74,7 +117,6 @@ C:\Users\ajaik\Desktop\salon-booking-full-stack>node show-structure.js
    📄 vite.config.js
 📁 backend
    📄 .env
-   📄 .env.test
    📄 .gitignore
    📁 config
       📄 cloudinary.js
@@ -120,14 +162,7 @@ C:\Users\ajaik\Desktop\salon-booking-full-stack>node show-structure.js
    📄 show-structure.txt
    📁 uploads
       📄 1777457343065-haie.jpg
-      📄 1777461660321-color.jpg
-      📄 1777461662476-color.jpg
-      📄 1777461667551-color.jpg
-      📄 1777461692996-color.jpg
-      📄 1777462569495-color.jpg
-      📄 1777462694564-color.jpg
-      📄 1777462837767-color.jpg
-      📄 1777975294869-Zudio_FanZ_QR.jpeg
+
    📁 utils
       📄 appointmentCron.js
       📄 Local Work Prod Not Have Block Special Code slotUtils copy.js
@@ -140,52 +175,8 @@ C:\Users\ajaik\Desktop\salon-booking-full-stack>node show-structure.js
    📄 .env
    📄 .eslintrc.cjs
    📄 .gitignore
-   📁 dist
-      📁 assets
-         📄 about_image-6lHCM0SA.png
-         📄 appointment_img-DzbZlMsi.png
-         📄 banner_img-BLLjJE-E.png
-         📄 beard-grooming-BNCMfKPh.jpeg
-         📄 bridal_hairstylist-CssZmVVW.jpeg
-         📄 contact_image-IJu_19v_.png
-         📄 doc1-DpAa9vNj.png
-         📄 doc10-CAm4njsj.png
-         📄 doc11-Dhd97DEN.png
-         📄 doc12-DnN3-E9a.png
-         📄 doc13-iluopkgH.png
-         📄 doc14-DFAA3xQf.png
-         📄 doc15-wRQogShG.png
-         📄 doc2-Y_tw-_wb.png
-         📄 doc3-D46sSx07.png
-         📄 doc4-BJ7TwJ-q.png
-         📄 doc5-DMyOgDQL.png
-         📄 doc6-BBgIGkd-.png
-         📄 doc7-Jj6FmILj.png
-         📄 doc8-IA4IHo5Z.png
-         📄 doc9-DFlzAwfe.png
-         📄 Gastroenterologist-CTgzRFeY.svg
-         📄 google-icon-BLE1e77o.png
-         📄 group_profiles-BCL6AVF5.png
-         📄 Gynecologist-Av1zZu4d.svg
-         📄 hair-coloring_specialist-CfOZrXWu.jpeg
-         📄 hair-styling-Dp2VeJ_L.jpeg
-         📄 hair_treatment_specialist-B1QuFYKE.jpeg
-         📄 hero_img-XposRj94.png
-         📄 image-E3p1CqDM.jpeg
-         📄 index-BbJwlZ12.js
-         📄 index-BbKBAdiF.css
-         📄 logo-CFKPEYG3.svg
-         📄 Neurologist-CuaLxNpX.svg
-         📄 Pediatricians-C6nmx5n8.svg
-         📄 profile_pic-D58ifz71.png
-         📄 razorpay_logo-C6aP63br.png
-         📄 unisex_hairstylist-CRdtk43t.jpeg
-      📄 favicon.svg
-      📄 icon-192.png
-      📄 icon-512.png
-      📄 index.html
-      📄 manifest.json
-      📄 vite.svg
+   📄 backup status dynmic MyAppointments.jsx
+   📄 demo.jsx
    📄 index.html
    📄 package-lock.json
    📄 package.json
@@ -202,61 +193,7 @@ C:\Users\ajaik\Desktop\salon-booking-full-stack>node show-structure.js
       📄 App.jsx
       📁 assets
          📄 1.png
-         📄 1.svg
-         📄 2.png
-         📄 about.png
-         📄 about_image.png
-         📄 appointment_img.png
-         📄 arrow_icon.svg
-         📄 assets.js
-         📄 banner_img.png
-         📄 beard-grooming.jpeg
-         📄 bridal_hairstylist.jpeg
-         📄 chats_icon.svg
-         📄 contact_image.png
-         📄 cross_icon.png
-         📄 Dermatologist.svg
-         📄 doc1.png
-         📄 doc10.png
-         📄 doc11.png
-         📄 doc12.png
-         📄 doc13.png
-         📄 doc14.png
-         📄 doc15.png
-         📄 doc2.png
-         📄 doc3.png
-         📄 doc4.png
-         📄 doc5.png
-         📄 doc6.png
-         📄 doc7.png
-         📄 doc8.png
-         📄 doc9.png
-         📄 dropdown_icon.svg
-         📄 Gastroenterologist.svg
-         📄 General_physician.svg
-         📄 google-icon.png
-         📄 group_profiles.png
-         📄 Gynecologist.svg
-         📄 hair-coloring_specialist.jpeg
-         📄 hair-styling.jpeg
-         📄 hair_treatment_specialist.jpeg
-         📄 header.png
-         📄 hero_img.png
-         📄 image.jpeg
-         📄 img.png
-         📄 info_icon.svg
-         📄 logo.svg
-         📄 logo1.svg
-         📄 menu_icon.svg
-         📄 Neurologist.svg
-         📄 Pediatricians.svg
-         📄 profile_pic.png
-         📄 razorpay_logo.png
-         📄 stripe_logo.png
-         📄 unisex_hairstylist.jpeg
-         📄 upload_area.png
-         📄 upload_icon.png
-         📄 verified_icon.svg
+         
       📁 components
          📄 Banner.jsx
          📄 Footer.jsx
