@@ -8,7 +8,7 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
 
-const storage = multer.diskStorage({
+const storage = multer.memoryStorage({
   destination: function (req, file, callback) {
     callback(null, "./uploads");  // ✅ saves to backend/uploads folder
   },
@@ -19,6 +19,6 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 export default upload;
