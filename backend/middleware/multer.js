@@ -1,23 +1,7 @@
 import multer from "multer";
-import path from "path";
-import fs from "fs";
 
-// Create uploads folder if it doesn't exist
-const uploadDir = "./uploads";
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
-const storage = multer.memoryStorage({
-  destination: function (req, file, callback) {
-    callback(null, "./uploads");  // ✅ saves to backend/uploads folder
-  },
-  filename: function (req, file, callback) {
-    // adds timestamp to avoid duplicate filenames
-    const uniqueName = Date.now() + "-" + file.originalname;
-    callback(null, uniqueName);
-  }
-});
+// ✅ Memory storage - stores file as buffer for Cloudinary upload
+const storage = multer.memoryStorage();
 
 const upload = multer({ storage });
 
