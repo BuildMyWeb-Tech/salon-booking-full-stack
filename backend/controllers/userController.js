@@ -620,6 +620,126 @@ export const markNotificationsRead = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+// ─────────────────────────────────────────────────────────────────────────────
+// RESCHEDULE APPOINTMENT  –  POST /api/user/reschedule-appointment
+// ✅ Sends reschedule confirmation to: User + Admin
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const rescheduleAppointment = async (req, res) => {
+  try {
+    const { userId, appointmentId, slotDate, slotTime, oldSlotDate, oldSlotTime } = req.body;
+
+    if (!appointmentId || !slotDate || !slotTime)
+      return res.json({ success: false, message: 'Missing required fields' });
+
+    const appointment = await appointmentModel.findById(appointmentId);
+    if (!appointment)
+      return res.json({ success: false, message: 'Appointment not found' });
+
+    if (appointment.userId.toString() !== userId.toString())
+      return res.json({ success: false, message: 'Unauthorized action' });
+
+    if (appointment.isCompleted)
+      return res.json({ success: false, message: 'Cannot reschedule a completed appointment' });
+
+    // ── 3-hour rule (only for non-cancelled appointments) ──────────────────
+    if (!appointment.cancelled && appointment.slotDateTime) {
+      const hoursDiff = (new Date(appointment.slotDateTime) - new Date()) / 3600000;
+      if (hoursDiff < 3)
+        return res.json({
+          success: false,
+          message: 'Appointments can only be rescheduled at least 3 hours before the scheduled time',
+        });
+    }
+
+    // ── Check new slot is free ─────────────────────────────────────────────
+    const doctorId = appointment.doctorId || appointment.docId;
+    const slotFree = await isSlotAvailable(doctorId, slotDate, slotTime);
+    if (!slotFree)
+      return res.json({
+        success: false,
+        message: 'This slot was just taken. Please select another time.',
+      });
+
+    // ── Release OLD slot from doctor's map ────────────────────────────────
+    const doctor = await doctorModel.findById(doctorId);
+    if (doctor) {
+      const slots_booked =
+        doctor.slots_booked instanceof Map
+          ? doctor.slots_booked
+          : new Map(Object.entries(doctor.slots_booked || {}));
+
+      const oldDate = oldSlotDate || appointment.slotDate;
+      let oldTime = oldSlotTime || appointment.slotTime || '';
+
+      // Normalise to HH:MM (24hr) in case it was stored as 12hr
+      const m12 = oldTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (m12) {
+        let h = parseInt(m12[1]);
+        if (m12[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+        if (m12[3].toUpperCase() === 'AM' && h === 12) h = 0;
+        oldTime = `${String(h).padStart(2, '0')}:${m12[2]}`;
+      }
+
+      const existing = slots_booked.get(oldDate) || [];
+      slots_booked.set(oldDate, existing.filter((x) => x !== oldTime));
+
+      // ── Book NEW slot ────────────────────────────────────────────────────
+      const newSlots = slots_booked.get(slotDate) || [];
+      newSlots.push(slotTime);
+      slots_booked.set(slotDate, newSlots);
+
+      await doctorModel.findByIdAndUpdate(doctorId, { slots_booked }, { runValidators: false });
+    }
+
+    // ── Build new slotDateTime ────────────────────────────────────────────
+    const [sYear, sMonth, sDay] = slotDate.split('-').map(Number);
+    const [sHour, sMinute] = slotTime.split(':').map(Number);
+    const slotDateTime = new Date(sYear, sMonth - 1, sDay, sHour, sMinute, 0, 0);
+
+    // ── Update appointment record ─────────────────────────────────────────
+    appointment.slotDate = slotDate;
+    appointment.slotTime = slotTime;
+    appointment.slotDateTime = slotDateTime;
+    appointment.cancelled = false;
+    appointment.cancelledBy = null;
+    appointment.cancellationReason = null;
+    await appointment.save();
+
+    // ── Notifications ─────────────────────────────────────────────────────
+    const { dateStr, timeStr } = formatDisplayDate(slotDate, slotTime);
+    const stylistName = appointment.docData?.name || 'your stylist';
+    const userName = appointment.userData?.name || 'A customer';
+
+    // Notify USER
+    await userModel.findByIdAndUpdate(userId, {
+      $push: {
+        notifications: {
+          title: '🔄 Appointment Rescheduled',
+          message: `Your appointment with ${stylistName} has been rescheduled to ${dateStr} at ${timeStr}.`,
+          type: 'info',
+          read: false,
+          link: '/my-appointments',
+          createdAt: new Date(),
+        },
+      },
+    });
+
+    // Notify ADMIN
+    await AdminNotification.create({
+      title: '🔄 Appointment Rescheduled',
+      message: `${userName} rescheduled their appointment with ${stylistName} to ${dateStr} at ${timeStr}.`,
+      type: 'booking_confirmed',
+      appointmentId: appointment._id,
+      meta: { userName, stylistName, slotDate, slotTime },
+    });
+
+    res.json({ success: true, message: 'Appointment rescheduled successfully!' });
+  } catch (error) {
+    console.error('❌ rescheduleAppointment error:', error);
+    res.json({ success: false, message: error.message });
+  }
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPORTS

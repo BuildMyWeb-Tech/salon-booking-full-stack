@@ -85,9 +85,12 @@ const AllAppointments = () => {
     }
   }, [aToken]);
   
-  useEffect(() => {
+ // ✅ FIXED
+useEffect(() => {
+  if (appointments && appointments.length > 0) {
     setLocalAppointments(appointments);
-  }, [appointments]);
+  }
+}, [appointments]);
   
   // Reset to page 1 when filters change
   useEffect(() => {

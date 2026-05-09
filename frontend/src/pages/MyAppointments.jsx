@@ -30,6 +30,24 @@ import {
   IndianRupee,
 } from 'lucide-react';
 
+// ─── 12hr format helper ──────────────────────────────────────────────────────
+/**
+ * Converts "HH:MM" (24hr) → "hh:MM AM/PM" (12hr)
+ * Safe: returns the original string if it can't parse it.
+ */
+const to12Hr = (time24) => {
+  if (!time24) return '';
+  const parts = time24.split(':');
+  if (parts.length < 2) return time24;
+  let h = parseInt(parts[0], 10);
+  const m = parts[1];
+  if (isNaN(h)) return time24;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 const MyAppointments = () => {
   const { backendUrl, token, currencySymbol = '₹' } = useContext(AppContext);
   const navigate = useNavigate();
@@ -52,26 +70,14 @@ const MyAppointments = () => {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
 
   const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
 
-  // Handle scroll for sticky header
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -161,7 +167,6 @@ const MyAppointments = () => {
       });
 
       if (response.data.success) {
-        // Filter out past time slots for today
         const now = new Date();
         const selectedDate = new Date(appointmentDate);
         const isToday = selectedDate.toDateString() === now.toDateString();
@@ -197,23 +202,19 @@ const MyAppointments = () => {
 
   const checkRescheduleEligibility = (appointment) => {
     if (!appointment || appointment.isCompleted) return false;
-
     const appointmentDateTime = new Date(appointment.slotDateTime);
     const now = new Date();
     const diffMs = appointmentDateTime - now;
     const diffHours = diffMs / (1000 * 60 * 60);
-
     return diffHours > 3;
   };
 
   const checkCancellationEligibility = (appointment) => {
     if (!appointment || appointment.cancelled || appointment.isCompleted) return false;
-
     const appointmentDateTime = new Date(appointment.slotDateTime);
     const now = new Date();
     const diffMs = appointmentDateTime - now;
     const diffHours = diffMs / (1000 * 60 * 60);
-
     return diffHours > 3;
   };
 
@@ -254,8 +255,7 @@ const MyAppointments = () => {
           userId: appointmentToReschedule.userId,
           appointmentId: appointmentToReschedule._id,
           slotDate: selectedDate,
-          slotTime: selectedTime,
-          // Pass old date/time so backend can include in notification
+          slotTime: selectedTime,          // still 24hr for backend — unchanged
           oldSlotDate: appointmentToReschedule.slotDate,
           oldSlotTime: appointmentToReschedule.slotTime,
         },
@@ -315,7 +315,6 @@ const MyAppointments = () => {
   ).length;
   const cancelledCount = localAppointments.filter((app) => app.cancelled).length;
 
-  // Calendar functions
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -323,7 +322,6 @@ const MyAppointments = () => {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
-
     return { daysInMonth, startingDayOfWeek, year, month };
   };
 
@@ -333,9 +331,7 @@ const MyAppointments = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    if (clickedDate < today) {
-      return;
-    }
+    if (clickedDate < today) return;
 
     setSelectedCalendarDate(clickedDate);
     const dateStr = clickedDate.toISOString().split('T')[0];
@@ -537,7 +533,6 @@ const MyAppointments = () => {
               const hoursUntilAppointment = (appointmentDate - now) / (1000 * 60 * 60);
               const isComingSoon = hoursUntilAppointment > 0 && hoursUntilAppointment < 24;
 
-              // Extract payment information
               const totalAmount = item.amount || 0;
               const paidAmount = item.paidAmount || 0;
               const remainingAmount = item.remainingAmount || 0;
@@ -649,7 +644,8 @@ const MyAppointments = () => {
                               </div>
                               <div>
                                 <p className="text-xs text-gray-500 uppercase font-medium">Time</p>
-                                <p className="font-medium text-gray-800">{item.slotTime}</p>
+                                {/* ✅ FIX 1: appointment card time → 12hr */}
+                                <p className="font-medium text-gray-800">{to12Hr(item.slotTime)}</p>
                               </div>
                             </div>
                           </div>
@@ -674,7 +670,6 @@ const MyAppointments = () => {
                         {/* Payment Information Section */}
                         <div className="mb-4 bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border border-blue-100">
                           <div className="flex items-center gap-2 mb-3">
-                            {/* <IndianRupee size={18} className="text-blue-600" /> */}
                             <h4 className="font-semibold text-gray-800">Payment Details</h4>
                           </div>
 
@@ -682,8 +677,7 @@ const MyAppointments = () => {
                             <div className="flex justify-between items-center">
                               <span className="text-sm text-gray-600">Total Amount:</span>
                               <span className="font-bold text-gray-900">
-                                {currencySymbol}
-                                {totalAmount}
+                                {currencySymbol}{totalAmount}
                               </span>
                             </div>
 
@@ -692,8 +686,7 @@ const MyAppointments = () => {
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm text-gray-600">Paid Amount:</span>
                                   <span className="font-semibold text-green-600">
-                                    {currencySymbol}
-                                    {paidAmount}
+                                    {currencySymbol}{paidAmount}
                                   </span>
                                 </div>
                                 <div className="flex justify-between items-center">
@@ -701,8 +694,7 @@ const MyAppointments = () => {
                                     Remaining (Pay at Salon):
                                   </span>
                                   <span className="font-semibold text-orange-600">
-                                    {currencySymbol}
-                                    {remainingAmount}
+                                    {currencySymbol}{remainingAmount}
                                   </span>
                                 </div>
                               </>
@@ -809,6 +801,7 @@ const MyAppointments = () => {
           </div>
         )}
 
+        {/* ── Reschedule Modal ─────────────────────────────────────────────── */}
         <AnimatePresence>
           {rescheduleModal && (
             <motion.div
@@ -873,7 +866,10 @@ const MyAppointments = () => {
                             <Clock size={14} className="text-gray-400" />
                             <div>
                               <p className="text-gray-500">Time</p>
-                              <p className="font-medium">{appointmentToReschedule?.slotTime}</p>
+                              {/* ✅ FIX 2: current appointment time in modal → 12hr */}
+                              <p className="font-medium">
+                                {to12Hr(appointmentToReschedule?.slotTime)}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -1001,7 +997,8 @@ const MyAppointments = () => {
                                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                       }`}
                                     >
-                                      {slot.startTime}
+                                      {/* ✅ FIX 3: slot grid buttons → 12hr */}
+                                      {to12Hr(slot.startTime)}
                                     </button>
                                   );
                                 })}
@@ -1067,6 +1064,7 @@ const MyAppointments = () => {
           )}
         </AnimatePresence>
 
+        {/* ── Cancel Modal ─────────────────────────────────────────────────── */}
         <AnimatePresence>
           {cancelModal && (
             <motion.div
@@ -1099,7 +1097,8 @@ const MyAppointments = () => {
                       </span>{' '}
                       at{' '}
                       <span className="font-medium text-gray-800">
-                        {appointmentToCancel?.slotTime}
+                        {/* ✅ FIX 4: cancel modal time → 12hr */}
+                        {to12Hr(appointmentToCancel?.slotTime)}
                       </span>{' '}
                       with{' '}
                       <span className="font-medium text-gray-800">
@@ -1123,8 +1122,7 @@ const MyAppointments = () => {
                               {appointmentToCancel?.service}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {currencySymbol}
-                              {appointmentToCancel?.amount}
+                              {currencySymbol}{appointmentToCancel?.amount}
                             </p>
                           </div>
                         </div>
@@ -1187,54 +1185,27 @@ const MyAppointments = () => {
         </button>
 
         <style>{`
-                    @keyframes slideDown {
-                        from { 
-                            opacity: 0; 
-                            transform: translateY(-10px); 
-                        }
-                        to { 
-                            opacity: 1; 
-                            transform: translateY(0); 
-                        }
-                    }
-                    
-                    .animate-slideDown {
-                        animation: slideDown 0.3s ease-out;
-                    }
-                    
-                    @media (max-width: 640px) {
-                        .bg-white.rounded-xl {
-                            border-radius: 12px;
-                        }
-                        
-                        .p-5.sm\\:p-6 {
-                            padding: 1.25rem;
-                        }
-                    }
-                    
-                    .bg-white.rounded-xl.shadow-sm:hover {
-                        transform: translateY(-2px);
-                        transition: all 0.3s ease;
-                    }
-                    
-                    .max-h-60.overflow-y-auto::-webkit-scrollbar {
-                        width: 6px;
-                    }
-                    
-                    .max-h-60.overflow-y-auto::-webkit-scrollbar-track {
-                        background: #f1f1f1;
-                        border-radius: 10px;
-                    }
-                    
-                    .max-h-60.overflow-y-auto::-webkit-scrollbar-thumb {
-                        background: #cfcfcf;
-                        border-radius: 10px;
-                    }
-                    
-                    .max-h-60.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-                        background: #a3a3a3;
-                    }
-                `}</style>
+          @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          .animate-slideDown { animation: slideDown 0.3s ease-out; }
+
+          @media (max-width: 640px) {
+            .bg-white.rounded-xl { border-radius: 12px; }
+            .p-5.sm\\:p-6 { padding: 1.25rem; }
+          }
+
+          .bg-white.rounded-xl.shadow-sm:hover {
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+          }
+
+          .max-h-60.overflow-y-auto::-webkit-scrollbar { width: 6px; }
+          .max-h-60.overflow-y-auto::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+          .max-h-60.overflow-y-auto::-webkit-scrollbar-thumb { background: #cfcfcf; border-radius: 10px; }
+          .max-h-60.overflow-y-auto::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+        `}</style>
       </div>
     </div>
   );

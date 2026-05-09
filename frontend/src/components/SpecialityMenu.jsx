@@ -90,11 +90,11 @@ const SpecialityMenu = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {visibleServices.map((item, index) => (
               <Link
-                key={item._id || index}
-                to="/services"
-                onClick={() => window.scrollTo(0, 0)}
-                className="group"
-              >
+                 key={item._id || index}
+                 to={`/stylists?speciality=${encodeURIComponent(item.name || item.speciality)}`}
+                  onClick={() => window.scrollTo(0, 0)}
+                  className="group"
+                     >
                 <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 h-full border border-gray-100 hover:border-primary/20 transform hover:-translate-y-1">
                   {/* Image Wrapper with enhanced hover effect */}
                   <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
