@@ -88,50 +88,66 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotifications]);
 
-  // Fetch notifications when user is logged in — poll every 60s
+  const fetchNotifications = async () => {
+    if (!token || !backendUrl) return;
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/user/notifications`, {
+        headers: { token },
+      });
+      if (data.success) {
+        const allNotifs = data.notifications || [];
+        setNotifications(allNotifs);
+        const lastRead = localStorage.getItem('notif_last_read');
+        if (lastRead) {
+          const lastReadDate = new Date(lastRead);
+          // Count notifications that arrived AFTER user last read
+          const newCount = allNotifs.filter(
+            (n) => new Date(n.createdAt) > lastReadDate
+          ).length;
+          setUnreadCount(newCount);
+        } else {
+          setUnreadCount(data.unreadCount || 0);
+        }
+      }
+    } catch (err) {
+      /* silent — notifications are non-critical */
+    }
+  };
+
+  // Fetch notifications when user is logged in — poll every 5 minutes
   useEffect(() => {
     if (!token || !backendUrl) {
       setNotifications([]);
       setUnreadCount(0);
       return;
     }
-    const fetchNotifications = async () => {
-      try {
-        const { data } = await axios.get(`${backendUrl}/api/user/notifications`, {
-          headers: { token },
-        });
-        if (data.success) {
-          setNotifications(data.notifications || []);
-          setUnreadCount(data.unreadCount || 0);
-        }
-      } catch (err) {
-        /* silent — notifications are non-critical */
-      }
-    };
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000);
+    const interval = setInterval(fetchNotifications, 5000);
     return () => clearInterval(interval);
   }, [token, backendUrl]);
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('notif_last_read');
     setToken(false);
     navigate('/login');
   };
 
   const markAllRead = async () => {
     try {
-      await axios.post(`${backendUrl}/api/user/notifications/read`, {}, { headers: { token } });
+      await axios.post(`${backendUrl}/api/user/notifications/mark-read`, {}, { headers: { token } });
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      setUnreadCount(0);
+      setUnreadCount(0); // ✅ immediately set to 0
+      localStorage.setItem('notif_last_read', new Date().toISOString());
     } catch (err) {
       /* silent */
     }
   };
 
   const handleOpenNotifications = () => {
-    setShowNotifications((prev) => !prev);
-    if (!showNotifications && unreadCount > 0) markAllRead();
+    const willOpen = !showNotifications;
+    setShowNotifications(willOpen);
+    if (willOpen && unreadCount > 0) markAllRead();
   };
 
   // Install app function
@@ -243,7 +259,7 @@ const Navbar = () => {
 
           {/* Desktop Right Side — Notification Bell + User Menu */}
           <div className="hidden md:flex items-center gap-3">
-            {/* ✅ Notification Bell */}
+            {/* Notification Bell */}
             {token && userData && (
               <div className="notification-container relative">
                 <button
@@ -613,7 +629,7 @@ const Navbar = () => {
 
       {/* ─── Bottom Mobile Navigation ───────────────────────────── */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-30 px-2 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-        {/* ✅ Mobile notification panel — slides up above bottom nav */}
+        {/* Mobile notification panel */}
         {showNotifications && token && (
           <div className="notification-container absolute bottom-full left-0 right-0 bg-white border border-b-0 rounded-t-xl shadow-lg max-h-72 flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b">
@@ -640,9 +656,7 @@ const Navbar = () => {
                       setShowNotifications(false);
                     }}
                   >
-                    <p
-                      className={`text-sm font-medium ${!n.read ? 'text-gray-900' : 'text-gray-600'}`}
-                    >
+                    <p className={`text-sm font-medium ${!n.read ? 'text-gray-900' : 'text-gray-600'}`}>
                       {n.title}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.message}</p>
@@ -702,7 +716,6 @@ const Navbar = () => {
             <span className="text-xs mt-1">Bookings</span>
           </NavLink>
 
-          {/* ✅ Notification bell in mobile bottom nav */}
           {token && userData ? (
             <button
               onClick={handleOpenNotifications}
@@ -746,7 +759,6 @@ const Navbar = () => {
 
       {/* Spacer for fixed navbar */}
       <div className="h-20"></div>
-      {/* Spacer for bottom nav on mobile */}
       <div className="md:h-0"></div>
     </>
   );

@@ -376,14 +376,23 @@ const AddStylist = () => {
                                 <span className="text-red-500 ml-1">*</span>
                             </label>
                             <input 
-                                onChange={e => setPhone(e.target.value)} 
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    if (val.length <= 10) setPhone(val);
+                                }} 
                                 value={phone} 
                                 className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
                                 type="tel" 
-                                placeholder='Enter phone number' 
+                                placeholder='Enter 10-digit phone number'
+                                pattern="[0-9]{10}"
+                                minLength={10}
+                                maxLength={10}
                                 required 
                             />
-                            <p className="text-xs text-gray-500">This number will be displayed for clients to contact the stylist</p>
+                            <p className="text-xs text-gray-500">10-digit number • digits only</p>
+                            {phone.length > 0 && phone.length < 10 && (
+                                <p className="text-xs text-red-500">Phone number must be exactly 10 digits</p>
+                            )}
                         </div>
 
                         <div className='flex flex-col gap-1.5'>

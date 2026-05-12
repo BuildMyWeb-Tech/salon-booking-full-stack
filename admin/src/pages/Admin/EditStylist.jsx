@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import { AdminContext } from '../../context/AdminContext';
 import { AppContext } from '../../context/AppContext';
-import { Pencil, User, Mail, Phone, Award, Hash, Instagram, Clock, FileText, ArrowLeft, Scissors, Loader2, Upload, Lock } from 'lucide-react';
+import { Pencil, User, Mail, Phone, Award, Hash, Instagram, Clock, FileText, ArrowLeft, Scissors, Loader2, Upload, Lock, Eye, EyeOff } from 'lucide-react';
 
 const EditStylist = () => {
     const { id } = useParams();
@@ -19,6 +19,7 @@ const EditStylist = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false); // ✅ NEW: eye toggle state
     const [phone, setPhone] = useState('');
     const [experience, setExperience] = useState('1 Year');
     const [price, setPrice] = useState('');
@@ -74,6 +75,8 @@ const EditStylist = () => {
                     setExperience(stylist.experience || '1 Year');
                     setPrice(stylist.price?.toString() || stylist.fees?.toString() || '');
                     setAbout(stylist.about || '');
+                    // ✅ Pre-fill password from DB so admin can see and edit it
+                    setPassword(stylist.password || '');
                     
                     if (Array.isArray(stylist.specialty)) {
                         setSpecialty(stylist.specialty);
@@ -148,7 +151,7 @@ const EditStylist = () => {
             formData.append('instagram', instagram);
             formData.append('workingHours', workingHours);
 
-            // ✅ Only send password if user typed a new one
+            // ✅ Always send password (it's pre-filled and editable)
             if (password) {
                 formData.append('password', password);
             }
@@ -321,19 +324,30 @@ const EditStylist = () => {
                             />
                         </div>
 
-                        {/* ✅ NEW Password Field */}
+                        {/* ✅ FIXED: Password — pre-filled, visible, editable with eye toggle */}
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
-                                <Lock size={16} className="mr-1.5" /> New Password
+                                <Lock size={16} className="mr-1.5" /> Password
+                                <span className="text-red-500 ml-1">*</span>
                             </label>
-                            <input
-                                onChange={e => setPassword(e.target.value)}
-                                value={password}
-                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary'
-                                type="password"
-                                placeholder='Leave empty to keep current password'
-                            />
-                            <p className="text-xs text-gray-500">Only fill this if you want to change the password</p>
+                            <div className='relative'>
+                                <input
+                                    onChange={e => setPassword(e.target.value)}
+                                    value={password}
+                                    className='border rounded-md px-3 py-2.5 pr-10 w-full focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary'
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder='Enter password'
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(p => !p)}
+                                    className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700'
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-500">Edit to change the stylist's password</p>
                         </div>
 
                         {/* Experience */}
@@ -438,21 +452,30 @@ const EditStylist = () => {
                             />
                         </div>
 
-                        {/* Phone */}
+                        {/* ✅ Phone — 10 digits only */}
                         <div className='flex flex-col gap-1.5'>
                             <label className='text-sm font-medium text-gray-700 flex items-center'>
                                 <Phone size={16} className="mr-1.5" /> Phone Number
                                 <span className="text-red-500 ml-1">*</span>
                             </label>
                             <input 
-                                onChange={e => setPhone(e.target.value)} 
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    if (val.length <= 10) setPhone(val);
+                                }} 
                                 value={phone} 
-                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
+                                className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary'
                                 type="tel" 
-                                placeholder='Enter phone number' 
+                                placeholder='Enter 10-digit phone number'
+                                pattern="[0-9]{10}"
+                                minLength={10}
+                                maxLength={10}
                                 required 
                             />
-                            <p className="text-xs text-gray-500">This number will be displayed for clients to contact the stylist</p>
+                            <p className="text-xs text-gray-500">10-digit number • digits only</p>
+                            {phone.length > 0 && phone.length < 10 && (
+                                <p className="text-xs text-red-500">Phone number must be exactly 10 digits</p>
+                            )}
                         </div>
 
                         {/* Instagram */}
