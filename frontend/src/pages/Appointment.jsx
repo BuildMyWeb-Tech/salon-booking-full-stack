@@ -324,6 +324,9 @@ const Appointment = () => {
     setStylistInfo(stylistInfo);
   }, [stylists, docId]);
 
+  // ✅ PERFORMANCE FIX: generateAvailableDates now makes ONE API call instead of N+1
+  // Previously: 1 call to get dates + 1 call per date to get slot counts (e.g. 30 dates = 31 calls)
+  // Now: 1 call to /available-dates-with-counts — backend handles everything in parallel
   const generateAvailableDates = useCallback(async () => {
     if (!docId || !token) return;
 
@@ -334,7 +337,7 @@ const Appointment = () => {
     lastDocId.current = docId;
 
     try {
-      const response = await axios.get(`${backendUrl}/api/user/available-dates/${docId}`, {
+      const response = await axios.get(`${backendUrl}/api/user/available-dates-with-counts/${docId}`, {
         headers: { token },
       });
 
@@ -343,54 +346,20 @@ const Appointment = () => {
         return;
       }
 
-      const promises = response.data.dates.map(dateStr => 
-        axios.get(`${backendUrl}/api/user/available-slots`, {
-          params: { date: dateStr, docId },
-          headers: { token }
-        }).catch(() => ({ data: { success: false, slots: [] } }))
-      );
-
-      const results = await Promise.all(promises);
-      
-      const datesWithSlots = [];
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        
-        // Parse the date string properly
-        const [year, month, day] = response.data.dates[i].split('-').map(Number);
+      // Backend already filtered: past slots, blocked dates, leave dates, booked slots
+      const datesWithSlots = response.data.dates.map(item => {
+        const [year, month, day] = item.dateStr.split('-').map(Number);
         const date = new Date(year, month - 1, day);
-        
-        // Filter past time slots for today
-        let availableSlots = result.data.slots || [];
-        const isToday = date.toDateString() === new Date().toDateString();
-        
-        if (isToday) {
-          const now = new Date();
-          const currentTime = now.getHours() * 60 + now.getMinutes();
-          
-          availableSlots = availableSlots.filter(slot => {
-            const [hours, minutes] = slot.startTime.split(':').map(Number);
-            const slotTime = hours * 60 + minutes;
-            return slotTime > currentTime;
-          });
-        }
-        
-        // Only include dates with available slots
-        if (!result.data.success || availableSlots.length === 0) continue;
-        
-        datesWithSlots.push({
+        return {
           date,
-          dateStr: response.data.dates[i],
-          dayName: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
-          dayNumber: date.getDate(),
-          month: date.toLocaleDateString('en-US', { month: 'short' }),
-          isToday: isToday,
-          slotCount: availableSlots.length
-        });
-      }
+          dateStr: item.dateStr,
+          dayName: item.dayName,
+          dayNumber: item.dayNumber,
+          month: item.month,
+          isToday: item.isToday,
+          slotCount: item.slotCount,
+        };
+      });
 
       setAvailableDates(datesWithSlots);
     } catch (error) {

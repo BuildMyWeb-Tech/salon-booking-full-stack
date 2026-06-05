@@ -13,6 +13,7 @@ import {
   cancelAppointment,
   bookAppointment,
   getAvailableDates,
+  getAvailableDatesWithCounts,
   getAvailableSlots,
   getServices,
   getNotifications,
@@ -50,6 +51,7 @@ userRouter.post('/reschedule-appointment', authUser, rescheduleAppointment); // 
 
 /* ===================== SLOTS ===================== */
 userRouter.get('/available-dates/:docId', authUser, getAvailableDates);
+userRouter.get('/available-dates-with-counts/:docId', authUser, getAvailableDatesWithCounts); // ✅ PERFORMANCE FIX
 userRouter.get('/available-slots', authUser, getAvailableSlots);
 
 /* ===================== SERVICES ===================== */

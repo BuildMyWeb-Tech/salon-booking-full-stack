@@ -206,6 +206,125 @@ export const getAvailableDates = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// AVAILABLE DATES WITH SLOT COUNTS  –  GET /api/user/available-dates-with-counts/:docId
+// ✅ PERFORMANCE FIX: Single API call replaces the old N+1 calls from frontend
+// Previously: frontend called /available-dates (1 call) + /available-slots per date (N calls)
+// Now: 1 call total — backend generates dates, counts slots, and filters booked ones
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getAvailableDatesWithCounts = async (req, res) => {
+  try {
+    const { docId } = req.params;
+    const doctor = await doctorModel.findById(docId).select('available leaveDates');
+    if (!doctor) return res.json({ success: false, message: 'Stylist not found' });
+    if (!doctor.available) return res.json({ success: false, message: 'Stylist is not available' });
+
+    const settings = await SlotSettings.findOne();
+    if (!settings) return res.json({ success: false, message: 'Slot settings not configured' });
+
+    const blockedDates = await BlockedDate.find();
+    const recurringHols = await RecurringHoliday.find();
+    const specialDays = await SpecialWorkingDay.find();
+
+    const toStr = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    const blockedSet = new Set(blockedDates.map((b) => toStr(new Date(b.date))));
+    const specialSet = new Set(specialDays.map((s) => toStr(new Date(s.date))));
+    const leaveSet = new Set(doctor.leaveDates || []);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxDays = settings.maxAdvanceBookingDays || 30;
+    const candidateDates = [];
+
+    for (let i = 0; i <= maxDays; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const str = toStr(d);
+      const day = d.toLocaleDateString('en-US', { weekday: 'long' });
+
+      if (leaveSet.has(str)) continue;
+      if (blockedSet.has(str)) continue;
+
+      const isSpecial = specialSet.has(str);
+      let isHoliday = false;
+      for (const h of recurringHols) {
+        if (h.type === 'weekly' && h.value === day) { isHoliday = true; break; }
+        if (h.type === 'monthly' && h.value === String(d.getDate())) { isHoliday = true; break; }
+      }
+      if (isHoliday && !isSpecial) continue;
+      if (!settings.daysOpen.includes(day) && !isSpecial) continue;
+
+      candidateDates.push(str);
+    }
+
+    // ✅ Step 1: Generate slots for ALL dates in parallel (no serial waiting)
+    const slotResults = await Promise.all(
+      candidateDates.map(dateStr =>
+        generateAvailableSlots(dateStr, settings, docId)
+          .then(({ slots }) => ({ dateStr, slots }))
+          .catch(() => ({ dateStr, slots: [] }))
+      )
+    );
+
+    // ✅ Step 2: ONE single DB query to get all booked appointments across all candidate dates
+    // Previously: N queries (one per slot per date). Now: 1 query total.
+    const bookedAppointments = await appointmentModel.find({
+      $or: [{ doctorId: docId }, { docId }],
+      slotDate: { $in: candidateDates },
+      cancelled: false,
+    }).select('slotDate slotTime').lean();
+
+    // ✅ Step 3: Build O(1) lookup Set of "date|time" strings
+    const bookedSet = new Set(
+      bookedAppointments.map(a => `${a.slotDate}|${a.slotTime}`)
+    );
+
+    // ✅ Step 4: Filter booked + past slots and build result
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const todayStr = toStr(now);
+
+    const result = [];
+
+    for (const { dateStr, slots } of slotResults) {
+      if (!slots.length) continue;
+
+      // Remove already-booked slots using Set lookup
+      let freeSlots = slots.filter(slot => !bookedSet.has(`${dateStr}|${slot.startTime}`));
+
+      // For today only: remove slots that have already passed
+      if (dateStr === todayStr) {
+        freeSlots = freeSlots.filter(slot => {
+          const [h, m] = slot.startTime.split(':').map(Number);
+          return (h * 60 + m) > nowMinutes;
+        });
+      }
+
+      if (freeSlots.length === 0) continue;
+
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const dateObj = new Date(year, month - 1, day);
+
+      result.push({
+        dateStr,
+        dayName: dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+        dayNumber: dateObj.getDate(),
+        month: dateObj.toLocaleDateString('en-US', { month: 'short' }),
+        isToday: dateStr === todayStr,
+        slotCount: freeSlots.length,
+      });
+    }
+
+    res.json({ success: true, dates: result });
+  } catch (error) {
+    console.error('❌ getAvailableDatesWithCounts:', error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // AVAILABLE SLOTS  –  GET /api/user/available-slots?date=&docId=
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -227,10 +346,13 @@ export const getAvailableSlots = async (req, res) => {
     const { slots: allSlots, error } = await generateAvailableSlots(date, settings, docId);
     if (error && allSlots.length === 0) return res.json({ success: false, message: error });
 
-    const free = [];
-    for (const slot of allSlots) {
-      if (await isSlotAvailable(docId, date, slot.startTime)) free.push(slot);
-    }
+    // ✅ PERFORMANCE FIX: Check all slots availability in parallel instead of serial for-loop
+    // Previously: awaited isSlotAvailable one-by-one (16 slots = 16 sequential DB queries)
+    // Now: all 16 run at the same time, total wait = slowest single query
+    const availability = await Promise.all(
+      allSlots.map(slot => isSlotAvailable(docId, date, slot.startTime))
+    );
+    const free = allSlots.filter((_, i) => availability[i]);
 
     res.json({ success: true, slots: free });
   } catch (error) {
@@ -620,6 +742,7 @@ export const markNotificationsRead = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
 // ─────────────────────────────────────────────────────────────────────────────
 // RESCHEDULE APPOINTMENT  –  POST /api/user/reschedule-appointment
 // ✅ Sends reschedule confirmation to: User + Admin
