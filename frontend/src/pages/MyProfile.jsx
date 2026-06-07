@@ -72,13 +72,13 @@ const MyProfile = () => {
       )
 
       if (data.success) {
-        toast.success(data.message)
-        await loadUserProfileData()
-        setIsEdit(false)
-        setImage(false)
-      } else {
-        toast.error(data.message)
-      }
+      toast.success(data.message)
+      setImage(false)
+      setIsEdit(false)
+      await loadUserProfileData(token)  // ← pass token explicitly
+    } else {
+      toast.error(data.message)
+    }
     } catch (error) {
       console.error(error)
       toast.error("Profile update failed")

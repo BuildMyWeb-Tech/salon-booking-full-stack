@@ -113,7 +113,7 @@ const updateProfile = async (req, res) => {
       dob,
       gender,
     });
-    if (imageFile) {
+    if (imageFile && imageFile.path) {
       const { secure_url } = await cloudinary.uploader.upload(imageFile.path, {
         resource_type: 'image',
       });
