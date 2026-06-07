@@ -106,11 +106,12 @@ const AllAppointments = () => {
     setTodayFilter(false)
   }
   
-  // Handle Today Filter
+  // Handle Today Filter — only sets date range, keeps filterStatus as 'all'
   const handleTodayFilter = () => {
     const newTodayFilter = !todayFilter;
     setTodayFilter(newTodayFilter);
-    
+    setFilterStatus('all');
+
     if (newTodayFilter) {
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
@@ -177,14 +178,13 @@ const AllAppointments = () => {
   }
 
   const callPhoneNumber = (phone) => {
-  if (!phone || phone === "-") {
-    toast.error("Phone number not available");
-    return;
-  }
-
-  window.location.href = `tel:${phone}`;
-  toast.info(`Calling ${phone}...`);
-};
+    if (!phone || phone === "-") {
+      toast.error("Phone number not available");
+      return;
+    }
+    window.location.href = `tel:${phone}`;
+    toast.info(`Calling ${phone}...`);
+  };
   
   // Open calendar modal
   const openCalendarModal = () => {
@@ -484,6 +484,18 @@ const AllAppointments = () => {
       return 'Invalid Date';
     }
   };
+
+  // ✅ Convert 24hr to 12hr format
+  const formatTime12hr = (time) => {
+    if (!time) return 'N/A';
+    if (time.toLowerCase().includes('am') || time.toLowerCase().includes('pm')) return time;
+    const [hourStr, minuteStr] = time.split(':');
+    let hour = parseInt(hourStr);
+    const minute = minuteStr || '00';
+    const period = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return `${hour}:${minute} ${period}`;
+  };
   
   const parseDateString = (dateStr) => {
     if (!dateStr) return new Date(NaN);
@@ -521,19 +533,25 @@ const AllAppointments = () => {
     
     return false;
   }
-  
+
   const filteredAppointments = localAppointments.filter(appointment => {
-    const matchesStatus = 
-      filterStatus === 'all' ||
-      (filterStatus === 'upcoming' && !appointment.isCompleted && !appointment.cancelled) ||
-      (filterStatus === 'completed' && appointment.isCompleted && !appointment.cancelled) ||
-      (filterStatus === 'cancelled' && appointment.cancelled);
-    
-    const matchesPayment = 
+
+    let matchesStatus = true;
+    if (todayFilter) {
+      matchesStatus = !appointment.cancelled && !appointment.isCompleted;
+    } else if (filterStatus === 'upcoming') {
+      matchesStatus = !appointment.isCompleted && !appointment.cancelled;
+    } else if (filterStatus === 'completed') {
+      matchesStatus = appointment.isCompleted === true && !appointment.cancelled;
+    } else if (filterStatus === 'cancelled') {
+      matchesStatus = appointment.cancelled === true;
+    }
+
+    const matchesPayment =
       filterPayment === 'all' ||
       (filterPayment === 'paid' && appointment.payment) ||
       (filterPayment === 'unpaid' && !appointment.payment);
-    
+
     const searchString = [
       appointment.userData?.name || '',
       appointment.userData?.phone || '',
@@ -541,20 +559,19 @@ const AllAppointments = () => {
       appointment.service || '',
       appointment.docData?.specialty || appointment.docData?.speciality || ''
     ].map(s => s.toLowerCase()).join(' ');
-    
+
     const matchesSearch = !searchTerm || searchString.includes(searchTerm.toLowerCase());
-    
+
     let matchesDateRange = true;
     if (startDate || endDate) {
       const appointmentDate = parseDateString(appointment.slotDate);
-      
+      appointmentDate.setHours(0, 0, 0, 0);
+
       if (startDate && endDate) {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
-        
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        
         matchesDateRange = appointmentDate >= start && appointmentDate <= end;
       } else if (startDate) {
         const start = new Date(startDate);
@@ -566,7 +583,7 @@ const AllAppointments = () => {
         matchesDateRange = appointmentDate <= end;
       }
     }
-    
+
     return matchesStatus && matchesPayment && matchesSearch && matchesDateRange;
   });
   
@@ -585,7 +602,6 @@ const AllAppointments = () => {
     return 0;
   });
   
-  // Pagination logic
   const totalPages = Math.ceil(sortedAppointments.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
@@ -665,16 +681,16 @@ const AllAppointments = () => {
   }
 
   const getFileDate = () => {
-    return new Date().toISOString().split("T")[0]; // 2026-02-10
+    return new Date().toISOString().split("T")[0];
   };
 
   const getFullDateTime = () => {
     return new Date().toLocaleString();
   };
 
-const formatDateForExport = (dateStr) => {
-  return slotDateFormat(dateStr) || dateStr;
-};
+  const formatDateForExport = (dateStr) => {
+    return slotDateFormat(dateStr) || dateStr;
+  };
 
   const exportToPDF = () => {
     if (!sortedAppointments || sortedAppointments.length === 0) {
@@ -683,14 +699,11 @@ const formatDateForExport = (dateStr) => {
     }
 
     const doc = new jsPDF("landscape");
-
     const downloadDate = getFullDateTime();
 
-    // Title
     doc.setFontSize(18);
     doc.text("Salon Appointments Report", 14, 20);
 
-    // Download Date inside PDF
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Downloaded on: ${downloadDate}`, 14, 28);
@@ -702,7 +715,7 @@ const formatDateForExport = (dateStr) => {
       item.docData?.name || "-",
       item.service || item.docData?.specialty || "-",
       formatDateForExport(item.slotDate) || "-",
-      item.slotTime || "-",
+      formatTime12hr(item.slotTime) || "-",
       item.cancelled
         ? "Cancelled"
         : item.isCompleted
@@ -711,43 +724,19 @@ const formatDateForExport = (dateStr) => {
         ? "Overdue"
         : "Upcoming",
       item.payment ? "Paid" : "Unpaid",
-      `${currency}${item.amount || 0}`,
+      `Rs. ${item.amount || 0}`,
     ]);
 
     autoTable(doc, {
       startY: 35,
-      head: [
-        [
-          "#",
-          "Customer",
-          "Phone",
-          "Stylist",
-          "Service",
-          "Date",
-          "Time",
-          "Status",
-          "Payment",
-          "Amount",
-        ],
-      ],
+      head: [["#", "Customer", "Phone", "Stylist", "Service", "Date", "Time", "Status", "Payment", "Amount"]],
       body: tableData,
-      styles: {
-        fontSize: 8,
-        cellPadding: 3,
-      },
-      headStyles: {
-        fillColor: [239, 68, 68],
-        textColor: 255,
-        fontStyle: "bold",
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
     });
 
-    // ✅ Date in file name
     doc.save(`Salon_Appointments_${getFileDate()}.pdf`);
-
     setShowExportMenu(false);
   };
 
@@ -766,20 +755,12 @@ const formatDateForExport = (dateStr) => {
       "Stylist Name": item.docData?.name || "",
       "Service": item.service || item.docData?.specialty || item.docData?.speciality || "",
       "Date": formatDateForExport(item.slotDate) || "",
-      "Time": item.slotTime || "",
-      "Status":
-        item.cancelled
-          ? "Cancelled"
-          : item.isCompleted
-          ? "Completed"
-          : isAppointmentTimePast(item)
-          ? "Overdue"
-          : "Upcoming",
+      "Time": formatTime12hr(item.slotTime) || "",
+      "Status": item.cancelled ? "Cancelled" : item.isCompleted ? "Completed" : isAppointmentTimePast(item) ? "Overdue" : "Upcoming",
       "Payment Status": item.payment ? "Paid" : "Unpaid",
-      "Amount": item.amount ? `${currency}${item.amount}` : "0",
+      "Amount": `Rs. ${item.amount || 0}`,
     }));
 
-    // Add download date row in Excel
     const worksheet = XLSX.utils.aoa_to_sheet([
       [`Downloaded on: ${downloadDate}`],
       [],
@@ -790,34 +771,19 @@ const formatDateForExport = (dateStr) => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments");
 
-    // Column width
     worksheet["!cols"] = [
-      { wch: 5 },
-      { wch: 20 },
-      { wch: 15 },
-      { wch: 18 },
-      { wch: 20 },
-      { wch: 12 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 15 },
-      { wch: 10 },
+      { wch: 5 }, { wch: 20 }, { wch: 15 }, { wch: 18 }, { wch: 20 },
+      { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 10 },
     ];
 
-    // ✅ Date in filename
     XLSX.writeFile(workbook, `Salon_Appointments_${getFileDate()}.xlsx`);
-
     setShowExportMenu(false);
   };
 
-
-
-  // Modified to reload the entire page
   const manualRefresh = () => {
     window.location.reload();
   };
 
-  // Check if any filters are active
   const isFilterActive = () => {
     return (
       filterStatus !== 'all' || 
@@ -845,7 +811,7 @@ const formatDateForExport = (dateStr) => {
                 onClick={manualRefresh}
                 className="px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-xs sm:text-sm font-medium hover:from-blue-700 hover:to-blue-800 transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
               >
-                <RefreshCcw size={16} className="sm:w-4 sm:h-4" />
+                <RefreshCcw size={16} />
                 <span className="hidden sm:inline">Refresh</span>
               </button>
               
@@ -854,7 +820,7 @@ const formatDateForExport = (dateStr) => {
                   onClick={() => setShowExportMenu(!showExportMenu)}
                   className="px-3 sm:px-4 py-2 bg-white border-2 border-gray-200 rounded-xl text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
                 >
-                  <Download size={16} className="sm:w-4 sm:h-4" />
+                  <Download size={16} />
                   <span className="hidden sm:inline">Export</span>
                 </button>
                 
@@ -875,7 +841,6 @@ const formatDateForExport = (dateStr) => {
                         <FileText size={18} className="text-red-600" />
                         <span>PDF</span>
                       </button>
-
                       <button
                         onClick={exportToExcel}
                         className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-green-50 flex items-center gap-3 transition-colors"
@@ -898,8 +863,9 @@ const formatDateForExport = (dateStr) => {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs sm:text-sm font-semibold text-gray-700 mr-1">Status:</span>
               <div className="flex flex-wrap gap-2">
+                {/* ALL */}
                 <button 
-                  onClick={() => {setFilterStatus('all'); setTodayFilter(false);}}
+                  onClick={() => { setFilterStatus('all'); setTodayFilter(false); setStartDate(''); setEndDate(''); setSelectedQuickFilter(null); }}
                   className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all shadow-sm ${
                     filterStatus === 'all' && !todayFilter
                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg scale-105' 
@@ -908,6 +874,8 @@ const formatDateForExport = (dateStr) => {
                 >
                   All
                 </button>
+
+                {/* TODAY */}
                 <button 
                   onClick={handleTodayFilter}
                   className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all shadow-sm ${
@@ -918,18 +886,22 @@ const formatDateForExport = (dateStr) => {
                 >
                   Today
                 </button>
+
+                {/* UPCOMING */}
                 <button 
-                  onClick={() => {setFilterStatus('upcoming'); setTodayFilter(false);}}
+                  onClick={() => { setFilterStatus('upcoming'); setTodayFilter(false); setStartDate(''); setEndDate(''); setSelectedQuickFilter(null); }}
                   className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all shadow-sm ${
-                                        filterStatus === 'upcoming' && !todayFilter
+                    filterStatus === 'upcoming' && !todayFilter
                       ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg scale-105' 
                       : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
                   }`}
                 >
                   Upcoming
                 </button>
+
+                {/* COMPLETED */}
                 <button 
-                  onClick={() => {setFilterStatus('completed'); setTodayFilter(false);}}
+                  onClick={() => { setFilterStatus('completed'); setTodayFilter(false); setStartDate(''); setEndDate(''); setSelectedQuickFilter(null); }}
                   className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all shadow-sm ${
                     filterStatus === 'completed' && !todayFilter
                       ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg scale-105' 
@@ -938,8 +910,10 @@ const formatDateForExport = (dateStr) => {
                 >
                   Completed
                 </button>
+
+                {/* CANCELLED */}
                 <button 
-                  onClick={() => {setFilterStatus('cancelled'); setTodayFilter(false);}}
+                  onClick={() => { setFilterStatus('cancelled'); setTodayFilter(false); setStartDate(''); setEndDate(''); setSelectedQuickFilter(null); }}
                   className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all shadow-sm ${
                     filterStatus === 'cancelled' && !todayFilter
                       ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg scale-105' 
@@ -951,9 +925,8 @@ const formatDateForExport = (dateStr) => {
               </div>
             </div>
             
-            {/* Search and Payment Filter Row */}
+            {/* Search and Date Row */}
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              {/* Search Bar */}
               <div className="relative flex-1">
                 <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input 
@@ -973,9 +946,7 @@ const formatDateForExport = (dateStr) => {
                 )}
               </div>
               
-              {/* Payment Filter and Date Range */}
               <div className="flex flex-wrap gap-2">
-                {/* Calendar Date Range Picker */}
                 <button
                   onClick={openCalendarModal}
                   className="px-3 sm:px-4 py-2 sm:py-2.5 bg-white border-2 border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center gap-2 shadow-sm"
@@ -990,7 +961,6 @@ const formatDateForExport = (dateStr) => {
                   <span className="sm:hidden">Date</span>
                 </button>
                 
-                {/* Sort Dropdown */}
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
@@ -1002,13 +972,12 @@ const formatDateForExport = (dateStr) => {
                   <option value="price-asc">Price: Low to High</option>
                 </select>
                 
-                {/* Clear Filters Button - Only show when filters are active */}
                 {isFilterActive() && (
                   <button
                     onClick={clearFilters}
                     className="px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-amber-600 hover:to-orange-600 transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
                   >
-                    <Filter size={16} className="sm:w-4 sm:h-4" />
+                    <Filter size={16} />
                     <span>Clear Filters</span>
                   </button>
                 )}
@@ -1017,7 +986,7 @@ const formatDateForExport = (dateStr) => {
           </div>
         </div>
         
-        {/* Table Container */}
+        {/* Table */}
         <div className="overflow-x-auto">
           {appointmentsLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-gray-500">
@@ -1039,24 +1008,12 @@ const formatDateForExport = (dateStr) => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gradient-to-r from-gray-100 to-gray-50">
                 <tr>
-                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                    Customer Details
-                  </th>
-                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                    Stylist & Service
-                  </th>
-                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                    Date & Time
-                  </th>
-                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                    Status
-                  </th>
-                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                    Price
-                  </th>
-                  <th scope="col" className="px-3 sm:px-4 md:px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                    Actions
-                  </th>
+                  <th className="px-3 sm:px-4 md:px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Customer Details</th>
+                  <th className="px-3 sm:px-4 md:px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Stylist & Service</th>
+                  <th className="px-3 sm:px-4 md:px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Date & Time</th>
+                  <th className="px-3 sm:px-4 md:px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="px-3 sm:px-4 md:px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Price</th>
+                  <th className="px-3 sm:px-4 md:px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               
@@ -1065,120 +1022,73 @@ const formatDateForExport = (dateStr) => {
                   <tr key={index} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200">
                     <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        
-                        {/* Avatar */}
                         <div className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12">
                           {appointment.userData?.image ? (
-                            <img 
-                              className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl object-cover ring-2 ring-blue-100" 
-                              src={appointment.userData.image} 
-                              alt={appointment.userData.name}
-                            />
+                            <img className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl object-cover ring-2 ring-blue-100" src={appointment.userData.image} alt={appointment.userData.name} />
                           ) : (
                             <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-md">
                               {appointment.userData?.name?.charAt(0) || "?"}
                             </div>
                           )}
                         </div>
-
-                        {/* Name + Phone */}
                         <div className="ml-3 sm:ml-4">
-                          <div className="text-sm sm:text-base font-semibold text-gray-900">
-                            {appointment.userData?.name || "N/A"}
-                          </div>
-
-                          {/* Clickable Phone */}
-                          <div
-                            onClick={() => callPhoneNumber(appointment.userData?.phone)}
-                            className="text-xs sm:text-sm text-gray-600 font-medium mt-0.5 flex items-center gap-1 cursor-pointer hover:text-blue-600 transition-all"
-                          >
+                          <div className="text-sm sm:text-base font-semibold text-gray-900">{appointment.userData?.name || "N/A"}</div>
+                          <div onClick={() => callPhoneNumber(appointment.userData?.phone)} className="text-xs sm:text-sm text-gray-600 font-medium mt-0.5 flex items-center gap-1 cursor-pointer hover:text-blue-600 transition-all">
                             <Phone className="w-3.5 h-3.5" />
                             {appointment.userData?.phone || "N/A"}
                           </div>
                         </div>
-
                       </div>
                     </td>
 
-
-                    {/* Stylist & Service */}
                     <td className="px-3 sm:px-4 md:px-6 py-4">
                       <div className="flex items-start">
                         <div className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 mt-1">
                           {appointment.docData?.image ? (
-                            <img 
-                              className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg object-cover ring-2 ring-purple-100" 
-                              src={appointment.docData.image} 
-                              alt={appointment.docData.name}
-                            />
+                            <img className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg object-cover ring-2 ring-purple-100" src={appointment.docData.image} alt={appointment.docData.name} />
                           ) : (
                             <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white shadow-md">
-                              <Scissors size={14} className="sm:w-4 sm:h-4" />
+                              <Scissors size={14} />
                             </div>
                           )}
                         </div>
                         <div className="ml-3">
-                          <div className="text-xs sm:text-sm font-semibold text-gray-900">
-                            {appointment.docData?.name || "N/A"}
-                          </div>
-                          <div className="text-xs text-gray-600 mt-1 max-w-[200px] leading-relaxed">
-                            {appointment.service || appointment.docData?.specialty || appointment.docData?.speciality || "N/A"}
-                          </div>
+                          <div className="text-xs sm:text-sm font-semibold text-gray-900">{appointment.docData?.name || "N/A"}</div>
+                          <div className="text-xs text-gray-600 mt-1 max-w-[200px] leading-relaxed">{appointment.service || appointment.docData?.specialty || appointment.docData?.speciality || "N/A"}</div>
                         </div>
                       </div>
                     </td>
                     
-                    {/* Date & Time */}
                     <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                      <div className="text-xs sm:text-sm font-bold text-gray-900">
-                        {slotDateFormat(appointment.slotDate)}
-                      </div>
-                      <div className="text-xs text-gray-600 font-medium mt-1">
-                        {appointment.slotTime || "N/A"}
-                      </div>
-                    </td>                  
+                      <div className="text-xs sm:text-sm font-bold text-gray-900">{slotDateFormat(appointment.slotDate)}</div>
+                      <div className="text-xs text-gray-600 font-medium mt-1">{formatTime12hr(appointment.slotTime)}</div>
+                    </td>
                     
-                    {/* Status */}
                     <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                       <StatusBadge appointment={appointment} />
                     </td>
                     
-                    {/* Price */}
                     <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm sm:text-base font-bold text-gray-900">
                       <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
-                        {currency}{appointment.amount || appointment.price || 0}
+                        Rs. {appointment.amount || appointment.price || 0}
                       </div>
                     </td>
                     
-                    {/* Actions */}
                     <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">
                         {!appointment.cancelled && (
                           appointment.isCompleted ? (
-                            <button 
-                              onClick={() => handleUndoCompleted(appointment._id)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all hover:scale-110 shadow-sm hover:shadow-md"
-                              title="Undo completion"
-                            >
-                              <RotateCcw size={18} className="sm:w-5 sm:h-5" />
+                            <button onClick={() => handleUndoCompleted(appointment._id)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all hover:scale-110 shadow-sm hover:shadow-md" title="Undo completion">
+                              <RotateCcw size={18} />
                             </button>
                           ) : (
-                            <button 
-                              onClick={() => handleMarkCompleted(appointment._id)}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all hover:scale-110 shadow-sm hover:shadow-md"
-                              title="Mark as completed"
-                            >
-                              <CheckCircle size={18} className="sm:w-5 sm:h-5" />
+                            <button onClick={() => handleMarkCompleted(appointment._id)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all hover:scale-110 shadow-sm hover:shadow-md" title="Mark as completed">
+                              <CheckCircle size={18} />
                             </button>
                           )
                         )}
-                        
-                        <button 
-                          onClick={() => handleDeleteConfirmation(appointment)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all hover:scale-110 shadow-sm hover:shadow-md"
-                          title="Delete permanently"
-                        >
-                          <Trash2 size={18} className="sm:w-5 sm:h-5" />
+                        <button onClick={() => handleDeleteConfirmation(appointment)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all hover:scale-110 shadow-sm hover:shadow-md" title="Delete permanently">
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>
@@ -1192,7 +1102,6 @@ const formatDateForExport = (dateStr) => {
         {/* Footer - Stats and Pagination */}
         {paginatedAppointments.length > 0 && (
           <div className="px-3 sm:px-4 md:px-6 py-4 bg-gradient-to-r from-gray-50 to-white border-t border-gray-200">
-            {/* Stats Bar */}
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-start sm:items-center justify-between mb-4 pb-4 border-b border-gray-200">
               <div className="text-xs sm:text-sm text-gray-700 font-semibold">
                 Showing <span className="text-blue-600">{startIndex + 1}</span> to <span className="text-blue-600">{Math.min(endIndex, sortedAppointments.length)}</span> of <span className="text-blue-600">{sortedAppointments.length}</span> total
@@ -1214,17 +1123,12 @@ const formatDateForExport = (dateStr) => {
               </div>
             </div>
             
-            {/* Pagination Controls */}
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-              {/* Rows per page */}
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm text-gray-700 font-semibold">Rows per page:</span>
                 <select
                   value={rowsPerPage}
-                  onChange={(e) => {
-                    setRowsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
+                  onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
                   className="px-3 py-2 border-2 border-gray-200 rounded-lg text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
                 >
                   <option value={5}>5</option>
@@ -1234,38 +1138,20 @@ const formatDateForExport = (dateStr) => {
                 </select>
               </div>
               
-              {/* Page Navigation */}
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-lg border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md"
-                  title="First page"
-                >
-                  <ChevronsLeft size={18} className="sm:w-5 sm:h-5" />
+                <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="p-2 rounded-lg border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md" title="First page">
+                  <ChevronsLeft size={18} />
                 </button>
-                
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-lg border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md"
-                  title="Previous page"
-                >
-                  <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
+                <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md" title="Previous page">
+                  <ChevronLeft size={18} />
                 </button>
                 
                 <div className="flex items-center gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(page => {
-                      return page === 1 || 
-                             page === totalPages || 
-                             Math.abs(page - currentPage) <= 1;
-                    })
+                    .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
                     .map((page, idx, arr) => (
                       <React.Fragment key={page}>
-                        {idx > 0 && arr[idx - 1] !== page - 1 && (
-                          <span className="px-2 text-gray-400 text-sm">...</span>
-                        )}
+                        {idx > 0 && arr[idx - 1] !== page - 1 && <span className="px-2 text-gray-400 text-sm">...</span>}
                         <button
                           onClick={() => setCurrentPage(page)}
                           className={`min-w-[36px] sm:min-w-[40px] h-9 sm:h-10 rounded-lg font-bold text-xs sm:text-sm transition-all shadow-sm ${
@@ -1280,22 +1166,11 @@ const formatDateForExport = (dateStr) => {
                     ))}
                 </div>
                 
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md"
-                  title="Next page"
-                >
-                  <ChevronRight size={18} className="sm:w-5 sm:h-5" />
+                <button onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} className="p-2 rounded-lg border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md" title="Next page">
+                  <ChevronRight size={18} />
                 </button>
-                
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md"
-                  title="Last page"
-                >
-                  <ChevronsRight size={18} className="sm:w-5 sm:h-5" />
+                <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="p-2 rounded-lg border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md" title="Last page">
+                  <ChevronsRight size={18} />
                 </button>
               </div>
             </div>
@@ -1322,22 +1197,14 @@ const formatDateForExport = (dateStr) => {
                 <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                   This will permanently delete the appointment for <span className="font-bold text-gray-900">{appointmentToDelete?.userData?.name}</span> on <span className="font-bold text-gray-900">{slotDateFormat(appointmentToDelete?.slotDate)}</span> at <span className="font-bold text-gray-900">{appointmentToDelete?.slotTime}</span>.
                 </p>
-                <p className="text-xs sm:text-sm text-red-600 font-semibold mt-2">
-                  This action cannot be undone!
-                </p>
+                <p className="text-xs sm:text-sm text-red-600 font-semibold mt-2">This action cannot be undone!</p>
               </div>
               
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 px-5 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all font-semibold shadow-md hover:shadow-lg text-sm sm:text-base"
-                >
+                <button onClick={() => setShowDeleteModal(false)} className="flex-1 px-5 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all font-semibold shadow-md hover:shadow-lg text-sm sm:text-base">
                   Cancel
                 </button>
-                <button
-                  onClick={handleDeleteConfirmed}
-                  className="flex-1 px-5 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all font-semibold shadow-lg hover:shadow-xl text-sm sm:text-base"
-                >
+                <button onClick={handleDeleteConfirmed} className="flex-1 px-5 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all font-semibold shadow-lg hover:shadow-xl text-sm sm:text-base">
                   Yes, Delete
                 </button>
               </div>

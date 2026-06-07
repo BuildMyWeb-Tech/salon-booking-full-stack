@@ -17,6 +17,7 @@ import {
   getServices,
   getNotifications,
   markNotificationsRead,
+  rescheduleAppointment,          // ✅ NEW
 } from '../controllers/userController.js';
 
 import {
@@ -45,6 +46,7 @@ userRouter.post('/update-profile', authUser, upload.single('image'), updateProfi
 userRouter.post('/book-appointment', authUser, bookAppointment);
 userRouter.get('/appointments', authUser, listAppointment);
 userRouter.post('/cancel-appointment', authUser, cancelAppointment);
+userRouter.post('/reschedule-appointment', authUser, rescheduleAppointment); // ✅ NEW
 
 /* ===================== SLOTS ===================== */
 userRouter.get('/available-dates/:docId', authUser, getAvailableDates);

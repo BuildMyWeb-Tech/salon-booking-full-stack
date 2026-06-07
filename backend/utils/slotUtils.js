@@ -42,40 +42,45 @@ export const generateAvailableSlots = async (date, customSettings = null, doctor
     }
 
     const startTimeSetting = settings.slotStartTime || '09:00';
-    const endTimeSetting = settings.slotEndTime || '17:00';
-    const slotDuration = settings.slotDuration || 60;
+    const endTimeSetting   = settings.slotEndTime   || '17:00';
+    const slotDuration     = settings.slotDuration  || 60;
 
     const [startHour, startMinute] = startTimeSetting.split(':').map(Number);
-    const [endHour, endMinute] = endTimeSetting.split(':').map(Number);
+    const [endHour,   endMinute  ] = endTimeSetting.split(':').map(Number);
 
     let currentTime = new Date(year, month - 1, day, startHour, startMinute, 0, 0);
-    let endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0, 0);
+    let endDateTime = new Date(year, month - 1, day, endHour,   endMinute,   0, 0);
     if (endDateTime <= currentTime) endDateTime.setDate(endDateTime.getDate() + 1);
 
     const slots = [];
     const now = new Date();
     const minBookingBufferMs = (settings.minBookingTimeBeforeSlot || 0) * 60 * 60 * 1000;
 
+    // ✅ FIX: only filter past/too-soon slots when the selected date is TODAY
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const isToday  = dateStr === todayStr;
+
     while (currentTime < endDateTime) {
       const slotStart = new Date(currentTime);
 
-      // Break time
+      // Break time check
       let isDuringBreak = false;
       if (settings.breakTime && settings.breakStartTime && settings.breakEndTime) {
         const [bsH, bsM] = settings.breakStartTime.split(':').map(Number);
         const [beH, beM] = settings.breakEndTime.split(':').map(Number);
         const breakStart = new Date(year, month - 1, day, bsH, bsM);
-        const breakEnd = new Date(year, month - 1, day, beH, beM);
+        const breakEnd   = new Date(year, month - 1, day, beH, beM);
         if (breakEnd <= breakStart) breakEnd.setDate(breakEnd.getDate() + 1);
         isDuringBreak = slotStart >= breakStart && slotStart < breakEnd;
       }
 
-      const isTooSoon = slotStart <= new Date(now.getTime() + minBookingBufferMs);
+      // ✅ FIX: isTooSoon only applies to today — future dates always show all slots
+      const isTooSoon = isToday && slotStart <= new Date(now.getTime() + minBookingBufferMs);
 
       if (!isDuringBreak && !isTooSoon) {
-        const slotEnd = new Date(slotStart.getTime() + slotDuration * 60000);
+        const slotEnd   = new Date(slotStart.getTime() + slotDuration * 60000);
         const startTime = `${String(slotStart.getHours()).padStart(2, '0')}:${String(slotStart.getMinutes()).padStart(2, '0')}`;
-        const endTime = `${String(slotEnd.getHours()).padStart(2, '0')}:${String(slotEnd.getMinutes()).padStart(2, '0')}`;
+        const endTime   = `${String(slotEnd.getHours()).padStart(2, '0')}:${String(slotEnd.getMinutes()).padStart(2, '0')}`;
         slots.push({ date: dateStr, startTime, endTime });
       }
 

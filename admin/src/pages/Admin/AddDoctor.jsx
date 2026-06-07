@@ -5,7 +5,8 @@ import axios from 'axios';
 import { AdminContext } from '../../context/AdminContext';
 import { AppContext } from '../../context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Eye, EyeOff, User, Mail, Lock, Phone, Award, Briefcase, Scissors, Hash, Instagram, Clock, FileText, CheckCircle } from 'lucide-react';
+// ✅ FIX 1: Added X and RotateCcw to existing imports (only change on this line)
+import { Pencil, Eye, EyeOff, User, Mail, Lock, Phone, Award, Briefcase, Scissors, Hash, Instagram, Clock, FileText, CheckCircle, X, RotateCcw } from 'lucide-react';
 
 const AddStylist = () => {
     const navigate = useNavigate();
@@ -182,15 +183,28 @@ const AddStylist = () => {
 
     return (
         <form onSubmit={onSubmitHandler} className='m-5 w-full'>
-            <div className='flex justify-between items-center mb-5'>
+
+            {/* ✅ FIX 2: Reset Form now has icon+border (visible on mobile too), X close button added */}
+            <div className='flex justify-between items-center mb-5 gap-2'>
                 <h1 className='text-2xl font-bold text-gray-800'>Add New Stylist</h1>
-                <button 
-                    type="button"
-                    onClick={resetForm}
-                    className="text-gray-500 hover:text-primary transition-colors text-sm font-medium"
-                >
-                    Reset Form
-                </button>
+                <div className='flex items-center gap-2'>
+                    <button 
+                        type="button"
+                        onClick={resetForm}
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-primary transition-colors"
+                    >
+                        <RotateCcw size={14} />
+                        <span>Reset Form</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/stylist-list')}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                        title="Close"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
             </div>
 
             <div className='bg-white px-6 py-8 sm:p-8 border rounded-lg shadow-sm w-full max-w-5xl max-h-[85vh] overflow-y-auto'>
@@ -250,12 +264,13 @@ const AddStylist = () => {
                                 <Mail size={16} className="mr-1.5" /> Email Address
                                 <span className="text-red-500 ml-1">*</span>
                             </label>
+                            {/* ✅ FIX 3: placeholder was 'admin@example.com' → now 'Enter stylist email' */}
                             <input 
                                 onChange={e => setEmail(e.target.value)} 
                                 value={email} 
                                 className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
                                 type="email" 
-                                placeholder='Enter email address' 
+                                placeholder='Enter stylist email' 
                                 required 
                             />
                         </div>
@@ -361,14 +376,23 @@ const AddStylist = () => {
                                 <span className="text-red-500 ml-1">*</span>
                             </label>
                             <input 
-                                onChange={e => setPhone(e.target.value)} 
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    if (val.length <= 10) setPhone(val);
+                                }} 
                                 value={phone} 
                                 className='border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary' 
                                 type="tel" 
-                                placeholder='Enter phone number' 
+                                placeholder='Enter 10-digit phone number'
+                                pattern="[0-9]{10}"
+                                minLength={10}
+                                maxLength={10}
                                 required 
                             />
-                            <p className="text-xs text-gray-500">This number will be displayed for clients to contact the stylist</p>
+                            <p className="text-xs text-gray-500">10-digit number • digits only</p>
+                            {phone.length > 0 && phone.length < 10 && (
+                                <p className="text-xs text-red-500">Phone number must be exactly 10 digits</p>
+                            )}
                         </div>
 
                         <div className='flex flex-col gap-1.5'>

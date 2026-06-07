@@ -15,7 +15,6 @@ const AdminContextProvider = (props) => {
   const [dashData, setDashData] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Admin notification state
   const [adminNotifications, setAdminNotifications] = useState([]);
   const [adminUnreadCount, setAdminUnreadCount] = useState(0);
 
@@ -23,20 +22,17 @@ const AdminContextProvider = (props) => {
     if (aToken) {
       getAllAppointments();
       getAdminNotifications();
-      // Poll for new notifications every 60 seconds
       const interval = setInterval(getAdminNotifications, 60000);
       return () => clearInterval(interval);
     }
   }, [aToken]);
 
-  // Getting all Doctors data from Database using API
   const getAllDoctors = async () => {
     setLoading(true);
     try {
       const { data } = await axios.get(backendUrl + '/api/admin/all-doctors', {
         headers: { aToken },
       });
-
       if (data.success) {
         setDoctors(data.doctors);
         return data.doctors;
@@ -53,18 +49,14 @@ const AdminContextProvider = (props) => {
     }
   };
 
-  // Function to get a single doctor/stylist by ID
   const getDoctorById = async (id) => {
     setLoading(true);
     try {
       const { data } = await axios.get(`${backendUrl}/api/admin/doctor/${id}`, {
         headers: { aToken },
       });
-
       if (data.success) {
         const stylist = data.stylist;
-
-        // Ensure specialty is always an array
         if (stylist.speciality && !stylist.specialty) {
           stylist.specialty = Array.isArray(stylist.speciality)
             ? stylist.speciality
@@ -72,30 +64,22 @@ const AdminContextProvider = (props) => {
         } else if (stylist.specialty && !Array.isArray(stylist.specialty)) {
           stylist.specialty = [stylist.specialty];
         }
-
-        // Ensure phone field is consistent
         if (stylist.phoneNumber && !stylist.phone) {
           stylist.phone = stylist.phoneNumber;
         }
-
-        // Ensure price field is consistent
         if (stylist.fees && !stylist.price) {
           stylist.price = stylist.fees;
         }
-
-        // Ensure leaveDates is always an array
         if (!stylist.leaveDates) {
           stylist.leaveDates = [];
         }
-
         return stylist;
       } else {
         toast.error(data.message);
         return null;
       }
     } catch (error) {
-      const errorMsg =
-        error.response?.data?.message || error.message || 'Failed to fetch stylist details';
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to fetch stylist details';
       toast.error(errorMsg);
       console.error('Error fetching stylist:', error);
       return null;
@@ -104,7 +88,6 @@ const AdminContextProvider = (props) => {
     }
   };
 
-  // Function to update a doctor/stylist
   const updateDoctor = async (id, formData) => {
     setLoading(true);
     try {
@@ -114,7 +97,6 @@ const AdminContextProvider = (props) => {
           'Content-Type': 'multipart/form-data',
         },
       });
-
       if (data.success) {
         toast.success(data.message || 'Stylist updated successfully');
         setDoctors((prevDoctors) =>
@@ -135,14 +117,12 @@ const AdminContextProvider = (props) => {
     }
   };
 
-  // Function to delete a doctor/stylist
   const deleteDoctor = async (id) => {
     setLoading(true);
     try {
       const { data } = await axios.delete(`${backendUrl}/api/admin/doctor/${id}`, {
         headers: { aToken },
       });
-
       if (data.success) {
         toast.success(data.message);
         setDoctors((prevDoctors) => prevDoctors.filter((doc) => doc._id !== id));
@@ -161,13 +141,11 @@ const AdminContextProvider = (props) => {
     }
   };
 
-  // ✅ NEW: Get leave dates for a specific stylist
   const getStylistLeaveDates = async (id) => {
     try {
       const { data } = await axios.get(`${backendUrl}/api/admin/doctor/${id}/leave-dates`, {
         headers: { aToken },
       });
-
       if (data.success) {
         return data.leaveDates || [];
       } else {
@@ -175,15 +153,13 @@ const AdminContextProvider = (props) => {
         return [];
       }
     } catch (error) {
-      const errorMsg =
-        error.response?.data?.message || error.message || 'Failed to fetch leave dates';
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to fetch leave dates';
       toast.error(errorMsg);
       console.error('Error fetching leave dates:', error);
       return [];
     }
   };
 
-  // ✅ NEW: Update leave dates for a specific stylist
   const updateStylistLeaveDates = async (id, leaveDates) => {
     try {
       const { data } = await axios.put(
@@ -191,9 +167,7 @@ const AdminContextProvider = (props) => {
         { leaveDates },
         { headers: { aToken } }
       );
-
       if (data.success) {
-        // Update the local doctors array to reflect the new leave dates
         setDoctors((prevDoctors) =>
           prevDoctors.map((doc) => (doc._id === id ? { ...doc, leaveDates: data.leaveDates } : doc))
         );
@@ -203,15 +177,13 @@ const AdminContextProvider = (props) => {
         return { success: false };
       }
     } catch (error) {
-      const errorMsg =
-        error.response?.data?.message || error.message || 'Failed to update leave dates';
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to update leave dates';
       toast.error(errorMsg);
       console.error('Error updating leave dates:', error);
       return { success: false };
     }
   };
 
-  // Function to change doctor availability using API
   const changeAvailability = async (docId) => {
     try {
       const { data } = await axios.post(
@@ -219,7 +191,6 @@ const AdminContextProvider = (props) => {
         { docId },
         { headers: { aToken } }
       );
-
       if (data.success) {
         toast.success(data.message);
         setDoctors((prevDoctors) =>
@@ -234,21 +205,17 @@ const AdminContextProvider = (props) => {
       }
     } catch (error) {
       console.error(error);
-      toast.error(
-        error.response?.data?.message || error.message || 'Failed to update availability'
-      );
+      toast.error(error.response?.data?.message || error.message || 'Failed to update availability');
       return false;
     }
   };
 
-  // Getting all appointment data from Database using API
   const getAllAppointments = async () => {
     setAppointmentsLoading(true);
     try {
       const { data } = await axios.get(backendUrl + '/api/admin/appointments', {
         headers: { aToken },
       });
-
       if (data.success) {
         setAppointments(data.appointments);
         return data.appointments;
@@ -268,7 +235,7 @@ const AdminContextProvider = (props) => {
     }
   };
 
-  // Function to cancel appointment using API
+  // ✅ FIXED: No longer calls getAllAppointments() — updates state locally instead
   const cancelAppointment = async (appointmentId) => {
     try {
       const { data } = await axios.post(
@@ -276,10 +243,14 @@ const AdminContextProvider = (props) => {
         { appointmentId },
         { headers: { aToken } }
       );
-
       if (data.success) {
         toast.success(data.message);
-        await getAllAppointments();
+        // ✅ Update locally — prevents appointments resetting to [] and breaking tabs
+        setAppointments((prev) =>
+          prev.map((app) =>
+            app._id === appointmentId ? { ...app, cancelled: true } : app
+          )
+        );
         return true;
       } else {
         toast.error(data.message);
@@ -292,7 +263,6 @@ const AdminContextProvider = (props) => {
     }
   };
 
-  // Functions for marking appointments complete/incomplete
   const markAppointmentCompleted = async (id) => {
     try {
       const { data } = await axios.post(
@@ -300,7 +270,6 @@ const AdminContextProvider = (props) => {
         { appointmentId: id },
         { headers: { aToken } }
       );
-
       if (data.success) {
         toast.success(data.message || 'Appointment marked as completed');
         setAppointments((prev) =>
@@ -313,9 +282,7 @@ const AdminContextProvider = (props) => {
       }
     } catch (error) {
       console.error('Error marking appointment complete:', error);
-      toast.error(
-        'Failed to update: ' + (error.response?.data?.message || error.message || 'Unknown error')
-      );
+      toast.error('Failed to update: ' + (error.response?.data?.message || error.message || 'Unknown error'));
       return false;
     }
   };
@@ -327,7 +294,6 @@ const AdminContextProvider = (props) => {
         { appointmentId: id },
         { headers: { aToken } }
       );
-
       if (data.success) {
         toast.success(data.message || 'Appointment marked as incomplete');
         setAppointments((prev) =>
@@ -340,14 +306,11 @@ const AdminContextProvider = (props) => {
       }
     } catch (error) {
       console.error('Error marking appointment incomplete:', error);
-      toast.error(
-        'Failed to update: ' + (error.response?.data?.message || error.message || 'Unknown error')
-      );
+      toast.error('Failed to update: ' + (error.response?.data?.message || error.message || 'Unknown error'));
       return false;
     }
   };
 
-  // ✅ Get all admin notifications
   const getAdminNotifications = async () => {
     try {
       const { data } = await axios.get(`${backendUrl}/api/admin/notifications`, {
@@ -358,11 +321,10 @@ const AdminContextProvider = (props) => {
         setAdminUnreadCount(data.unreadCount || 0);
       }
     } catch (error) {
-      // silent — notifications are non-critical
+      // silent
     }
   };
 
-  // ✅ Mark one or all admin notifications as read
   const markAdminNotificationsRead = async (notificationId = null) => {
     try {
       await axios.post(
@@ -384,14 +346,12 @@ const AdminContextProvider = (props) => {
     }
   };
 
-  // Getting Admin Dashboard data from Database using API
   const getDashData = async () => {
     setLoading(true);
     try {
       const { data } = await axios.get(backendUrl + '/api/admin/dashboard', {
         headers: { aToken },
       });
-
       if (data.success) {
         setDashData(data.dashData);
         return data.dashData;
@@ -401,9 +361,7 @@ const AdminContextProvider = (props) => {
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      toast.error(
-        error.response?.data?.message || error.message || 'Failed to load dashboard data'
-      );
+      toast.error(error.response?.data?.message || error.message || 'Failed to load dashboard data');
       return null;
     } finally {
       setLoading(false);
@@ -431,7 +389,6 @@ const AdminContextProvider = (props) => {
     markAppointmentCompleted,
     markAppointmentIncomplete,
     dashData,
-    // ✅ Admin notifications
     adminNotifications,
     adminUnreadCount,
     getAdminNotifications,

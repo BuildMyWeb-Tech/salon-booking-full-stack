@@ -18,6 +18,66 @@ const getOrdinalSuffix = (day) => {
   }
 };
 
+// ✅ 12hr Time Input Component
+const TimeInput12Hr = ({ label, name, value, onChange }) => {
+  const to24Hr = (h, m, period) => {
+    let hour = parseInt(h);
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+    return `${String(hour).padStart(2, '0')}:${m}`;
+  };
+
+  const getValues = () => {
+    if (!value) return { hour: '12', minute: '00', period: 'AM' };
+    const [h, m] = value.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    return { hour: String(hour12), minute: String(m).padStart(2, '0'), period };
+  };
+
+  const { hour, minute, period } = getValues();
+
+  const handleChange = (newHour, newMinute, newPeriod) => {
+    const time24 = to24Hr(newHour, newMinute, newPeriod);
+    onChange({ target: { name, value: time24 } });
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <div className="flex gap-1 items-center border rounded-md px-3 py-2.5 bg-white w-full">
+        <select
+          value={hour}
+          onChange={(e) => handleChange(e.target.value, minute, period)}
+          className="border-none outline-none bg-transparent font-medium text-gray-800 cursor-pointer"
+        >
+          {[1,2,3,4,5,6,7,8,9,10,11,12].map(h => (
+            <option key={h} value={String(h)}>{String(h).padStart(2, '0')}</option>
+          ))}
+        </select>
+        <span className="font-bold text-gray-600">:</span>
+        <select
+          value={minute}
+          onChange={(e) => handleChange(hour, e.target.value, period)}
+          className="border-none outline-none bg-transparent font-medium text-gray-800 cursor-pointer"
+        >
+          {['00', '15', '30', '45'].map(m => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+        <select
+          value={period}
+          onChange={(e) => handleChange(hour, minute, e.target.value)}
+          className="border-none outline-none bg-transparent font-medium text-gray-800 cursor-pointer"
+        >
+          <option value="AM">AM</option>
+          <option value="PM">PM</option>
+        </select>
+      </div>
+    </div>
+  );
+};
+
 const SlotManagement = () => {
   const {
     loading, settings, saveSettings: saveSettingsToAPI,
@@ -76,7 +136,6 @@ const SlotManagement = () => {
       toast.error('Please provide a reason');
       return;
     }
-    
     const result = await addBlockedDateToAPI(blockDate, blockReason);
     if (result) {
       setBlockDate(new Date());
@@ -90,10 +149,8 @@ const SlotManagement = () => {
       toast.error('Please provide a holiday name');
       return;
     }
-    
     const value = recurringType === 'weekly' ? recurringDay : recurringDate.toString();
     const result = await addRecurringHolidayToAPI(recurringName, recurringType, value);
-    
     if (result) {
       setRecurringName('');
       setRecurringType('weekly');
@@ -105,7 +162,6 @@ const SlotManagement = () => {
 
   const addSpecialWorkingDay = async () => {
     const result = await addSpecialWorkingDayToAPI(specialDate);
-    
     if (result) {
       setSpecialDate(new Date());
       setShowSpecialModal(false);
@@ -124,7 +180,7 @@ const SlotManagement = () => {
       </div>
       
       {error && (
-        <div className="mb-4 bg-red-50 text-red-700  rounded-lg flex items-center gap-2">
+        <div className="mb-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
           <AlertCircle size={18} />
           {error}
         </div>
@@ -152,28 +208,20 @@ const SlotManagement = () => {
           <div className="bg-white border rounded-xl shadow-sm p-6 mb-6">
             <h2 className="text-lg font-semibold mb-6">Operating Hours</h2>
             
+            {/* ✅ All 4 time inputs now use 12hr AM/PM format */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Slot Start Time</label>
-                <input 
-                  type="time" 
-                  name="slotStartTime" 
-                  value={localSettings.slotStartTime} 
-                  onChange={handleInputChange} 
-                  className="w-full px-3 py-2.5 border rounded-md"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Slot End Time</label>
-                <input 
-                  type="time" 
-                  name="slotEndTime" 
-                  value={localSettings.slotEndTime} 
-                  onChange={handleInputChange} 
-                  className="w-full px-3 py-2.5 border rounded-md"
-                />
-              </div>
+              <TimeInput12Hr
+                label="Slot Start Time"
+                name="slotStartTime"
+                value={localSettings.slotStartTime}
+                onChange={handleInputChange}
+              />
+              <TimeInput12Hr
+                label="Slot End Time"
+                name="slotEndTime"
+                value={localSettings.slotEndTime}
+                onChange={handleInputChange}
+              />
             </div>
             
             <div className="mb-6">
@@ -207,27 +255,18 @@ const SlotManagement = () => {
             {localSettings.breakTime && (
               <div className="ml-6 pl-4 border-l-2 border-gray-200 mb-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Break Start</label>
-                    <input 
-                      type="time" 
-                      name="breakStartTime" 
-                      value={localSettings.breakStartTime} 
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2.5 border rounded-md"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Break End</label>
-                    <input 
-                      type="time" 
-                      name="breakEndTime" 
-                      value={localSettings.breakEndTime} 
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2.5 border rounded-md"
-                    />
-                  </div>
+                  <TimeInput12Hr
+                    label="Break Start"
+                    name="breakStartTime"
+                    value={localSettings.breakStartTime}
+                    onChange={handleInputChange}
+                  />
+                  <TimeInput12Hr
+                    label="Break End"
+                    name="breakEndTime"
+                    value={localSettings.breakEndTime}
+                    onChange={handleInputChange}
+                  />
                 </div>
               </div>
             )}
@@ -271,7 +310,6 @@ const SlotManagement = () => {
                   Add Blocked Date
                 </button>
               </div>
-              
               <div className="p-6">
                 {localSettings.blockedDates?.length > 0 ? (
                   <div className="overflow-x-auto">
@@ -329,7 +367,6 @@ const SlotManagement = () => {
                   Add Recurring Holiday
                 </button>
               </div>
-              
               <div className="p-6">
                 {localSettings.recurringHolidays?.length > 0 ? (
                   <div className="space-y-2">
@@ -374,7 +411,6 @@ const SlotManagement = () => {
                   Add Special Day
                 </button>
               </div>
-              
               <div className="p-6">
                 {localSettings.specialWorkingDays?.length > 0 ? (
                   <div className="space-y-2">
@@ -409,7 +445,6 @@ const SlotManagement = () => {
           <div className="space-y-6">
             <div className="bg-white border rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold mb-4">Rescheduling Options</h2>
-              
               <div className="mb-4">
                 <label className="flex items-center cursor-pointer">
                   <input 
@@ -422,7 +457,6 @@ const SlotManagement = () => {
                   <span className="text-sm font-medium text-gray-700">Allow Appointment Rescheduling</span>
                 </label>
               </div>
-              
               {localSettings.allowRescheduling && (
                 <div className="ml-6 pl-4 border-l-2 border-gray-200">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -442,7 +476,6 @@ const SlotManagement = () => {
             
             <div className="bg-white border rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold mb-4">Advance Booking Rules</h2>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Advance Booking Days</label>
@@ -455,7 +488,6 @@ const SlotManagement = () => {
                     className="w-full px-3 py-2.5 border rounded-md"
                   />
                 </div>
-                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Min Booking Time Before Slot (hours)</label>
                   <input 
@@ -479,7 +511,6 @@ const SlotManagement = () => {
               <CreditCard size={20} />
               Payment Settings
             </h2>
-            
             <div className="mb-6">
               <label className="flex items-center cursor-pointer">
                 <input 
@@ -492,7 +523,6 @@ const SlotManagement = () => {
                 <span className="text-sm font-medium text-gray-700">Require Advance Payment</span>
               </label>
             </div>
-            
             {localSettings.advancePaymentRequired && (
               <div className="ml-6 pl-4 border-l-2 border-gray-200">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -565,18 +595,8 @@ const SlotManagement = () => {
               />
             </div>
             <div className="flex gap-3">
-              <button 
-                onClick={addBlockedDate}
-                className="flex-1 bg-primary text-white py-2 rounded-lg"
-              >
-                Add
-              </button>
-              <button 
-                onClick={() => setShowBlockModal(false)}
-                className="flex-1 border py-2 rounded-lg"
-              >
-                Cancel
-              </button>
+              <button onClick={addBlockedDate} className="flex-1 bg-primary text-white py-2 rounded-lg">Add</button>
+              <button onClick={() => setShowBlockModal(false)} className="flex-1 border py-2 rounded-lg">Cancel</button>
             </div>
           </div>
         </div>
@@ -636,18 +656,8 @@ const SlotManagement = () => {
               </div>
             )}
             <div className="flex gap-3">
-              <button 
-                onClick={addRecurringHoliday}
-                className="flex-1 bg-primary text-white py-2 rounded-lg"
-              >
-                Add
-              </button>
-              <button 
-                onClick={() => setShowRecurringModal(false)}
-                className="flex-1 border py-2 rounded-lg"
-              >
-                Cancel
-              </button>
+              <button onClick={addRecurringHoliday} className="flex-1 bg-primary text-white py-2 rounded-lg">Add</button>
+              <button onClick={() => setShowRecurringModal(false)} className="flex-1 border py-2 rounded-lg">Cancel</button>
             </div>
           </div>
         </div>
@@ -668,18 +678,8 @@ const SlotManagement = () => {
               />
             </div>
             <div className="flex gap-3">
-              <button 
-                onClick={addSpecialWorkingDay}
-                className="flex-1 bg-primary text-white py-2 rounded-lg"
-              >
-                Add
-              </button>
-              <button 
-                onClick={() => setShowSpecialModal(false)}
-                className="flex-1 border py-2 rounded-lg"
-              >
-                Cancel
-              </button>
+              <button onClick={addSpecialWorkingDay} className="flex-1 bg-primary text-white py-2 rounded-lg">Add</button>
+              <button onClick={() => setShowSpecialModal(false)} className="flex-1 border py-2 rounded-lg">Cancel</button>
             </div>
           </div>
         </div>
