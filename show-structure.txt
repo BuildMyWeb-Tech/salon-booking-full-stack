@@ -1,23 +1,10 @@
 📁 .git
+   📄 COMMIT_EDITMSG
    📄 config
    📄 description
    📄 FETCH_HEAD
    📄 HEAD
-   📁 hooks
-      📄 applypatch-msg.sample
-      📄 commit-msg.sample
-      📄 fsmonitor-watchman.sample
-      📄 post-update.sample
-      📄 pre-applypatch.sample
-      📄 pre-commit.sample
-      📄 pre-merge-commit.sample
-      📄 pre-push.sample
-      📄 pre-rebase.sample
-      📄 pre-receive.sample
-      📄 prepare-commit-msg.sample
-      📄 push-to-checkout.sample
-      📄 sendemail-validate.sample
-      📄 update.sample
+   
    📄 index
    📁 info
       📄 exclude
@@ -26,22 +13,30 @@
       📁 refs
          📁 heads
             📄 main
+            📄 Mauli
          📁 remotes
             📁 origin
+               📄 Ajai-Kumar
                📄 HEAD
+               📄 Jiju
+               📄 main
+               📄 Mauli
+               📄 New-AK
    📁 objects
-      📁 info
-      📁 pack
-         📄 pack-f098e8ed161c8b0c439d1cc42aa00dee0b75c665.idx
-         📄 pack-f098e8ed161c8b0c439d1cc42aa00dee0b75c665.pack
-         📄 pack-f098e8ed161c8b0c439d1cc42aa00dee0b75c665.rev
-   📄 packed-refs
+ 
+   📄 ORIG_HEAD
    📁 refs
       📁 heads
          📄 main
+         📄 Mauli
       📁 remotes
          📁 origin
+            📄 Ajai-Kumar
             📄 HEAD
+            📄 Jiju
+            📄 main
+            📄 Mauli
+            📄 New-AK
       📁 tags
 📄 .gitattributes
 📄 .gitignore
@@ -62,25 +57,7 @@
       📄 App.jsx
       📁 assets
          📄 1.png
-         📄 add_icon.svg
-         📄 admin_logo.svg
-         📄 appointments_icon.svg
-         📄 appointment_icon.svg
-         📄 assets.js
-         📄 cancel_icon.svg
-         📄 doctor_icon.svg
-         📄 earning_icon.svg
-         📄 home_icon.svg
-         📄 image.jpeg
-         📄 list_icon.svg
-         📄 patients_icon.svg
-         📄 patient_icon.svg
-         📄 people_icon.svg
-         📄 scissors-solid.svg
-         📄 specializations_icon.jpg
-         📄 specializations_icon.svg
-         📄 tick_icon.svg
-         📄 upload_area.svg
+         
       📁 components
          📄 Navbar.jsx
          📄 Sidebar.jsx
@@ -161,8 +138,7 @@
    📄 show-structure.js
    📄 show-structure.txt
    📁 uploads
-      📄 1777457343065-haie.jpg
-
+      
    📁 utils
       📄 appointmentCron.js
       📄 Local Work Prod Not Have Block Special Code slotUtils copy.js
@@ -175,8 +151,63 @@
    📄 .env
    📄 .eslintrc.cjs
    📄 .gitignore
+   📁 android
+      📁 app
+         📁 build
+            📄 .npmkeep
+         📁 src
+            📁 androidTest
+               📁 java
+                  📁 com
+                     📁 getcapacitor
+                        📁 myapp
+            📁 main
+               📁 assets
+                  📁 public
+                     📁 assets
+               📁 java
+                  📁 com
+                     📁 uniquesalon
+                        📁 app
+               📁 res
+                  📁 drawable
+                  📁 drawable-land-hdpi
+                  📁 drawable-land-mdpi
+                  📁 drawable-land-xhdpi
+                  📁 drawable-land-xxhdpi
+                  📁 drawable-land-xxxhdpi
+                  📁 drawable-port-hdpi
+                  📁 drawable-port-mdpi
+                  📁 drawable-port-xhdpi
+                  📁 drawable-port-xxhdpi
+                  📁 drawable-port-xxxhdpi
+                  📁 drawable-v24
+                  📁 layout
+                  📁 mipmap-anydpi-v26
+                  📁 mipmap-hdpi
+                  📁 mipmap-mdpi
+                  📁 mipmap-xhdpi
+                  📁 mipmap-xxhdpi
+                  📁 mipmap-xxxhdpi
+                  📁 values
+                  📁 xml
+            📁 test
+               📁 java
+                  📁 com
+                     📁 getcapacitor
+                        📁 myapp
+      📁 capacitor-cordova-android-plugins
+         📁 src
+            📁 main
+               📁 java
+               📁 res
+      📁 gradle
+         📁 wrapper
    📄 backup status dynmic MyAppointments.jsx
    📄 demo.jsx
+   📁 dist
+      📁 assets
+         
    📄 index.html
    📄 package-lock.json
    📄 package.json
@@ -192,7 +223,6 @@
    📁 src
       📄 App.jsx
       📁 assets
-         📄 1.png
          
       📁 components
          📄 Banner.jsx
