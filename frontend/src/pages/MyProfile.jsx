@@ -1,3 +1,4 @@
+// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\frontend\src\pages\MyProfile.jsx
 import React, { useContext, useState, useEffect } from 'react'
 import { AppContext } from '../context/AppContext'
 import axios from 'axios'

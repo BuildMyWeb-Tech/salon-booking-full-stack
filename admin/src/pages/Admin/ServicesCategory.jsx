@@ -1,3 +1,4 @@
+// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\admin\src\pages\Admin\ServicesCategory.jsx
 import React, { useContext, useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import axios from 'axios'

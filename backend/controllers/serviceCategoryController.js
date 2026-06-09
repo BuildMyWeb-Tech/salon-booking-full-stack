@@ -1,3 +1,4 @@
+// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\backend\controllers\serviceCategoryController.js
 import ServiceCategory from '../models/ServiceCategory.js';
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -36,11 +37,18 @@ const createService = async (req, res) => {
       return res.json({ success: false, message: 'Service image is required' });
     }
 
-    // ✅ Upload buffer to Cloudinary
+    // ✅ FIX S08-002: Check for duplicate name (case-insensitive)
+    const existing = await ServiceCategory.findOne({
+      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+    });
+    if (existing) {
+      return res.json({ success: false, message: 'Category already exists' });
+    }
+
     const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype, 'services');
     const imageUrl = uploadResult.secure_url;
 
-    const service = new ServiceCategory({ name, description, basePrice, imageUrl });
+    const service = new ServiceCategory({ name: name.trim(), description, basePrice, imageUrl });
     await service.save();
 
     res.json({ success: true, message: 'Service created successfully', service });
