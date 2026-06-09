@@ -1,3 +1,4 @@
+// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\admin\src\pages\Admin\EditStylist.jsx
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';

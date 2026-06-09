@@ -1,3 +1,4 @@
+// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\backend\models\ServiceCategory.js
 import mongoose from 'mongoose';
 
 const serviceCategorySchema = new mongoose.Schema(

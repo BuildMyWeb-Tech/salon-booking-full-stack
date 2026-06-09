@@ -1,3 +1,4 @@
+// frontend/src/pages/MyAppointments.jsx
 import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
@@ -31,10 +32,6 @@ import {
 } from 'lucide-react';
 
 // ─── 12hr format helper ──────────────────────────────────────────────────────
-/**
- * Converts "HH:MM" (24hr) → "hh:MM AM/PM" (12hr)
- * Safe: returns the original string if it can't parse it.
- */
 const to12Hr = (time24) => {
   if (!time24) return '';
   const parts = time24.split(':');
@@ -75,13 +72,9 @@ const MyAppointments = () => {
   ];
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const slotDateFormat = (slotDate) => {
@@ -113,14 +106,13 @@ const MyAppointments = () => {
     if (!appointmentToCancel) return;
 
     try {
-      setLocalAppointments((prevAppointments) =>
-        prevAppointments.map((app) =>
+      setLocalAppointments((prev) =>
+        prev.map((app) =>
           app._id === appointmentToCancel._id
             ? { ...app, cancelled: true, cancelledBy: 'user' }
             : app
         )
       );
-
       setActiveTab('cancelled');
 
       const { data } = await axios.post(
@@ -136,8 +128,8 @@ const MyAppointments = () => {
         getUserAppointments();
       } else {
         toast.error(data.message);
-        setLocalAppointments((prevAppointments) =>
-          prevAppointments.map((app) =>
+        setLocalAppointments((prev) =>
+          prev.map((app) =>
             app._id === appointmentToCancel._id
               ? { ...app, cancelled: false, cancelledBy: null }
               : app
@@ -147,8 +139,8 @@ const MyAppointments = () => {
     } catch (error) {
       console.log(error);
       toast.error(error.message);
-      setLocalAppointments((prevAppointments) =>
-        prevAppointments.map((app) =>
+      setLocalAppointments((prev) =>
+        prev.map((app) =>
           app._id === appointmentToCancel._id
             ? { ...app, cancelled: false, cancelledBy: null }
             : app
@@ -159,7 +151,6 @@ const MyAppointments = () => {
 
   const getAvailableSlots = async (stylistId, appointmentDate) => {
     setIsRescheduling(true);
-
     try {
       const response = await axios.get(backendUrl + `/api/user/available-slots`, {
         params: { date: appointmentDate, docId: stylistId },
@@ -168,22 +159,19 @@ const MyAppointments = () => {
 
       if (response.data.success) {
         const now = new Date();
-        const selectedDate = new Date(appointmentDate);
-        const isToday = selectedDate.toDateString() === now.toDateString();
-
+        const selDate = new Date(appointmentDate);
+        const isToday = selDate.toDateString() === now.toDateString();
         let slots = response.data.slots || [];
 
         if (isToday) {
           const currentTime = now.getHours() * 60 + now.getMinutes();
           slots = slots.filter((slot) => {
             const [hours, minutes] = slot.startTime.split(':').map(Number);
-            const slotTime = hours * 60 + minutes;
-            return slotTime > currentTime;
+            return hours * 60 + minutes > currentTime;
           });
         }
 
         setAvailableSlots(slots);
-
         if (slots.length === 0) {
           toast.info('No available slots for this date. Please select another date.');
         }
@@ -203,27 +191,23 @@ const MyAppointments = () => {
   const checkRescheduleEligibility = (appointment) => {
     if (!appointment || appointment.isCompleted) return false;
     const appointmentDateTime = new Date(appointment.slotDateTime);
-    const now = new Date();
-    const diffMs = appointmentDateTime - now;
-    const diffHours = diffMs / (1000 * 60 * 60);
+    const diffHours = (appointmentDateTime - new Date()) / (1000 * 60 * 60);
     return diffHours > 3;
   };
 
   const checkCancellationEligibility = (appointment) => {
     if (!appointment || appointment.cancelled || appointment.isCompleted) return false;
     const appointmentDateTime = new Date(appointment.slotDateTime);
-    const now = new Date();
-    const diffMs = appointmentDateTime - now;
-    const diffHours = diffMs / (1000 * 60 * 60);
+    const diffHours = (appointmentDateTime - new Date()) / (1000 * 60 * 60);
     return diffHours > 3;
   };
 
   const openRescheduleModal = (appointment) => {
-    const canReschedule = appointment.cancelled || checkRescheduleEligibility(appointment);
-    setCanReschedule(canReschedule);
-
+    const eligible = appointment.cancelled || checkRescheduleEligibility(appointment);
+    setCanReschedule(eligible);
     setAppointmentToReschedule(appointment);
-    if (canReschedule) {
+
+    if (eligible) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       setCurrentMonth(tomorrow);
@@ -247,7 +231,6 @@ const MyAppointments = () => {
     }
 
     setIsRescheduling(true);
-
     try {
       const { data } = await axios.post(
         backendUrl + '/api/user/reschedule-appointment',
@@ -255,7 +238,7 @@ const MyAppointments = () => {
           userId: appointmentToReschedule.userId,
           appointmentId: appointmentToReschedule._id,
           slotDate: selectedDate,
-          slotTime: selectedTime,          // still 24hr for backend — unchanged
+          slotTime: selectedTime,
           oldSlotDate: appointmentToReschedule.slotDate,
           oldSlotTime: appointmentToReschedule.slotTime,
         },
@@ -297,13 +280,9 @@ const MyAppointments = () => {
   }, [appointments]);
 
   const filteredAppointments = localAppointments.filter((appointment) => {
-    if (activeTab === 'upcoming') {
-      return !appointment.cancelled && !appointment.isCompleted;
-    } else if (activeTab === 'completed') {
-      return appointment.isCompleted && !appointment.cancelled;
-    } else if (activeTab === 'cancelled') {
-      return appointment.cancelled;
-    }
+    if (activeTab === 'upcoming') return !appointment.cancelled && !appointment.isCompleted;
+    if (activeTab === 'completed') return appointment.isCompleted && !appointment.cancelled;
+    if (activeTab === 'cancelled') return appointment.cancelled;
     return true;
   });
 
@@ -320,9 +299,12 @@ const MyAppointments = () => {
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-    return { daysInMonth, startingDayOfWeek, year, month };
+    return {
+      daysInMonth: lastDay.getDate(),
+      startingDayOfWeek: firstDay.getDay(),
+      year,
+      month,
+    };
   };
 
   const handleDateClick = (day) => {
@@ -330,7 +312,6 @@ const MyAppointments = () => {
     const clickedDate = new Date(year, month, day);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     if (clickedDate < today) return;
 
     setSelectedCalendarDate(clickedDate);
@@ -372,6 +353,7 @@ const MyAppointments = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent h-64 pointer-events-none" />
 
       <div className="max-w-5xl mx-auto relative">
+        {/* ── Header ── */}
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate(-1)}
@@ -386,6 +368,7 @@ const MyAppointments = () => {
           <div className="w-[40px] sm:w-[56px]"></div>
         </div>
 
+        {/* ── Tab Bar ── */}
         <div
           className={`sticky top-[60px] z-10 transition-all duration-300 ${
             scrolled ? 'py-2 bg-white/95 backdrop-blur-sm shadow-md' : 'py-1 bg-transparent'
@@ -395,78 +378,40 @@ const MyAppointments = () => {
             className={`bg-white rounded-xl shadow-sm border border-gray-200 ${scrolled ? 'mx-4' : ''}`}
           >
             <div className="flex">
-              <button
-                onClick={() => setActiveTab('upcoming')}
-                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${
-                  activeTab === 'upcoming'
-                    ? 'bg-primary text-white shadow-inner'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <CalendarCheck size={18} />
-                  <span className="hidden sm:inline">Upcoming</span>
-                </div>
-                {upcomingCount > 0 && (
-                  <span
-                    className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                      activeTab === 'upcoming' ? 'bg-white text-primary' : 'bg-primary text-white'
-                    }`}
-                  >
-                    {upcomingCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={() => setActiveTab('completed')}
-                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${
-                  activeTab === 'completed'
-                    ? 'bg-primary text-white shadow-inner'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <CheckCircle size={18} />
-                  <span className="hidden sm:inline">Completed</span>
-                </div>
-                {completedCount > 0 && (
-                  <span
-                    className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                      activeTab === 'completed' ? 'bg-white text-primary' : 'bg-primary text-white'
-                    }`}
-                  >
-                    {completedCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={() => setActiveTab('cancelled')}
-                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${
-                  activeTab === 'cancelled'
-                    ? 'bg-primary text-white shadow-inner'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <CalendarX size={18} />
-                  <span className="hidden sm:inline">Cancelled</span>
-                </div>
-                {cancelledCount > 0 && (
-                  <span
-                    className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                      activeTab === 'cancelled' ? 'bg-white text-primary' : 'bg-primary text-white'
-                    }`}
-                  >
-                    {cancelledCount}
-                  </span>
-                )}
-              </button>
+              {[
+                { id: 'upcoming', icon: <CalendarCheck size={18} />, label: 'Upcoming', count: upcomingCount },
+                { id: 'completed', icon: <CheckCircle size={18} />, label: 'Completed', count: completedCount },
+                { id: 'cancelled', icon: <CalendarX size={18} />, label: 'Cancelled', count: cancelledCount },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all relative ${
+                    activeTab === tab.id
+                      ? 'bg-primary text-white shadow-inner'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    {tab.icon}
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </div>
+                  {tab.count > 0 && (
+                    <span
+                      className={`absolute -top-2 -right-1 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                        activeTab === tab.id ? 'bg-white text-primary' : 'bg-primary text-white'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
+        {/* ── Content ── */}
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="relative w-16 h-16">
@@ -507,10 +452,10 @@ const MyAppointments = () => {
             <h3 className="text-lg font-medium text-gray-800 mb-2">No {activeTab} appointments</h3>
             <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">
               {activeTab === 'upcoming'
-                ? "You don't have any upcoming appointments scheduled. Book your next style session!"
+                ? "You don't have any upcoming appointments scheduled."
                 : activeTab === 'completed'
-                  ? "You don't have any completed appointments yet. They will appear here after your service."
-                  : "You don't have any cancelled appointments. That's a good thing!"}
+                  ? "You don't have any completed appointments yet."
+                  : "You don't have any cancelled appointments."}
             </p>
             {activeTab === 'upcoming' && (
               <button
@@ -538,13 +483,18 @@ const MyAppointments = () => {
               const remainingAmount = item.remainingAmount || 0;
               const hasPartialPayment = paidAmount > 0 && remainingAmount > 0;
 
+              // ✅ FIX S06-004: rescheduled flag
+              const isRescheduled = item.rescheduled === true && !item.cancelled && !item.isCompleted;
+
               return (
                 <motion.div
                   key={item._id || index}
                   className={`bg-white rounded-xl shadow-sm overflow-hidden border transition-all ${
                     isComingSoon && activeTab === 'upcoming'
                       ? 'border-primary/50'
-                      : 'border-gray-100'
+                      : isRescheduled
+                        ? 'border-purple-300'
+                        : 'border-gray-100'
                   } hover:shadow-md`}
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -553,12 +503,22 @@ const MyAppointments = () => {
                   {isComingSoon && activeTab === 'upcoming' && (
                     <div className="bg-primary/10 border-b border-primary/20 py-2 px-4 text-xs font-medium text-primary flex items-center justify-center gap-1">
                       <Clock size={14} />
-                      <span>Coming Soon - Your appointment is within 24 hours</span>
+                      <span>Coming Soon — Your appointment is within 24 hours</span>
+                    </div>
+                  )}
+
+                  {/* ✅ FIX S06-004: Rescheduled top banner */}
+                  {isRescheduled && (
+                    <div className="bg-purple-50 border-b border-purple-200 py-2 px-4 text-xs font-medium text-purple-700 flex items-center justify-center gap-1.5">
+                      <RefreshCw size={13} />
+                      <span>Rescheduled — showing your updated date &amp; time below</span>
                     </div>
                   )}
 
                   <div className="p-5 sm:p-6">
                     <div className="flex flex-col sm:flex-row gap-6">
+
+                      {/* ── Stylist Image + Status Badge ── */}
                       <div className="sm:w-1/4 lg:w-1/5">
                         <div className="relative mx-auto sm:mx-0 w-32 sm:w-full max-w-[160px] group">
                           <div className="rounded-xl overflow-hidden shadow-sm border-2 border-gray-100 aspect-square">
@@ -590,6 +550,12 @@ const MyAppointments = () => {
                                 <Check size={12} />
                                 Completed
                               </div>
+                            ) : isRescheduled ? (
+                              // ✅ FIX S06-004: Purple "Rescheduled" status badge
+                              <div className="bg-purple-500 text-white text-xs px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
+                                <RefreshCw size={12} />
+                                Rescheduled
+                              </div>
                             ) : item.payment ? (
                               <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
                                 <BadgeCheck size={12} />
@@ -605,6 +571,7 @@ const MyAppointments = () => {
                         </div>
                       </div>
 
+                      {/* ── Appointment Details ── */}
                       <div className="flex-1">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
                           <div>
@@ -616,12 +583,31 @@ const MyAppointments = () => {
                                   Soon
                                 </span>
                               )}
+                              {/* ✅ FIX S06-004: inline "Rescheduled" chip next to name */}
+                              {isRescheduled && (
+                                <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full">
+                                  <RefreshCw size={10} />
+                                  Rescheduled
+                                </span>
+                              )}
                             </h3>
                           </div>
                         </div>
 
                         <div className="border-b border-gray-100 mb-4 mt-2"></div>
 
+                        {/* ✅ FIX S06-004: Rescheduled info banner inside card */}
+                        {isRescheduled && (
+                          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg px-4 py-2.5 flex items-start gap-2 text-sm text-purple-800 animate-slideDown">
+                            <RefreshCw size={15} className="text-purple-500 mt-0.5 flex-shrink-0" />
+                            <span>
+                              This appointment was rescheduled. The date &amp; time shown below reflect
+                              your <strong>new</strong> booking.
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Date / Time / Service Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
                           <div className="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors group">
                             <div className="flex gap-3">
@@ -644,7 +630,6 @@ const MyAppointments = () => {
                               </div>
                               <div>
                                 <p className="text-xs text-gray-500 uppercase font-medium">Time</p>
-                                {/* ✅ FIX 1: appointment card time → 12hr */}
                                 <p className="font-medium text-gray-800">{to12Hr(item.slotTime)}</p>
                               </div>
                             </div>
@@ -656,9 +641,7 @@ const MyAppointments = () => {
                                 <Scissors size={18} />
                               </div>
                               <div className="min-w-0">
-                                <p className="text-xs text-gray-500 uppercase font-medium">
-                                  Service
-                                </p>
+                                <p className="text-xs text-gray-500 uppercase font-medium">Service</p>
                                 <p className="font-medium text-gray-800 leading-snug break-words">
                                   {item.service || 'Hair Styling'}
                                 </p>
@@ -667,12 +650,11 @@ const MyAppointments = () => {
                           </div>
                         </div>
 
-                        {/* Payment Information Section */}
+                        {/* Payment Information */}
                         <div className="mb-4 bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border border-blue-100">
                           <div className="flex items-center gap-2 mb-3">
                             <h4 className="font-semibold text-gray-800">Payment Details</h4>
                           </div>
-
                           <div className="space-y-2">
                             <div className="flex justify-between items-center">
                               <span className="text-sm text-gray-600">Total Amount:</span>
@@ -690,9 +672,7 @@ const MyAppointments = () => {
                                   </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                  <span className="text-sm text-gray-600">
-                                    Remaining (Pay at Salon):
-                                  </span>
+                                  <span className="text-sm text-gray-600">Remaining (Pay at Salon):</span>
                                   <span className="font-semibold text-orange-600">
                                     {currencySymbol}{remainingAmount}
                                   </span>
@@ -704,15 +684,14 @@ const MyAppointments = () => {
                               <div className="mt-2 pt-2 border-t border-blue-200">
                                 <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
                                   <Check size={12} />
-                                  {hasPartialPayment
-                                    ? 'Advance payment completed'
-                                    : 'Payment completed'}
+                                  {hasPartialPayment ? 'Advance payment completed' : 'Payment completed'}
                                 </span>
                               </div>
                             )}
                           </div>
                         </div>
 
+                        {/* Action Buttons */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-auto pt-3 border-t border-gray-100">
                           <div className="flex flex-wrap gap-3">
                             {item.cancelled && item.payment && (
@@ -759,6 +738,7 @@ const MyAppointments = () => {
                       </div>
                     </div>
 
+                    {/* Cancellation reason banner */}
                     {item.cancelled && item.cancelledBy && (
                       <div
                         className={`mt-4 border rounded-lg p-3 flex items-start gap-2 text-sm animate-slideDown ${
@@ -769,7 +749,9 @@ const MyAppointments = () => {
                       >
                         <AlertCircle
                           size={18}
-                          className={`mt-0.5 flex-shrink-0 ${item.cancelledBy === 'system' ? 'text-orange-500' : 'text-red-500'}`}
+                          className={`mt-0.5 flex-shrink-0 ${
+                            item.cancelledBy === 'system' ? 'text-orange-500' : 'text-red-500'
+                          }`}
                         />
                         <span
                           className={
@@ -789,8 +771,7 @@ const MyAppointments = () => {
                       <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex items-center gap-2 text-sm animate-slideDown">
                         <AlertTriangle size={16} className="text-yellow-500" />
                         <span className="text-yellow-800">
-                          Appointments can only be cancelled at least 3 hours before the scheduled
-                          time.
+                          Appointments can only be cancelled at least 3 hours before the scheduled time.
                         </span>
                       </div>
                     )}
@@ -801,7 +782,7 @@ const MyAppointments = () => {
           </div>
         )}
 
-        {/* ── Reschedule Modal ─────────────────────────────────────────────── */}
+        {/* ── Reschedule Modal ── */}
         <AnimatePresence>
           {rescheduleModal && (
             <motion.div
@@ -841,12 +822,12 @@ const MyAppointments = () => {
                       <AlertTriangle size={40} className="text-yellow-500 mx-auto mb-2" />
                       <p className="text-yellow-800 font-medium mb-1">Unable to Reschedule</p>
                       <p className="text-yellow-700 text-sm">
-                        Appointments can only be rescheduled at least 3 hours before the scheduled
-                        time.
+                        Appointments can only be rescheduled at least 3 hours before the scheduled time.
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-4">
+                      {/* Current appointment summary */}
                       <div className="bg-gray-50 p-4 rounded-lg mb-4">
                         <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
                           <User size={16} className="text-primary" />
@@ -866,7 +847,6 @@ const MyAppointments = () => {
                             <Clock size={14} className="text-gray-400" />
                             <div>
                               <p className="text-gray-500">Time</p>
-                              {/* ✅ FIX 2: current appointment time in modal → 12hr */}
                               <p className="font-medium">
                                 {to12Hr(appointmentToReschedule?.slotTime)}
                               </p>
@@ -875,11 +855,11 @@ const MyAppointments = () => {
                         </div>
                       </div>
 
+                      {/* Calendar */}
                       <div className="space-y-3">
                         <label className="block text-sm font-medium text-gray-700">
                           Select New Date
                         </label>
-
                         <div className="bg-white border border-gray-200 rounded-xl p-4">
                           <div className="flex items-center justify-between mb-4">
                             <button
@@ -889,14 +869,12 @@ const MyAppointments = () => {
                             >
                               <ChevronLeft size={20} className="text-gray-600" />
                             </button>
-
                             <h3 className="text-base font-semibold text-gray-800">
                               {currentMonth.toLocaleDateString('en-US', {
                                 month: 'long',
                                 year: 'numeric',
                               })}
                             </h3>
-
                             <button
                               type="button"
                               onClick={() => navigateMonth(1)}
@@ -908,27 +886,19 @@ const MyAppointments = () => {
 
                           <div className="grid grid-cols-7 gap-1">
                             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                              <div
-                                key={day}
-                                className="text-center text-xs font-medium text-gray-500 py-2"
-                              >
+                              <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
                                 {day}
                               </div>
                             ))}
-
                             {(() => {
-                              const { daysInMonth, startingDayOfWeek } =
-                                getDaysInMonth(currentMonth);
+                              const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentMonth);
                               const days = [];
-
                               for (let i = 0; i < startingDayOfWeek; i++) {
                                 days.push(<div key={`empty-${i}`} className="aspect-square" />);
                               }
-
                               for (let day = 1; day <= daysInMonth; day++) {
                                 const disabled = isDateDisabled(day);
                                 const selected = isDateSelected(day);
-
                                 days.push(
                                   <button
                                     key={day}
@@ -947,24 +917,19 @@ const MyAppointments = () => {
                                   </button>
                                 );
                               }
-
                               return days;
                             })()}
                           </div>
                         </div>
                       </div>
 
+                      {/* Time Slots */}
                       {selectedDate && (
                         <div className="space-y-2">
                           <label className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-gray-700">
-                              Select New Time
-                            </span>
-                            <span className="text-xs text-primary">
-                              All times are in local time
-                            </span>
+                            <span className="text-sm font-medium text-gray-700">Select New Time</span>
+                            <span className="text-xs text-primary">All times are in local time</span>
                           </label>
-
                           <div className="border border-gray-200 rounded-lg p-3">
                             {isRescheduling ? (
                               <div className="py-8 text-center">
@@ -977,15 +942,12 @@ const MyAppointments = () => {
                                   <Calendar size={20} className="text-gray-400" />
                                 </div>
                                 <p className="text-gray-700 font-medium">No Available Slots</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Please try selecting another date
-                                </p>
+                                <p className="text-xs text-gray-500 mt-1">Please try selecting another date</p>
                               </div>
                             ) : (
                               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-1">
                                 {availableSlots.map((slot, idx) => {
                                   if (!slot?.startTime) return null;
-
                                   return (
                                     <button
                                       key={`${slot.date}-${slot.startTime}-${idx}`}
@@ -997,7 +959,6 @@ const MyAppointments = () => {
                                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                       }`}
                                     >
-                                      {/* ✅ FIX 3: slot grid buttons → 12hr */}
                                       {to12Hr(slot.startTime)}
                                     </button>
                                   );
@@ -1064,7 +1025,7 @@ const MyAppointments = () => {
           )}
         </AnimatePresence>
 
-        {/* ── Cancel Modal ─────────────────────────────────────────────────── */}
+        {/* ── Cancel Modal ── */}
         <AnimatePresence>
           {cancelModal && (
             <motion.div
@@ -1097,14 +1058,12 @@ const MyAppointments = () => {
                       </span>{' '}
                       at{' '}
                       <span className="font-medium text-gray-800">
-                        {/* ✅ FIX 4: cancel modal time → 12hr */}
                         {to12Hr(appointmentToCancel?.slotTime)}
                       </span>{' '}
                       with{' '}
                       <span className="font-medium text-gray-800">
                         {appointmentToCancel?.docData?.name}
-                      </span>
-                      ?
+                      </span>?
                     </p>
 
                     <div className="bg-gray-50 rounded-lg p-4 mb-6 text-sm border border-gray-200">
@@ -1118,9 +1077,7 @@ const MyAppointments = () => {
                             />
                           </div>
                           <div className="text-left">
-                            <p className="font-medium text-gray-800">
-                              {appointmentToCancel?.service}
-                            </p>
+                            <p className="font-medium text-gray-800">{appointmentToCancel?.service}</p>
                             <p className="text-xs text-gray-500">
                               {currencySymbol}{appointmentToCancel?.amount}
                             </p>
@@ -1177,9 +1134,12 @@ const MyAppointments = () => {
           )}
         </AnimatePresence>
 
+        {/* ── Scroll-to-top Button ── */}
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className={`fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center transform ${scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}
+          className={`fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center transform ${
+            scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
+          }`}
         >
           <ChevronsUp size={20} />
         </button>

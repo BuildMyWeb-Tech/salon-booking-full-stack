@@ -1,3 +1,4 @@
+// C:\Users\Siddharathan\Desktop\salon-booking-full-stack\backend\controllers\adminController.js
 import jwt from 'jsonwebtoken';
 import { v2 as cloudinary } from 'cloudinary';
 import appointmentModel from '../models/appointmentModel.js';
@@ -243,6 +244,11 @@ export const updateDoctor = async (req, res) => {
     if (certification) updateData.certification = certification;
     if (instagram !== undefined) updateData.instagram = instagram;
     if (workingHours) updateData.workingHours = workingHours;
+
+    
+    if (req.body.available !== undefined) {
+      updateData.available = req.body.available === 'true' || req.body.available === true;
+    }
 
     if (specialty) {
       try {
